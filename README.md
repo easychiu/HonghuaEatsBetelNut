@@ -3,14 +3,14 @@
 以 `info.jpg` 哥德式暗黑美學為基礎的視覺小說遊戲 Demo，深化版新增：
 
 - 動態場景插圖（基於 info.jpg 風格，Pillow 生成）
-- Mureka.ai 背景配樂自動生成與播放
+- 哥德式管弦樂 BGM（由 Mureka.ai 預先生成，隨遊戲附帶）
 - 豐富的多分支劇情與典故系統
 - 兩種謎題類型與 5 種結局
 
 ## 安裝依賴
 
 ```bash
-pip install Pillow pygame requests
+pip install Pillow pygame
 ```
 
 > 若無上述依賴，遊戲仍可以純文字模式執行（無圖像、無音樂）。
@@ -23,6 +23,19 @@ pip install Pillow pygame requests
 ```bash
 python game.py
 ```
+
+## 開發者：重新生成配樂素材
+
+配樂檔案（`assets/bgm_main.mp3`、`assets/bgm_end.mp3`）應隨遊戲一同附帶。  
+若需重新生成（例如更換配樂風格），執行：
+
+```bash
+pip install requests
+python generate_assets.py
+```
+
+此腳本使用 Mureka.ai API 生成哥德式管弦樂 BGM，完成後儲存至 `assets/`，  
+再將 `assets/` 目錄隨遊戲一同發布即可。
 
 ## 遊戲簡介
 
@@ -58,5 +71,5 @@ python game.py
 
 ### 配樂
 
-遊戲啟動後會自動透過 Mureka.ai API 在背景生成哥德式管弦樂 BGM，  
-生成完成後自動播放。BGM 檔案快取於 `assets/bgm_main.mp3`。
+遊戲啟動後直接播放預先生成的配樂素材（`assets/bgm_main.mp3`）。  
+結局場景會淡出切換至 `assets/bgm_end.mp3`。

@@ -1,12 +1,11 @@
 """
 紅花吃檳榔：圖書館夜談 — 深夜完全版
-Enhanced visual novel · scene illustrations · Mureka.ai BGM
+Enhanced visual novel · scene illustrations · BGM
 """
 from __future__ import annotations
 
 import os
 import threading
-import time
 from collections.abc import Callable
 from typing import Optional
 
@@ -26,21 +25,12 @@ try:
 except ImportError:
     _PYGAME = False
 
-try:
-    import requests as _requests
-    _REQUESTS = True
-except ImportError:
-    _REQUESTS = False
-
 # ── paths ──────────────────────────────────────────────────────────────────────
 _DIR      = os.path.dirname(os.path.abspath(__file__))
 INFO_JPG  = os.path.join(_DIR, "info.jpg")
 ASSETS    = os.path.join(_DIR, "assets")
 BGM_MAIN  = os.path.join(ASSETS, "bgm_main.mp3")
 BGM_END   = os.path.join(ASSETS, "bgm_end.mp3")
-
-MUREKA_KEY = "op_27fqd8alidss5kntoh3651wtos85jf0g2"
-MUREKA_URL = "https://api.mureka.ai"
 
 # ── layout ─────────────────────────────────────────────────────────────────────
 WIN_W, WIN_H = 1100, 700
@@ -220,59 +210,6 @@ def _build(key: str) -> Optional[object]:
     return _atmospheric((7, 7, 11), [(IW // 2, IH // 2, 180, (28, 18, 38, 55))])
 
 
-# ══════════════════════════════════════════════════════════════════════════════
-#  Mureka.ai BGM generation
-# ══════════════════════════════════════════════════════════════════════════════
-def _mureka_generate_bgm(prompt: str, save_path: str, timeout: float = 360) -> bool:
-    """Generate instrumental BGM via Mureka.ai and save to disk. Blocking."""
-    if not _REQUESTS:
-        return False
-    try:
-        os.makedirs(os.path.dirname(save_path), exist_ok=True)
-        headers = {
-            "Authorization": f"Bearer {MUREKA_KEY}",
-            "Content-Type": "application/json",
-        }
-        resp = _requests.post(
-            f"{MUREKA_URL}/v1/instrumental/generate",
-            json={"model": "auto", "prompt": prompt},
-            headers=headers,
-            timeout=30,
-        )
-        resp.raise_for_status()
-        task_id = resp.json().get("id", "")
-        if not task_id:
-            return False
-
-        start = time.time()
-        while time.time() - start < timeout:
-            q = _requests.get(
-                f"{MUREKA_URL}/v1/instrumental/query/{task_id}",
-                headers=headers,
-                timeout=20,
-            )
-            q.raise_for_status()
-            data = q.json()
-            status = data.get("status", "failed")
-            if status in ("failed", "cancelled", "timeouted"):
-                return False
-            if status == "succeeded":
-                choices = data.get("choices", [])
-                if not choices:
-                    return False
-                url = choices[0].get("url", "")
-                if not url:
-                    return False
-                dl = _requests.get(url, timeout=60)
-                with open(save_path, "wb") as f:
-                    f.write(dl.content)
-                return True
-            time.sleep(2)
-        return False
-    except Exception:
-        return False
-
-
 class MusicPlayer:
     """Thin wrapper around pygame.mixer for looping BGM."""
 
@@ -325,16 +262,6 @@ class HonghuaGame:
     MAX_CODE_TRIES   = 3
     WINDOW_TITLE     = "紅花吃檳榔：圖書館夜談 — 深夜完全版"
 
-    BGM_MAIN_PROMPT = (
-        "dark gothic horror atmosphere, mysterious ancient library at night, "
-        "haunting orchestral strings, candlelight ambiance, slow tension, "
-        "Chinese folklore horror, piano and cello, ominous, 80 bpm"
-    )
-    BGM_END_PROMPT = (
-        "bittersweet emotional release, gothic piano solo, melancholic hope, "
-        "gentle resolution, Chinese folklore inspired, 70 bpm"
-    )
-
     # ── init ───────────────────────────────────────────────────────────────────
     def __init__(self, root: tk.Tk) -> None:
         self.root = root
@@ -355,18 +282,8 @@ class HonghuaGame:
         self.music = MusicPlayer()
 
         self._build_ui()
-        threading.Thread(target=self._prepare_bgm, daemon=True).start()
+        self.music.play(BGM_MAIN)
         self.show_intro()
-
-    # ── BGM background task ───────────────────────────────────────────────────
-    def _prepare_bgm(self) -> None:
-        if not os.path.exists(BGM_MAIN):
-            _mureka_generate_bgm(self.BGM_MAIN_PROMPT, BGM_MAIN)
-        if os.path.exists(BGM_MAIN):
-            self.root.after(0, lambda: self.music.play(BGM_MAIN))
-
-        if not os.path.exists(BGM_END):
-            _mureka_generate_bgm(self.BGM_END_PROMPT, BGM_END)
 
     # ── UI construction ────────────────────────────────────────────────────────
     def _build_ui(self) -> None:
