@@ -8,10 +8,12 @@ class HonghuaGame:
     REQUIRED_CLUES = 3
     PARTIAL_CLUES_THRESHOLD = 2
     MAX_CODE_ATTEMPTS = 3
+    WINDOW_TITLE = "紅花吃檳榔：圖書館夜談 | Honghua Eats Betel Nut"
+    STATUS_TEMPLATE = "狀態：道具[{items}]；線索[{clues}]；密碼剩餘嘗試 {attempts} 次"
 
     def __init__(self, root: tk.Tk) -> None:
         self.root = root
-        self.root.title("紅花吃檳榔：圖書館夜談")
+        self.root.title(self.WINDOW_TITLE)
         self.root.geometry("760x520")
         self.root.minsize(680, 460)
 
@@ -21,7 +23,7 @@ class HonghuaGame:
 
         self.title_label = tk.Label(
             root,
-            text="紅花吃檳榔：圖書館夜談",
+            text=self.WINDOW_TITLE,
             font=("Arial", 18, "bold"),
             pady=10,
         )
@@ -59,7 +61,9 @@ class HonghuaGame:
     def refresh_status(self) -> None:
         item_text = self._format_inventory()
         clue_text = self._format_clues()
-        self.status_var.set(f"狀態：道具[{item_text}]；線索[{clue_text}]；密碼剩餘嘗試 {self.code_attempts_left} 次")
+        self.status_var.set(
+            self.STATUS_TEMPLATE.format(items=item_text, clues=clue_text, attempts=self.code_attempts_left)
+        )
 
     def _format_inventory(self) -> str:
         return "、".join(sorted(self.inventory)) if self.inventory else "無"
@@ -169,8 +173,9 @@ class HonghuaGame:
                 else:
                     messagebox.showwarning("解鎖失敗", f"密碼錯誤，還剩 {self.code_attempts_left} 次。")
 
-        tk.Button(dialog, text="確認", command=submit).pack(pady=10)
-        dialog.bind("<Return>", lambda _: submit())
+        submit_btn = tk.Button(dialog, text="確認", command=submit)
+        submit_btn.pack(pady=10)
+        dialog.bind("<Return>", lambda _: submit_btn.invoke())
 
     def scene_confront(self) -> None:
         self.refresh_status()
