@@ -1,4 +1,5 @@
 import tkinter as tk
+from collections.abc import Callable
 from tkinter import messagebox
 
 
@@ -46,7 +47,7 @@ class HonghuaGame:
         for widget in self.buttons_frame.winfo_children():
             widget.destroy()
 
-    def set_options(self, options: list[tuple[str, callable]]) -> None:
+    def set_options(self, options: list[tuple[str, Callable[[], None]]]) -> None:
         self.clear_buttons()
         for label, callback in options:
             btn = tk.Button(self.buttons_frame, text=label, command=callback, padx=8, pady=6)
@@ -137,7 +138,6 @@ class HonghuaGame:
         self._create_unlock_dialog()
 
     def _create_unlock_dialog(self) -> None:
-
         dialog = tk.Toplevel(self.root)
         dialog.title("輸入三位密碼")
         dialog.geometry("320x150")
