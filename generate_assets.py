@@ -41,8 +41,8 @@ TRACKS = [
     },
 ]
 
-POLL_INTERVAL = 3   # seconds between status checks
-TIMEOUT       = 420 # seconds total wait per track
+POLL_INTERVAL = 3         # seconds between status checks
+TIMEOUT_PER_TRACK = 420   # max seconds to wait per track
 
 
 def generate(track: dict) -> bool:
@@ -87,7 +87,7 @@ def generate(track: dict) -> bool:
 
     print(f"[{name}] 任務 ID：{task_id}，等待生成完成…")
     start = time.time()
-    while time.time() - start < TIMEOUT:
+    while time.time() - start < TIMEOUT_PER_TRACK:
         time.sleep(POLL_INTERVAL)
         try:
             q = requests.get(
@@ -105,7 +105,7 @@ def generate(track: dict) -> bool:
         elapsed = int(time.time() - start)
         print(f"[{name}] {elapsed}s — 狀態：{status}")
 
-        if status in ("failed", "cancelled", "timeouted"):
+        if status in ("failed", "cancelled", "timeouted", "timed_out"):
             print(f"[{name}] 生成失敗：{status}", file=sys.stderr)
             return False
 
@@ -130,7 +130,7 @@ def generate(track: dict) -> bool:
                 print(f"[{name}] 下載失敗：{e}", file=sys.stderr)
                 return False
 
-    print(f"[{name}] 等待逾時（>{TIMEOUT}s）。", file=sys.stderr)
+    print(f"[{name}] 等待逾時（>{TIMEOUT_PER_TRACK}s）。", file=sys.stderr)
     return False
 
 
