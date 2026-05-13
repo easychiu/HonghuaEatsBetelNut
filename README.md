@@ -7,7 +7,7 @@
 
 ## 執行方式
 
-1. 確認使用 Python 3（內建 tkinter）
+1. 確認使用 Python 3.10+（內建 tkinter）
 2. 在專案根目錄執行：
 
 ```bash

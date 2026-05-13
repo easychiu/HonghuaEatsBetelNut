@@ -7,6 +7,7 @@ class HonghuaGame:
     PUZZLE_SOLUTION = "314"
     REQUIRED_CLUES = 3
     PARTIAL_CLUES_THRESHOLD = 2
+    MAX_CODE_ATTEMPTS = 3
 
     def __init__(self, root: tk.Tk) -> None:
         self.root = root
@@ -16,7 +17,7 @@ class HonghuaGame:
 
         self.inventory: set[str] = set()
         self.clues: dict[str, int] = {}
-        self.code_attempts_left = 3
+        self.code_attempts_left = self.MAX_CODE_ATTEMPTS
 
         self.title_label = tk.Label(
             root,
@@ -69,7 +70,7 @@ class HonghuaGame:
     def show_intro(self) -> None:
         self.inventory.clear()
         self.clues.clear()
-        self.code_attempts_left = 3
+        self.code_attempts_left = self.MAX_CODE_ATTEMPTS
         self.refresh_status()
         self.set_story(
             "深夜的圖書館只剩你與『紅花』。\n"
