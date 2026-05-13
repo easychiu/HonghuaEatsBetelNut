@@ -5,6 +5,8 @@ from tkinter import messagebox
 
 class HonghuaGame:
     PUZZLE_SOLUTION = "314"
+    REQUIRED_CLUES = 3
+    PARTIAL_CLUES_THRESHOLD = 2
 
     def __init__(self, root: tk.Tk) -> None:
         self.root = root
@@ -130,7 +132,7 @@ class HonghuaGame:
         ])
 
     def try_unlock(self) -> None:
-        if len(self.clues) < 3:
+        if len(self.clues) < self.REQUIRED_CLUES:
             messagebox.showinfo("線索不足", "你還沒蒐集完整線索。")
             self.scene_hall()
             return
@@ -175,7 +177,7 @@ class HonghuaGame:
             self.ending_true()
             return
 
-        if len(self.clues) >= 2:
+        if len(self.clues) >= self.PARTIAL_CLUES_THRESHOLD:
             self.ending_normal()
             return
 
