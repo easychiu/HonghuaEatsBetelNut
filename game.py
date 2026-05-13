@@ -3,6 +3,8 @@ from tkinter import messagebox
 
 
 class HonghuaGame:
+    PUZZLE_SOLUTION = "314"
+
     def __init__(self, root: tk.Tk) -> None:
         self.root = root
         self.root.title("紅花吃檳榔：圖書館夜談")
@@ -51,9 +53,15 @@ class HonghuaGame:
             btn.pack(side="left", padx=5, pady=2)
 
     def refresh_status(self) -> None:
-        item_text = "、".join(sorted(self.inventory)) if self.inventory else "無"
-        clue_text = " | ".join(f"{k}:{v}" for k, v in sorted(self.clues.items())) if self.clues else "尚未蒐集"
+        item_text = self._format_inventory()
+        clue_text = self._format_clues()
         self.status_var.set(f"狀態：道具[{item_text}]；線索[{clue_text}]；密碼剩餘嘗試 {self.code_attempts_left} 次")
+
+    def _format_inventory(self) -> str:
+        return "、".join(sorted(self.inventory)) if self.inventory else "無"
+
+    def _format_clues(self) -> str:
+        return " | ".join(f"{k}:{v}" for k, v in sorted(self.clues.items())) if self.clues else "尚未蒐集"
 
     def show_intro(self) -> None:
         self.inventory.clear()
@@ -126,6 +134,10 @@ class HonghuaGame:
             self.scene_hall()
             return
 
+        self._create_unlock_dialog()
+
+    def _create_unlock_dialog(self) -> None:
+
         dialog = tk.Toplevel(self.root)
         dialog.title("輸入三位密碼")
         dialog.geometry("320x150")
@@ -139,7 +151,7 @@ class HonghuaGame:
 
         def submit() -> None:
             code = entry.get().strip()
-            if code == "314":
+            if code == self.PUZZLE_SOLUTION:
                 self.inventory.add("安魂符")
                 self.refresh_status()
                 messagebox.showinfo("解鎖成功", "你取得了『安魂符』。")
