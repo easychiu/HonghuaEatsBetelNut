@@ -471,7 +471,12 @@ class HonghuaGame:
             self.story_text.configure(state="disabled")
 
     def _type_text(self, text: str, idx: int) -> None:
-        if idx > len(text):
+        if idx >= len(text):
+            # Ensure the full text is displayed on the last frame
+            self.story_text.configure(state="normal")
+            self.story_text.delete("1.0", "end")
+            self.story_text.insert("1.0", text)
+            self.story_text.configure(state="disabled")
             self._type_job = None
             return
         self.story_text.configure(state="normal")
