@@ -31,6 +31,7 @@ python game.py
 
 ```bash
 pip install requests
+export MUREKA_API_KEY='你的 Mureka API Key'
 python generate_assets.py
 ```
 

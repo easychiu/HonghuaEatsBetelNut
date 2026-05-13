@@ -16,7 +16,6 @@ import sys
 import time
 import requests
 
-MUREKA_KEY = "op_27fqd8alidss5kntoh3651wtos85jf0g2"
 MUREKA_URL = "https://api.mureka.ai"
 
 _DIR   = os.path.dirname(os.path.abspath(__file__))
@@ -56,8 +55,15 @@ def generate(track: dict) -> bool:
         return True
 
     os.makedirs(ASSETS, exist_ok=True)
+    mureka_key = os.getenv("MUREKA_API_KEY", "").strip()
+    if not mureka_key:
+        print(
+            f"[{name}] 缺少 MUREKA_API_KEY 環境變數，無法呼叫 API。",
+            file=sys.stderr,
+        )
+        return False
     headers = {
-        "Authorization": f"Bearer {MUREKA_KEY}",
+        "Authorization": f"Bearer {mureka_key}",
         "Content-Type": "application/json",
     }
 
