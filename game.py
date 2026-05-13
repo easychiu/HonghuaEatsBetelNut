@@ -1,6 +1,5 @@
 import tkinter as tk
 from collections.abc import Callable
-from secrets import compare_digest
 from tkinter import messagebox
 
 
@@ -154,7 +153,7 @@ class HonghuaGame:
 
         def submit() -> None:
             code = entry.get().strip()
-            if compare_digest(code, self.PUZZLE_SOLUTION):
+            if code == self.PUZZLE_SOLUTION:
                 self.inventory.add("安魂符")
                 self.refresh_status()
                 messagebox.showinfo("解鎖成功", "你取得了『安魂符』。")
