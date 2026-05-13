@@ -1,5 +1,6 @@
 import tkinter as tk
 from collections.abc import Callable
+from secrets import compare_digest
 from tkinter import messagebox
 
 
@@ -20,7 +21,7 @@ class HonghuaGame:
 
         self.title_label = tk.Label(
             root,
-            text="紅花吃檳榔：劇情 + 解謎 Demo",
+            text="紅花吃檳榔：圖書館夜談",
             font=("Arial", 18, "bold"),
             pady=10,
         )
@@ -153,7 +154,7 @@ class HonghuaGame:
 
         def submit() -> None:
             code = entry.get().strip()
-            if code == self.PUZZLE_SOLUTION:
+            if compare_digest(code, self.PUZZLE_SOLUTION):
                 self.inventory.add("安魂符")
                 self.refresh_status()
                 messagebox.showinfo("解鎖成功", "你取得了『安魂符』。")
@@ -169,7 +170,7 @@ class HonghuaGame:
                     messagebox.showwarning("解鎖失敗", f"密碼錯誤，還剩 {self.code_attempts_left} 次。")
 
         tk.Button(dialog, text="確認", command=submit).pack(pady=10)
-        dialog.bind("<Return>", lambda event: submit())
+        dialog.bind("<Return>", lambda _: submit())
 
     def scene_confront(self) -> None:
         self.refresh_status()
