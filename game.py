@@ -155,7 +155,7 @@ class HonghuaGame:
                     messagebox.showwarning("解鎖失敗", f"密碼錯誤，還剩 {self.code_attempts_left} 次。")
 
         tk.Button(dialog, text="確認", command=submit).pack(pady=10)
-        dialog.bind("<Return>", lambda _e: submit())
+        dialog.bind("<Return>", lambda event: submit())
 
     def scene_confront(self) -> None:
         self.refresh_status()
