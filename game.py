@@ -153,7 +153,7 @@ def scene_image(key: str) -> Optional[object]:
 def _load_scene_asset(key: str) -> Optional[object]:
     if not _PIL:
         return None
-    path = SCENE_SOURCE_OVERRIDES.get(key, "")
+    path = SCENE_SOURCE_OVERRIDES.get(key)
     if path and os.path.exists(path):
         img = Image.open(path).convert("RGB")
         if img.size != (IW, IH):

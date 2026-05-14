@@ -178,7 +178,7 @@ def _atmospheric(base_rgb: tuple, lights: list, blur: float = 2.5):
 def build_scene_image(key: str):
     if Image is None:
         return None
-    source = SCENE_SOURCE_OVERRIDES.get(key, "")
+    source = SCENE_SOURCE_OVERRIDES.get(key)
     if source and os.path.exists(source):
         return Image.open(source).convert("RGB").resize(
             (IMAGE_WIDTH, IMAGE_HEIGHT), Image.LANCZOS
