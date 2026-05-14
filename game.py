@@ -29,6 +29,7 @@ except ImportError:
 _DIR      = os.path.dirname(os.path.abspath(__file__))
 INFO_JPG  = os.path.join(_DIR, "info.jpg")
 ASSETS    = os.path.join(_DIR, "assets")
+SCENES    = os.path.join(ASSETS, "scenes")
 BGM_MAIN  = os.path.join(ASSETS, "bgm_main.mp3")
 BGM_END   = os.path.join(ASSETS, "bgm_end.mp3")
 
@@ -134,7 +135,23 @@ def scene_image(key: str) -> Optional[object]:
     return _img_cache[key]
 
 
+def _load_scene_asset(key: str) -> Optional[object]:
+    if not _PIL:
+        return None
+    path = os.path.join(SCENES, f"{key}.png")
+    if not os.path.exists(path):
+        return None
+    img = Image.open(path).convert("RGB")
+    if img.size != (IW, IH):
+        img = img.resize((IW, IH), Image.LANCZOS)
+    return ImageTk.PhotoImage(img)
+
+
 def _build(key: str) -> Optional[object]:
+    prebuilt = _load_scene_asset(key)
+    if prebuilt is not None:
+        return prebuilt
+
     # info.jpg-derived scenes  (darken, tint_rgba, crop_box)
     INFO: dict[str, tuple] = {
         "intro":       (0.58, (30, 0, 0, 80),    None),
