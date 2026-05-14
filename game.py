@@ -16,14 +16,23 @@ from tkinter import messagebox
 try:
     from PIL import Image, ImageDraw, ImageFilter, ImageEnhance, ImageTk
     _PIL = True
+    _RESAMPLING = getattr(Image, "Resampling", None)
+    _LANCZOS    = _RESAMPLING.LANCZOS if _RESAMPLING else Image.LANCZOS  # type: ignore[attr-defined]
 except ImportError:
     _PIL = False
+    _LANCZOS = 1  # unused when _PIL is False
 
 try:
     import pygame as _pygame
     _PYGAME = True
 except ImportError:
     _PYGAME = False
+
+try:
+    from character_animator import CharacterAnimator as _CharacterAnimator
+    _ANIMATOR = True
+except ImportError:
+    _ANIMATOR = False
 
 # ── paths ──────────────────────────────────────────────────────────────────────
 _DIR      = os.path.dirname(os.path.abspath(__file__))
@@ -35,6 +44,44 @@ SCENES    = os.path.join(ASSETS, "scenes")
 BGM_MAIN  = os.path.join(ASSETS, "bgm_main.mp3")
 BGM_END   = os.path.join(ASSETS, "bgm_end.mp3")
 DEFAULT_SCENE_PNG = os.path.join(SCENES, "default.png")
+
+# ── character animation: scene → animator state ────────────────────────────────
+# Only scenes that show a character image (via SCENE_SOURCE_OVERRIDES) are listed.
+_CHAR_ANIM_SCENES: dict[str, str] = {
+    "intro":         "talking",
+    "prologue":      "talking",   # Honghua is actively speaking in the prologue
+    "hall":          "idle",
+    "bookshelves":   "idle",
+    "desk":          "idle",
+    "diary":         "idle",
+    "window":        "idle",
+    "basement":      "talking",
+    "basement_deep": "excited",
+    "confront":      "excited",
+}
+
+# Scenes where Honghua is present and facing the player; her animation state
+# should reflect the current trust level rather than a fixed value.
+_CHAR_ANIM_TRUST_SCENES: frozenset[str] = frozenset({
+    "prologue", "hall", "bookshelves", "desk", "diary", "window", "confront",
+})
+
+_char_pil_cache: dict[str, object] = {}
+
+
+def _get_char_pil(path: str) -> Optional[object]:
+    """Return a cached RGBA PIL Image sized to the canvas for the given path."""
+    if not _PIL:
+        return None
+    if path not in _char_pil_cache:
+        try:
+            img = Image.open(path).convert("RGBA")
+            if img.size != (IW, IH):
+                img = img.resize((IW, IH), _LANCZOS)
+            _char_pil_cache[path] = img
+        except Exception:
+            return None
+    return _char_pil_cache.get(path)
 
 SCENE_SOURCE_OVERRIDES: dict[str, str] = {
     "intro": HONGHUA_IN_ENG_JPG,
@@ -344,12 +391,29 @@ class MusicPlayer:
                 pass
 
 
+class _NullAnimator:
+    """No-op animator used when character_animator is unavailable."""
+
+    def load_image(self, _: object) -> None: ...
+    def set_state(self, _: str) -> None: ...
+    def start(self) -> None: ...
+    def stop(self) -> None: ...
+
+
 # ══════════════════════════════════════════════════════════════════════════════
 #  HonghuaGame
 # ══════════════════════════════════════════════════════════════════════════════
 class HonghuaGame:
     # ── puzzle answers ─────────────────────────────────────────────────────────
     CODE_ANSWER      = "314"
+
+    # ── Honghua click OS lines (cycle on every click) ──────────────────────────
+    # "怎麼點擊都是表現優雅，但旁邊台詞會有主角OS"
+    _HONGHUA_OS_LINES: tuple[str, ...] = (
+        "聽說她會吃檳榔。",
+        "不知道真的假的，好想看看。",
+        "別再看了，再看她也不會吃檳榔給你看。",
+    )
     BOOKSHELF_CORRECT_ORDER = [
         "失蹤案卷",
         "退學檔案",
@@ -385,12 +449,17 @@ class HonghuaGame:
         self.code_tries_left = self.MAX_CODE_TRIES
         self._type_job: Optional[str] = None
         self._current_img: Optional[object] = None
+        self._current_scene: str = ""
         self._image_actions: list[dict[str, object]] = []
         self._hover_action: Optional[int] = None
+        self._honghua_click_count: int = 0
 
         self.music = MusicPlayer()
 
         self._build_ui()
+        self.animator: object = (
+            _CharacterAnimator(self.img_canvas, IW, IH) if _ANIMATOR else _NullAnimator()
+        )
         self.music.play(BGM_MAIN)
         self.show_intro()
 
@@ -477,11 +546,32 @@ class HonghuaGame:
 
     # ── helpers ────────────────────────────────────────────────────────────────
     def _show_image(self, key: str) -> None:
-        img = scene_image(key)
-        self._current_img = img
+        self._current_scene = key
+        self.animator.stop()
         self.img_canvas.delete("all")
         self._image_actions = []
-        self._hover_action = None
+        self._hover_action  = None
+
+        # Use the character animator for scenes that show a character image.
+        anim_state = _CHAR_ANIM_SCENES.get(key)
+        src_path   = SCENE_SOURCE_OVERRIDES.get(key)
+        if anim_state and src_path and _PIL and os.path.exists(src_path):
+            # For scenes where Honghua is present and interacting with the
+            # player, override the static state with a trust-based one so her
+            # expression reflects how she currently feels about the player.
+            if key in _CHAR_ANIM_TRUST_SCENES:
+                anim_state = self._trust_anim_state()
+            base = _get_char_pil(src_path)
+            if base is not None:
+                self.animator.load_image(base)
+                self.animator.set_state(anim_state)
+                self.animator.start()
+                self._current_img = None
+                return
+
+        # Fall back to the static scene image.
+        img = scene_image(key)
+        self._current_img = img
         if img:
             self.img_canvas.create_image(0, 0, anchor="nw", image=img)
         else:
@@ -509,11 +599,14 @@ class HonghuaGame:
                 dash=(6, 3),
                 tags=("hotspot",),
             )
+            # Use a custom hover hint when provided; otherwise fall back to the
+            # default "點擊：{label}" format.
+            hint = action.get("hint", f"點擊：{action['label']}")
             self.img_canvas.create_text(
                 x1 + 8,
                 y1 + 10,
                 anchor="nw",
-                text=f"點擊：{action['label']}",
+                text=hint,
                 fill=C["btn_hl"] if active else C["fg"],
                 font=_f(10, True),
                 tags=("hotspot",),
@@ -616,6 +709,7 @@ class HonghuaGame:
         self.trust = 0
         self._trust_events.clear()
         self.code_tries_left = self.MAX_CODE_TRIES
+        self._honghua_click_count = 0
         self._refresh_status()
 
     def _trust_level(self) -> str:
@@ -627,11 +721,24 @@ class HonghuaGame:
             return "觀望中"
         return "不信任"
 
+    def _trust_anim_state(self) -> str:
+        """Return the animator state string matching the current trust tier."""
+        if self.trust >= self.TRUST_THRESHOLD_SECRET:
+            return "trusted"
+        if self.trust >= self.TRUST_THRESHOLD_TRUE:
+            return "friendly"
+        if self.trust >= self.TRUST_THRESHOLD_OBSERVE:
+            return "peaceful"
+        return "impatient"
+
     def _gain_trust(self, event: str, points: int) -> None:
         if event in self._trust_events:
             return
         self._trust_events.add(event)
         self.trust += points
+        # If Honghua is currently visible, update her expression immediately.
+        if self._current_scene in _CHAR_ANIM_TRUST_SCENES:
+            self.animator.set_state(self._trust_anim_state())
 
     def _format_status_text(
         self,
@@ -645,6 +752,66 @@ class HonghuaGame:
             f"道具:{items} | 物證:{clue_count}/{self.REQUIRED_CLUES} | "
             f"密碼:{tries} | 線索:{lore_n}/{self.REQUIRED_LORE} | 信任:{self.trust}({trust_label})"
         )
+
+    # ── interactive OS helpers ─────────────────────────────────────────────────
+
+    def _append_os(self, text: str) -> None:
+        """Append a protagonist inner-monologue (OS) line to the story box.
+
+        Unlike ``_set_story``, this does *not* clear the existing text or
+        trigger a page navigation — it just appends to whatever is currently
+        visible, giving the feel of a live thought bubble.
+        """
+        if self._type_job:
+            self.root.after_cancel(self._type_job)
+            self._type_job = None
+        self.story_text.configure(state="normal")
+        self.story_text.insert("end", f"\n\n【主角OS】{text}")
+        self.story_text.see("end")
+        self.story_text.configure(state="disabled")
+
+    def _on_honghua_click(self) -> None:
+        """Cycle through the protagonist's inner thoughts when clicking Honghua.
+
+        Honghua herself stays graceful (animation state unchanged); only the
+        story text gains a new OS line.  Lines rotate every 3 clicks.
+        """
+        line = self._HONGHUA_OS_LINES[
+            self._honghua_click_count % len(self._HONGHUA_OS_LINES)
+        ]
+        self._honghua_click_count += 1
+        self._append_os(line)
+
+    def _on_book_regular_click(self) -> None:
+        """Protagonist notices an unremarkable book on the shelf."""
+        self._append_os("就是一本書……")
+
+    def _on_book_bl_click(self) -> None:
+        """Easter-egg: protagonist spots the suspicious title on a spine."""
+        self._append_os(
+            "等等這書名是啥……\n"
+            "《傑克森與伍茲的冬夜》……\n"
+            "居然還有這種一看書名就是BL的書。"
+        )
+
+    def _on_book_clue_click(self) -> None:
+        """Game-relevant clue hidden in an old annual report on the shelf.
+
+        First interaction gives +1 trust (the player is being thorough) and
+        adds the clue to ``lore``; subsequent clicks just remind the player.
+        """
+        if "圖書館年報" not in self.lore:
+            self.lore.add("圖書館年報")
+            self._gain_trust("book_annual", 1)
+            self._refresh_status()
+            self._append_os(
+                "《蔚藍學院圖書館・年度登記冊》……\n"
+                "翻到案發當夜那一頁——\n"
+                "入館紀錄第三欄：T.S.（天王星）　23:14 入館。\n"
+                "【線索】天王星案發當晚確實在場。"
+            )
+        else:
+            self._append_os("（已記下年度登記冊的入館紀錄。）")
 
     # ══════════════════════════════════════════════════════════════════════════
     #  Scenes
@@ -700,6 +867,19 @@ class HonghuaGame:
             ("開始調查圖書館", self.scene_hall),
             ("直接上前與紅花說話", self.scene_confront),
         ])
+        # Prologue: Honghua is front-and-centre — add her click hotspot.
+        # Coordinates are (x1, y1, x2, y2) measured from the top-left corner
+        # of the 460×490 canvas in pixels.  To adjust: open HonghuaReadBook.jpg
+        # in any image editor, hover over the character boundary and read off
+        # the pixel coordinates shown in the status bar.
+        self._set_image_actions([
+            {
+                "label": "紅花",
+                "area": (70, 30, 360, 280),
+                "command": self._on_honghua_click,
+                "hint": "……",
+            },
+        ])
 
     # ── main hall (hub) ───────────────────────────────────────────────────────
     def scene_hall(self) -> None:
@@ -707,10 +887,20 @@ class HonghuaGame:
         self._show_image("hall")
         has_key = "地下室鑰匙" in self.inventory
         basement_hint = "\n（口袋中有一把通往地下密室的鑰匙……）" if has_key else ""
+
+        trust_remarks = {
+            "不信任": "\n紅花的目光像刀，冷冷地釘在你身上。沒有歡迎，沒有客套。",
+            "觀望中": "\n她側過臉，用眼角餘光確認了你的位置——沒有說話，卻也沒有移開視線。",
+            "逐步信任": "\n「……隨便你，」她輕聲說，目光重新落回書頁，但翻頁的動作慢了許多。",
+            "高度信任": "\n「慢慢來，」她輕聲說，挪了挪燭台，讓光線照進了更多的角落。",
+        }
+        trust_remark = trust_remarks.get(self._trust_level(), "")
+
         self._set_story(
             "蔚藍學院圖書館——廢棄兩年的舊址。\n"
             "灰塵、蛛網與腐舊的書香充滿了每一個角落。\n"
-            "然而，燭光仍在搖曳。有人在守著這裡。\n\n"
+            "然而，燭光仍在搖曳。有人在守著這裡。\n"
+            + trust_remark + "\n\n"
             "你掃視四周，注意到幾件不尋常的物品：\n"
             f"一把長約{self.HAMMER_LENGTH_CM}公分的生鏽鎚子、一片乾燥的四葉草，\n"
             "以及一件疊得整齊的牛仔褲——\n"
@@ -720,7 +910,8 @@ class HonghuaGame:
             "而密碼盒就靜靜地立在書架旁。\n\n"
             "請點擊左側場景圖中的互動區域來調查物證與密碼盒；\n"
             "若要切換場景，仍使用下方按鈕。\n"
-            "目前可直接點擊：鎚子・四葉草・牛仔褲・密碼盒"
+            "目前可直接點擊：鎚子・四葉草・牛仔褲・密碼盒\n"
+            "也可點擊書架上的書籍或紅花本人。"
             + basement_hint
         )
         opts: list[tuple[str, Callable]] = [
@@ -734,12 +925,47 @@ class HonghuaGame:
             ("前去面對紅花", self.scene_confront),
         ]
         self._set_options(opts)
-        self._set_image_actions([
-            {"label": "鎚子", "area": (24, 316, 126, 470), "command": self.inspect_hammer},
+        # ── image hotspots ────────────────────────────────────────────────────
+        # All coordinates are (x1, y1, x2, y2) from the top-left of the
+        # 460×490 canvas in pixels.  To calibrate: open HonghuaReadBook.jpg
+        # in an image editor and read pixel coordinates from its status bar.
+        # More-specific (smaller) areas are listed BEFORE the larger Honghua
+        # area so they take priority when both overlap at the same pixel.
+        hall_actions: list[dict[str, object]] = [
+            # ── existing investigation items ─────────────────────────────────
+            {"label": "鎚子",  "area": (24, 316, 126, 470), "command": self.inspect_hammer},
             {"label": "四葉草", "area": (152, 266, 246, 386), "command": self.inspect_clover},
             {"label": "牛仔褲", "area": (286, 316, 426, 468), "command": self.inspect_jeans},
             {"label": "密碼盒", "area": (316, 146, 448, 278), "command": self.try_unlock},
-        ])
+            # ── book hotspots (upper-left bookshelf area) ────────────────────
+            {
+                "label": "書架上的書",
+                "area": (14, 44, 118, 152),
+                "command": self._on_book_regular_click,
+                "hint": "點擊：書架上的書",
+            },
+            {
+                "label": "角落的舊書",
+                "area": (126, 44, 256, 152),
+                "command": self._on_book_bl_click,
+                "hint": "點擊：角落的舊書",
+            },
+            {
+                "label": "封面泛黃的年報",
+                "area": (14, 158, 160, 258),
+                "command": self._on_book_clue_click,
+                "hint": "點擊：封面泛黃的年報",
+            },
+            # ── Honghua (centre of image; listed last so books take priority
+            #    where areas overlap) ──────────────────────────────────────────
+            {
+                "label": "紅花",
+                "area": (70, 30, 310, 260),
+                "command": self._on_honghua_click,
+                "hint": "……",
+            },
+        ]
+        self._set_image_actions(hall_actions)
 
     # ── hammer ────────────────────────────────────────────────────────────────
     def inspect_hammer(self) -> None:
@@ -747,6 +973,12 @@ class HonghuaGame:
         self.clues["鎚子"] = 3
         self._refresh_status()
         self._show_image("book")
+        trust_reaction = {
+            "不信任":  "",
+            "觀望中":  "\n\n（從書架那頭，你聽見翻頁的聲音停了。）",
+            "逐步信任": "\n\n「鎚柄上的刻痕……你注意到了？」\n她的聲音飄過來，比你預期的輕。",
+            "高度信任": "\n\n「那三道刻痕是計數用的，」她說，\n「每隔一年，有人就在那裡刻一道。」",
+        }.get(self._trust_level(), "")
         self._set_story(
             f"書架角落，一把鏽跡斑斑、長約{self.HAMMER_LENGTH_CM}公分的鎚子橫臥於塵埃之中。\n\n"
             f"{self.HAMMER_LENGTH_CM}公分，沉甸甸——這是一件兇器嗎？\n\n"
@@ -756,6 +988,7 @@ class HonghuaGame:
             "鎚柄底端刻著羅馬數字「III」。\n\n"
             "【物證取得】第一碼是 3。\n"
             "【推斷】這把鎚子，極可能是米糕店長遇害的兇器。"
+            + trust_reaction
         )
         self._set_options([
             ("繼續調查", self.scene_hall),
@@ -768,6 +1001,12 @@ class HonghuaGame:
         self.clues["四葉草"] = 1
         self._refresh_status()
         self._show_image("feather")
+        trust_reaction = {
+            "不信任":  "",
+            "觀望中":  "\n\n（你感覺她微微坐直了身子。）",
+            "逐步信任": "\n\n「艾莉卡那個孩子……，」\n她輕聲說，沒有繼續。",
+            "高度信任": "\n\n「她說『順路帶來好運』，」紅花說，\n「但她逃跑時沒帶走這片葉子——好運已經用完了。」",
+        }.get(self._trust_level(), "")
         self._set_story(
             "一片乾燥的四葉草，夾在書架縫隙中，\n"
             "邊緣已泛黃，但保存得出奇完好。\n\n"
@@ -780,6 +1019,7 @@ class HonghuaGame:
             "但案發當晚，她已不知去向。\n\n"
             "【物證取得】第二碼是 1。\n"
             "【推斷】艾莉卡可能是案發現場的目擊者。"
+            + trust_reaction
         )
         self._set_options([
             ("繼續調查", self.scene_hall),
@@ -792,6 +1032,12 @@ class HonghuaGame:
         self.clues["牛仔褲"] = 4
         self._refresh_status()
         self._show_image("box")
+        trust_reaction = {
+            "不信任":  "",
+            "觀望中":  "\n\n（遠處燭光輕輕搖曳。她好像在等你繼續。）",
+            "逐步信任": "\n\n「R.U.……，」她從書架那頭說，\n「他當年離校時，把怨氣也一起打包走了。」",
+            "高度信任": "\n\n「第四排，」她輕聲重複，\n「那是他和米糕第一次正面衝突的地方。\n 你找到正確的線索了。」",
+        }.get(self._trust_level(), "")
         self._set_story(
             "書架底層，一件疊得整整齊齊的牛仔褲。\n\n"
             "標籤上印著「YV」兩個字母——\n"
@@ -806,6 +1052,7 @@ class HonghuaGame:
             "而「第四排」，正是學院劇場的黑市座位……\n\n"
             "【物證取得】第三碼是 4。\n"
             "【推斷】天王星曾在案發前後秘密返回學院。"
+            + trust_reaction
         )
         self._set_options([
             ("繼續調查", self.scene_hall),
@@ -1014,6 +1261,12 @@ class HonghuaGame:
         self.lore.add("紅花案情筆記")
         self._refresh_status()
         self._show_image("diary")
+        trust_reaction = {
+            "不信任":  "\n\n【你感覺到她的目光穿過書架的縫隙——像在確認你是否值得信任。】",
+            "觀望中":  "\n\n【你隱約聽見她從書架另一側輕聲嘆了口氣。】",
+            "逐步信任": "\n\n「那個門，」她從你身後輕聲說，\n「自動上鎖那種感覺——我做夢夢到過好幾次。」",
+            "高度信任": "\n\n「謝謝你讀完了。」\n她走近了一步，燭光映在她臉上，\n你第一次看見她臉上有了不是防備的表情。",
+        }.get(self._trust_level(), "")
         self._set_story(
             "【紅花的案情紀錄 · 第七三頁】\n\n"
             "米糕的死絕非偶然。\n"
@@ -1027,6 +1280,7 @@ class HonghuaGame:
             "等一個不只懂劍，也懂心的人。\n\n"
             "——紅花　謹記\n\n"
             "【人物線索】你了解了紅花所掌握的秘密。"
+            + trust_reaction
         )
         self._set_options([
             ("繼續探索桌面", self.scene_desk),
@@ -1058,6 +1312,12 @@ class HonghuaGame:
         self.lore.add("艾蜜莉亞線索")
         self._refresh_status()
         self._show_image("window")
+        trust_reaction = {
+            "不信任":  "\n\n【她沒有說話。遠處的燭光在風中搖了幾下，又穩住了。】",
+            "觀望中":  "\n\n（你聽見她放下了什麼——是書嗎，還是什麼別的東西？）",
+            "逐步信任": "\n\n「艾蜜莉亞選擇沉默，」她輕聲說，\n「但她留下了這張字條。沉默有時候也是一種陳述。」",
+            "高度信任": "\n\n「那封信是我寫的，」她說，語氣平靜如水，\n「在她消失的那個晚上。我知道她不會回來了。\n 但我希望她知道——有人懂。」",
+        }.get(self._trust_level(), "")
         self._set_story(
             "字條的字跡在燭光下若隱若現：\n\n"
             "「艾蜜莉亞，你知道他做了什麼。\n"
@@ -1070,6 +1330,7 @@ class HonghuaGame:
             "艾蜜莉亞——那個消失的學生聯誼會委員。\n"
             "她當時目睹了什麼，讓她必須逃離這裡？\n\n"
             "【人物線索】你了解了艾蜜莉亞消失的原因。"
+            + trust_reaction
         )
         self._set_options([
             ("返回大廳", self.scene_hall),
