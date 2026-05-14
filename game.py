@@ -29,6 +29,7 @@ except ImportError:
 _DIR      = os.path.dirname(os.path.abspath(__file__))
 INFO_JPG  = os.path.join(_DIR, "info.jpg")
 ASSETS    = os.path.join(_DIR, "assets")
+SCENES    = os.path.join(ASSETS, "scenes")
 BGM_MAIN  = os.path.join(ASSETS, "bgm_main.mp3")
 BGM_END   = os.path.join(ASSETS, "bgm_end.mp3")
 
@@ -134,7 +135,23 @@ def scene_image(key: str) -> Optional[object]:
     return _img_cache[key]
 
 
+def _load_scene_asset(key: str) -> Optional[object]:
+    if not _PIL:
+        return None
+    path = os.path.join(SCENES, f"{key}.png")
+    if not os.path.exists(path):
+        return None
+    img = Image.open(path).convert("RGB")
+    if img.size != (IW, IH):
+        img = img.resize((IW, IH), Image.LANCZOS)
+    return ImageTk.PhotoImage(img)
+
+
 def _build(key: str) -> Optional[object]:
+    prebuilt = _load_scene_asset(key)
+    if prebuilt is not None:
+        return prebuilt
+
     # info.jpg-derived scenes  (darken, tint_rgba, crop_box)
     INFO: dict[str, tuple] = {
         "intro":       (0.58, (30, 0, 0, 80),    None),
@@ -258,9 +275,15 @@ class HonghuaGame:
     CODE_ANSWER      = "314"
     BOOKSHELF_ANSWER = "A"    # first choice = correct
     REQUIRED_CLUES   = 3
+    REQUIRED_LORE    = 3
     PARTIAL_CLUES    = 2
     MAX_CODE_TRIES   = 3
-    WINDOW_TITLE     = "紅花吃檳榔：圖書館夜談 — 深夜完全版"
+    HAMMER_LENGTH_CM = 30
+    TRUST_THRESHOLD_SECRET   = 7  # minimum trust for the secret ending
+    TRUST_THRESHOLD_TRUE     = 4  # minimum trust for the true ending path
+    TRUST_THRESHOLD_ALLIANCE = 6  # minimum trust for the alliance ending
+    TRUST_THRESHOLD_OBSERVE  = 1  # minimum trust to move past outright distrust
+    WINDOW_TITLE     = "紅花吃檳榔：蔚藍學院秘案 - 深夜調查版"
 
     # ── init ───────────────────────────────────────────────────────────────────
     def __init__(self, root: tk.Tk) -> None:
@@ -275,6 +298,8 @@ class HonghuaGame:
         self.inventory: set[str] = set()
         self.clues: dict[str, int] = {}
         self.lore: set[str] = set()
+        self.trust = 0
+        self._trust_events: set[str] = set()
         self.code_tries_left = self.MAX_CODE_TRIES
         self._type_job: Optional[str] = None
         self._current_img: Optional[object] = None
@@ -431,19 +456,46 @@ class HonghuaGame:
 
     def _refresh_status(self) -> None:
         items  = "、".join(sorted(self.inventory)) or "無"
-        clues  = " | ".join(f"{k}:{v}" for k, v in sorted(self.clues.items())) or "尚未蒐集"
         lore_n = len(self.lore)
         tries  = self.code_tries_left
-        self.status_var.set(
-            f"道具：{items}　　線索：{clues}　　密碼剩餘 {tries} 次　　典故：{lore_n}/3"
-        )
+        self.status_var.set(self._format_status_text(items, len(self.clues), tries, lore_n))
 
     def _reset_state(self) -> None:
         self.inventory.clear()
         self.clues.clear()
         self.lore.clear()
+        self.trust = 0
+        self._trust_events.clear()
         self.code_tries_left = self.MAX_CODE_TRIES
         self._refresh_status()
+
+    def _trust_level(self) -> str:
+        if self.trust >= self.TRUST_THRESHOLD_SECRET:
+            return "高度信任"
+        if self.trust >= self.TRUST_THRESHOLD_TRUE:
+            return "逐步信任"
+        if self.trust >= self.TRUST_THRESHOLD_OBSERVE:
+            return "觀望中"
+        return "不信任"
+
+    def _gain_trust(self, event: str, points: int) -> None:
+        if event in self._trust_events:
+            return
+        self._trust_events.add(event)
+        self.trust += points
+
+    def _format_status_text(
+        self,
+        items: str,
+        clue_count: int,
+        tries: int,
+        lore_n: int,
+    ) -> str:
+        trust_label = self._trust_level()
+        return (
+            f"道具:{items} | 物證:{clue_count}/{self.REQUIRED_CLUES} | "
+            f"密碼:{tries} | 線索:{lore_n}/{self.REQUIRED_LORE} | 信任:{self.trust}({trust_label})"
+        )
 
     # ══════════════════════════════════════════════════════════════════════════
     #  Scenes
@@ -454,13 +506,19 @@ class HonghuaGame:
         self._show_image("intro")
         self._set_story(
             "===================================\n"
-            "  紅花吃檳榔：圖書館夜談  深夜完全版\n"
+            "  紅花吃檳榔：蔚藍學院秘案  深夜調查版\n"
             "===================================\n\n"
-            "「紅花綻放之處，便是你的葬身之地。\n"
-            " 惹我？那就用你的血，來餵這口鮮紅。」\n"
+            "17世紀英格蘭。\n\n"
+            "蔚藍學院——曾是英倫最負盛名的貴族學院，\n"
+            "如今大門緊閉，雜草叢生，廢棄整整兩年。\n\n"
+            "兩年前，學院內發生了一場至今未破的謀殺案。\n"
+            "受害者是校內受人愛戴的米糕店長。\n"
+            "真兇至今逍遙法外，學院因此被迫關閉。\n\n"
+            "「紅花綻放之處，是你尋找答案的起點。\n"
+            " 但你能否離開，則是另一回事。」\n"
             "                              ——紅花\n\n"
-            "深夜的圖書館，一盞燭火搖曳於幽暗之中。\n"
-            "傳說中的紅花，就在那裡。",
+            "廢棄圖書館深處，一盞燭火搖曳於幽暗之中。\n"
+            "傳說中的紅花，就在那裡守候。",
             typing=False,
         )
         self._set_options([("進入故事", self.scene_prologue)])
@@ -468,17 +526,26 @@ class HonghuaGame:
     def scene_prologue(self) -> None:
         self._show_image("prologue")
         self._set_story(
-            "你是受雇的調查員，接到一份奇怪的委託：\n"
-            "進入城外那座廢棄圖書館，記錄其中的「異象」。\n\n"
-            "踏入大門，你看見燭光搖曳的書架間，有人端坐其中。\n\n"
-            "銀白色頭髮，水手服，嘴角帶著一抹血色——\n"
-            "她將一片檳榔塞入口中，緩緩抬起眼眸看著你。\n\n"
-            "「終於又有人來了，」她低聲說，\n"
-            "「這座圖書館藏著你想知道的一切。\n"
-            " 但在你找到答案之前——你哪兒也別想去。」\n\n"
-            "你掃視四周：三根紫色燭臺，佈滿灰塵的書架，\n"
-            "古舊的羽毛筆，還有一只神秘的檳榔盒。\n\n"
-            "天亮之前，必須找到出路。"
+            "你——英國皇家警察——踏入了蔚藍學院廢棄的圖書館。\n\n"
+            "這是你的母校。也是你反覆做惡夢的地方。\n\n"
+            "兩年前的那個傍晚，米糕店長倒在這裡。\n"
+            "案件懸而未決，學院就此關閉。\n"
+            "而你，曾是法國海軍，如今兼任英國皇家警察，\n"
+            "今夜隻身來此，要終結這一切。\n\n"
+            "你彎低身子穿過積滿灰塵的門廊——\n"
+            "燭光映照著三個方向的書架，\n"
+            "然後你看見了她。\n\n"
+            "銀白色短髮，筆挺的水手服。\n"
+            "她端坐於正中央的椅子上，\n"
+            "嘴角含著一抹說不清是什麼顏色的紅。\n\n"
+            "「英國皇家警察，」她緩緩開口，\n"
+            "「真是個奇妙的名字——或者說，奇妙的稱號。」\n\n"
+            "「你來這裡是為了什麼，我已經知道了。」\n"
+            "她淡淡地說，「問題是……\n"
+            " 你能找到答案嗎？」\n\n"
+            f"你掃視四周—— 一把長約{self.HAMMER_LENGTH_CM}公分的生鏽鎚子、不知從哪來的四葉草、\n"
+            "一件疊得整齊的牛仔褲，以及一個密碼盒。\n\n"
+            "天亮之前，必須找到真相。"
         )
         self._set_options([
             ("開始調查圖書館", self.scene_hall),
@@ -489,88 +556,107 @@ class HonghuaGame:
     def scene_hall(self) -> None:
         self._refresh_status()
         self._show_image("hall")
-        has_key = "書架鑰匙" in self.inventory
-        basement_hint = "\n（口袋中有一把生鏽的書架鑰匙……）" if has_key else ""
+        has_key = "地下室鑰匙" in self.inventory
+        basement_hint = "\n（口袋中有一把通往地下密室的鑰匙……）" if has_key else ""
         self._set_story(
-            "圖書館大廳。\n"
-            "燭光映照著三個方向的書架，\n"
-            "桌上散落著古書、羽毛筆、以及那只密碼盒。\n"
-            "紅花靜靜坐在遠處，目光如炬，看著你的一舉一動。\n\n"
-            "可以調查的地方：古書・羽毛筆・檳榔盒・書架深處・研究桌・窗邊"
+            "蔚藍學院圖書館——廢棄兩年的舊址。\n"
+            "灰塵、蛛網與腐舊的書香充滿了每一個角落。\n"
+            "然而，燭光仍在搖曳。有人在守著這裡。\n\n"
+            "你掃視四周，注意到幾件不尋常的物品：\n"
+            f"一把長約{self.HAMMER_LENGTH_CM}公分的生鏽鎚子、一片乾燥的四葉草，\n"
+            "以及一件疊得整齊的牛仔褲——\n"
+            "這些東西，不應該出現在廢棄的圖書館裡。\n\n"
+            "書架深處還有謎題，研究桌上有筆記，\n"
+            "窗台上似乎藏著什麼，\n"
+            "而密碼盒就靜靜地立在書架旁。\n\n"
+            "可以調查的地方：鎚子・四葉草・牛仔褲・書架深處・研究桌・窗邊"
             + basement_hint
         )
         opts: list[tuple[str, Callable]] = [
-            ("查看古書", self.inspect_book),
-            ("查看羽毛筆", self.inspect_feather),
-            ("查看檳榔盒", self.inspect_box),
+            ("調查鎚子", self.inspect_hammer),
+            ("調查四葉草", self.inspect_clover),
+            ("調查牛仔褲", self.inspect_jeans),
             ("前往書架深處", self.scene_bookshelves),
             ("前往研究桌", self.scene_desk),
             ("前往窗邊", self.scene_window),
         ]
         if has_key:
-            opts.append(("打開地下室", self.scene_basement))
+            opts.append(("打開地下密室", self.scene_basement))
         opts += [
             ("嘗試解鎖密碼盒", self.try_unlock),
             ("前去面對紅花", self.scene_confront),
         ]
         self._set_options(opts)
 
-    # ── book ──────────────────────────────────────────────────────────────────
-    def inspect_book(self) -> None:
-        self.clues["古書"] = 3
-        self.lore.add("古書典故")
+    # ── hammer ────────────────────────────────────────────────────────────────
+    def inspect_hammer(self) -> None:
+        self._gain_trust("inspect_hammer", 1)
+        self.clues["鎚子"] = 3
         self._refresh_status()
         self._show_image("book")
         self._set_story(
-            "《圓周率秘錄》——書脊上的金字已褪去大半。\n\n"
-            "翻開扉頁，有人用紅墨水寫道：\n"
-            "「答案始於圓，圓始於 3。」\n\n"
-            "書中夾著一張泛黃的紙條：\n"
-            "「紅花曾在此苦讀三年，企圖以數學破解命運之鎖。\n"
-            " 她找到了——卻也因此失去了離開的能力。」\n\n"
-            "【線索取得】第一碼是 3。\n"
-            "【典故】古書記載了紅花與數字命運的淵源。"
+            f"書架角落，一把鏽跡斑斑、長約{self.HAMMER_LENGTH_CM}公分的鎚子橫臥於塵埃之中。\n\n"
+            f"{self.HAMMER_LENGTH_CM}公分，沉甸甸——這是一件兇器嗎？\n\n"
+            "鎚柄上有三道深刻的刻痕，像是刻意留下的記號。\n"
+            "你在案卷中見過這個記號——\n"
+            "案發現場的地面，留下過同樣的痕跡。\n\n"
+            "鎚柄底端刻著羅馬數字「III」。\n\n"
+            "【物證取得】第一碼是 3。\n"
+            "【推斷】這把鎚子，極可能是米糕店長遇害的兇器。"
         )
         self._set_options([
             ("繼續調查", self.scene_hall),
             ("直接面對紅花", self.scene_confront),
         ])
 
-    # ── feather ───────────────────────────────────────────────────────────────
-    def inspect_feather(self) -> None:
-        self.clues["羽毛筆"] = 1
+    # ── four-leaf clover ──────────────────────────────────────────────────────
+    def inspect_clover(self) -> None:
+        self._gain_trust("inspect_clover", 1)
+        self.clues["四葉草"] = 1
         self._refresh_status()
         self._show_image("feather")
         self._set_story(
-            "一根墨汁未乾的白色羽毛筆，\n"
-            "筆尖點著未完成的算式。\n\n"
-            "壓在筆下的字條寫著：\n"
-            "「一筆定心，心正則路正。第二碼藏於此。」\n\n"
-            "你仔細辨認墨漬的形狀——\n"
-            "那是一個未被圈起的數字「1」。\n\n"
-            "【線索取得】第二碼是 1。"
+            "一片乾燥的四葉草，夾在書架縫隙中，\n"
+            "邊緣已泛黃，但保存得出奇完好。\n\n"
+            "四葉草的葉片中央，用細筆寫著一個「壹」字。\n\n"
+            "你記得蔚藍學院有一位出了名幸運的轉學生——\n"
+            "她叫艾莉卡，「幸運的艾莉卡」。\n"
+            "這片四葉草是她的標誌性飾品。\n\n"
+            "她曾在案發前夕造訪學院。\n"
+            "她說……她只是「順路帶來好運」。\n"
+            "但案發當晚，她已不知去向。\n\n"
+            "【物證取得】第二碼是 1。\n"
+            "【推斷】艾莉卡可能是案發現場的目擊者。"
         )
         self._set_options([
             ("繼續調查", self.scene_hall),
             ("直接面對紅花", self.scene_confront),
         ])
 
-    # ── box ───────────────────────────────────────────────────────────────────
-    def inspect_box(self) -> None:
-        self.clues["檳榔盒"] = 4
+    # ── YV jeans ──────────────────────────────────────────────────────────────
+    def inspect_jeans(self) -> None:
+        self._gain_trust("inspect_jeans", 1)
+        self.clues["牛仔褲"] = 4
         self._refresh_status()
         self._show_image("box")
         self._set_story(
-            "金牌正宗檳榔——外包裝的文字已模糊，\n"
-            "但底部用刀刻著四個字：「四季花開」。\n\n"
-            "「四季」——你默數：春夏秋冬，共四季。\n\n"
-            "盒蓋內側還有一行小字：\n"
-            "「此盒由紅花親手封印。欲開者，需知三數之和。」\n\n"
-            "【線索取得】第三碼是 4。"
+            "書架底層，一件疊得整整齊齊的牛仔褲。\n\n"
+            "標籤上印著「YV」兩個字母——\n"
+            "這是英倫近年流行的品牌，\n"
+            "據說只有特定社交圈的人才會穿。\n\n"
+            "褲腿內側縫著手寫的文字：\n"
+            "「R.U. · 第四排 · 入場許可」\n\n"
+            "R.U.——你腦海中浮現一個名字：\n"
+            "天王星（Uranus）。退學生天王星，\n"
+            "曾因家道中落憤恨離校，愛攀關係，\n"
+            "卻也因此對某些人懷恨在心。\n\n"
+            "而「第四排」，正是學院劇場的黑市座位……\n\n"
+            "【物證取得】第三碼是 4。\n"
+            "【推斷】天王星曾在案發前後秘密返回學院。"
         )
         self._set_options([
             ("繼續調查", self.scene_hall),
-            ("嘗試解鎖", self.try_unlock),
+            ("嘗試解鎖密碼盒", self.try_unlock),
         ])
 
     # ── bookshelves area ──────────────────────────────────────────────────────
@@ -579,29 +665,28 @@ class HonghuaGame:
         self._show_image("bookshelves")
         self._set_story(
             "書架深處，光線幾乎不存在。\n\n"
-            "你摸索前行，發現一排陳舊的書架上，\n"
-            "有四本書被刻意排列在同一層：\n\n"
-            "   《晨曦錄》  《暮色卷》  《星辰賦》  《隱月頌》\n\n"
-            "架下有一塊石板，刻著謎語：\n\n"
-            "「太陽初升，書見曙光。\n"
-            " 日落西山，紙墨留香。\n"
-            " 繁星閃耀，筆走龍蛇。\n"
-            " 月隱無蹤，秘密封藏。」\n\n"
-            "石板旁有一個小鎖孔，按照正確的書序才能打開。"
+            "你摸索前行，發現一排特殊的書架上，\n"
+            "擺著四份封存的案件文件夾：\n\n"
+            "   《失蹤案卷》  《退學檔案》  《死亡報告》  《停課公告》\n\n"
+            "架下有一塊石板，刻著說明：\n\n"
+            "「蔚藍學院的終結，並非始於最後那一聲哀鳴。\n"
+            " 按事件發生的時間順序排列，\n"
+            " 方可開啟封印。」\n\n"
+            "石板旁有一個小鎖孔，排列正確才能打開。"
         )
         self._set_options([
-            ("嘗試排列四書（解謎）", self.puzzle_bookshelf),
+            ("嘗試排列四份案卷（解謎）", self.puzzle_bookshelf),
             ("返回大廳", self.scene_hall),
         ])
 
     def puzzle_bookshelf(self) -> None:
-        if "書架鑰匙" in self.inventory:
-            messagebox.showinfo("已解鎖", "書架鑰匙已在你手中。")
+        if "地下室鑰匙" in self.inventory:
+            messagebox.showinfo("已解鎖", "地下密室的鑰匙已在你手中。")
             self.scene_hall()
             return
 
         dialog = tk.Toplevel(self.root)
-        dialog.title("書架謎題——四書排序")
+        dialog.title("案件時間線——事件排序")
         dialog.geometry("520x330")
         dialog.configure(bg=C["bg"])
         dialog.transient(self.root)
@@ -609,7 +694,7 @@ class HonghuaGame:
 
         tk.Label(
             dialog,
-            text="請根據謎語「日升→日落→繁星→月隱」選出正確排列順序：",
+            text="請根據蔚藍學院事件的發生順序，選出正確的時間排列：",
             font=_f(11),
             bg=C["bg"],
             fg=C["fg"],
@@ -617,10 +702,10 @@ class HonghuaGame:
         ).pack(pady=14, padx=14)
 
         choices = [
-            ("A", "晨曦錄 → 暮色卷 → 星辰賦 → 隱月頌（黎明→黃昏→深夜→新月）"),
-            ("B", "隱月頌 → 星辰賦 → 暮色卷 → 晨曦錄（逆序）"),
-            ("C", "暮色卷 → 晨曦錄 → 隱月頌 → 星辰賦（混亂）"),
-            ("D", "星辰賦 → 晨曦錄 → 暮色卷 → 隱月頌（亂序）"),
+            ("A", "失蹤案卷 → 退學檔案 → 死亡報告 → 停課公告（時間正序）"),
+            ("B", "死亡報告 → 退學檔案 → 失蹤案卷 → 停課公告（倒序）"),
+            ("C", "退學檔案 → 失蹤案卷 → 停課公告 → 死亡報告（混亂）"),
+            ("D", "停課公告 → 死亡報告 → 退學檔案 → 失蹤案卷（完全逆序）"),
         ]
         selected = tk.StringVar(value="")
 
@@ -644,12 +729,12 @@ class HonghuaGame:
                 messagebox.showwarning("未選擇", "請選擇一個排列順序。", parent=dialog)
                 return
             if ans == self.BOOKSHELF_ANSWER:
-                self.inventory.add("書架鑰匙")
+                self.inventory.add("地下室鑰匙")
                 self._refresh_status()
                 messagebox.showinfo(
-                    "解謎成功",
-                    "書架底部傳來「喀噠」一聲，\n你取得了一把生鏽的書架鑰匙！\n\n"
-                    "（可用來打開大廳的地下室入口）",
+                    "排序正確",
+                    "書架底部傳來「喀噠」一聲，\n書架後方的牆壁微微滑動——\n\n"
+                    "你取得了通往地下密室的鑰匙！",
                     parent=dialog,
                 )
                 dialog.destroy()
@@ -657,7 +742,7 @@ class HonghuaGame:
             else:
                 messagebox.showerror(
                     "順序錯誤",
-                    "書架紋絲不動……仔細重讀謎語，再試一次。",
+                    "案卷紋絲不動……仔細回想蔚藍學院的歷史，再試一次。",
                     parent=dialog,
                 )
 
@@ -679,33 +764,35 @@ class HonghuaGame:
         self._show_image("desk")
         self._set_story(
             "圖書館一角有張破舊的研究桌。\n\n"
-            "桌面散亂地鋪著筆記與殘破的文件，\n"
+            "桌面散亂地鋪著手繪的案情分析圖，\n"
+            "以及一份份逐漸發黃的筆記與文件。\n"
             "一根快燃盡的蠟燭在紙堆旁顫抖著。\n\n"
-            "桌角有一本合上的日記，\n"
-            "封面上縫著一片乾枯的紅色花瓣。"
+            "桌角有一本合上的筆記本，\n"
+            "封面上縫著水手服的繡章——這是紅花的。"
         )
         self._set_options([
-            ("閱讀日記", self.read_diary),
+            ("閱讀紅花的案情筆記", self.read_case_notes),
             ("返回大廳", self.scene_hall),
         ])
 
-    def read_diary(self) -> None:
-        self.lore.add("日記頁")
+    def read_case_notes(self) -> None:
+        self._gain_trust("read_case_notes", 2)
+        self.lore.add("紅花案情筆記")
         self._refresh_status()
         self._show_image("diary")
         self._set_story(
-            "【日記　第七三頁】\n\n"
-            "今夜我終於明白了那個詛咒的本質。\n"
-            "那本古書所藏的不是知識——是一道枷鎖。\n"
-            "誰解開了它，誰就必須永遠守護它。\n\n"
-            "我以為我能承受。我以為我夠強大。\n\n"
-            "但當我第一次翻開那頁，我的腳步就再也\n"
-            "無法邁出這座圖書館的門檻。\n\n"
-            "若有人能找到「安魂符」，\n"
-            "以它驅散書中的怨念，\n"
-            "或許……或許那道枷鎖就能解開。\n\n"
-            "                              ——紅花　謹記\n\n"
-            "【典故】你理解了紅花被困此處的真相。"
+            "【紅花的案情紀錄 · 第七三頁】\n\n"
+            "米糕的死絕非偶然。\n"
+            "我看過那把鎚子，我看過現場的血跡。\n\n"
+            "那個傍晚，我就在圖書館裡——\n"
+            "我聽見了爭吵聲，聽見了倒地的聲音。\n"
+            "但那道門在案發後自動上鎖，像是某種詛咒。\n\n"
+            "我知道誰在那裡。\n"
+            "但是沒有證據，沒有人會信我的話。\n\n"
+            "我只能留在這裡，等一個真正懂得查案的人。\n"
+            "等一個不只懂劍，也懂心的人。\n\n"
+            "——紅花　謹記\n\n"
+            "【人物線索】你了解了紅花所掌握的秘密。"
         )
         self._set_options([
             ("繼續探索桌面", self.scene_desk),
@@ -719,30 +806,33 @@ class HonghuaGame:
         self._set_story(
             "大廳角落的窗戶，玻璃早已破碎，\n"
             "夜風從缺口灌入，搖晃著窗簾上的蛛網。\n\n"
-            "窗沿上有一張被雨水打濕、幾乎辨認不了的紙條。\n\n"
-            "你努力辨認……"
+            "窗台上的塵埃中，有一個橢圓形的輪廓——\n"
+            "像是曾經放過一個相框。但相框已不在了。\n\n"
+            "只剩下一縷乾燥的玫瑰花瓣，\n"
+            "以及壓在花瓣下的一張折疊字條。"
         )
         self._set_options([
-            ("仔細辨認紙條", self.inspect_window_note),
+            ("仔細辨認字條", self.inspect_window_note),
             ("返回大廳", self.scene_hall),
         ])
 
     def inspect_window_note(self) -> None:
-        self.lore.add("窗邊記憶")
+        self._gain_trust("inspect_window_note", 2)
+        self.lore.add("艾蜜莉亞線索")
         self._refresh_status()
         self._show_image("window")
         self._set_story(
-            "紙條的字跡在燭光下若隱若現：\n\n"
-            "「我恨你們。你們說要救我。\n"
-            " 你們說會回來。\n"
-            " 但沒有人……沒有人回來過。\n\n"
-            " 所以我選擇留下。\n"
-            " 留在這裡，等待一個\n"
-            " 真正能讀懂我的人。\n\n"
-            " 如果你在讀這張紙——\n"
-            " 你就是那個人。\n"
-            " 請……不要讓我白等了。」\n\n"
-            "【典故】你感受到紅花深藏的孤獨與等待。"
+            "字條的字跡在燭光下若隱若現：\n\n"
+            "「艾蜜莉亞，你知道他做了什麼。\n"
+            " 你不得不消失。我明白。\n\n"
+            " 但你留下的線索，\n"
+            " 總有一天會讓真相浮現。\n\n"
+            " 請——好好保重。\n\n"
+            "                    ——你知道是誰的人」\n\n"
+            "字跡……你認出了，這是紅花的筆跡。\n\n"
+            "艾蜜莉亞——那個消失的學生聯誼會委員。\n"
+            "她當時目睹了什麼，讓她必須逃離這裡？\n\n"
+            "【人物線索】你了解了艾蜜莉亞消失的原因。"
         )
         self._set_options([
             ("返回大廳", self.scene_hall),
@@ -753,8 +843,8 @@ class HonghuaGame:
     def try_unlock(self) -> None:
         if len(self.clues) < self.REQUIRED_CLUES:
             messagebox.showinfo(
-                "線索不足",
-                f"你只蒐集了 {len(self.clues)}/{self.REQUIRED_CLUES} 個線索，\n"
+                "物證不足",
+                f"你只找到了 {len(self.clues)}/{self.REQUIRED_CLUES} 件物證，\n"
                 "尚不足以推算密碼。",
             )
             self.scene_hall()
@@ -762,8 +852,8 @@ class HonghuaGame:
         self._create_code_dialog()
 
     def _create_code_dialog(self) -> None:
-        if "安魂符" in self.inventory:
-            messagebox.showinfo("已解鎖", "你已持有安魂符。")
+        if "鎮魂歌譜" in self.inventory:
+            messagebox.showinfo("已解鎖", "你已持有《鎮魂歌譜》。")
             self.scene_hall()
             return
 
@@ -776,7 +866,7 @@ class HonghuaGame:
 
         tk.Label(
             dialog,
-            text="根據三個線索推算密碼，輸入三位數：",
+            text="根據三件物證推算案件密碼，輸入三位數：",
             font=_f(11),
             bg=C["bg"],
             fg=C["fg"],
@@ -798,11 +888,14 @@ class HonghuaGame:
         def submit() -> None:
             code = entry.get().strip()
             if code == self.CODE_ANSWER:
-                self.inventory.add("安魂符")
+                self._gain_trust("unlock_code", 1)
+                self.inventory.add("鎮魂歌譜")
                 self._refresh_status()
                 messagebox.showinfo(
                     "解鎖成功！",
-                    "密碼盒緩緩打開，裡面有一張泛黃的符紙——\n「安魂符」入手！",
+                    "密碼盒緩緩打開，裡面有一份泛黃的音樂手稿——\n"
+                    "《鎮魂歌譜》入手！\n\n"
+                    "這份樂譜似乎對紅花有特殊的意義……",
                     parent=dialog,
                 )
                 dialog.destroy()
@@ -836,19 +929,22 @@ class HonghuaGame:
 
     # ── basement ──────────────────────────────────────────────────────────────
     def scene_basement(self) -> None:
-        if "書架鑰匙" not in self.inventory:
-            messagebox.showinfo("門緊閉", "地下室的門紋絲不動，需要某種鑰匙。")
+        if "地下室鑰匙" not in self.inventory:
+            messagebox.showinfo("門緊閉", "地下密室的門紋絲不動，需要某種鑰匙。")
             self.scene_hall()
             return
         self._refresh_status()
         self._show_image("basement")
         self._set_story(
-            "鑰匙插入門縫，鏽跡斑斑的鎖機發出一聲沉悶的聲響。\n\n"
-            "你踏上狹窄的石階，潮濕與腐敗的氣味撲面而來。\n\n"
-            "燭光在你身後搖曳，前方是一片深不見底的黑暗。\n"
+            "鑰匙插入暗格，書架後方的牆壁緩緩滑動。\n\n"
+            "你踏上狹窄的石階，\n"
+            "潮濕與腐舊紙張的氣味撲面而來。\n\n"
+            "燭光在你身後搖曳，\n"
+            "前方是一片深不見底的黑暗。\n"
             "你繼續下行……\n\n"
-            "數十級石階之後，你看到一扇半開的石門，\n"
-            "門縫中透出隱約的紅光。"
+            "數十級石階之後，\n"
+            "你看到一扇半開的石門，\n"
+            "門縫中透出隱約的燭光。"
         )
         self._set_options([
             ("推開石門探索", self.scene_basement_deep),
@@ -856,23 +952,32 @@ class HonghuaGame:
         ])
 
     def scene_basement_deep(self) -> None:
-        self.lore.add("地下真相")
+        self._gain_trust("scene_basement_deep", 2)
+        self.lore.add("天王星供詞")
         self._refresh_status()
         self._show_image("basement_deep")
         self._set_story(
-            "石室中央，有一個刻滿符文的石台。\n\n"
-            "台上擺著一本血紅色封面的典籍——\n"
-            "《縛靈典·圖書館章》\n\n"
-            "你翻開：\n\n"
-            "「凡觸碰『真理之封』者，\n"
-            " 其靈魂將與封印共存，\n"
-            " 直至有人以『安魂符』和『真情告解』\n"
-            " 同時破解封印，方可得解脫。\n\n"
-            " 安魂符破其形，\n"
-            " 真情告解破其心。」\n\n"
-            "「真情告解」——你想起窗邊的那張紙條，\n"
-            "還有日記裡紅花傾訴的那段孤獨。\n\n"
-            "【典故】你掌握了解開紅花封印的完整方式。"
+            "石室中央，有一個塵封已久的小桌。\n\n"
+            "桌上放著一封未完成的信，\n"
+            "以及一本翻開的日記——\n"
+            "日記的頁面上，你辨認出了熟悉的字體：\n"
+            "「天王星（Uranus）」的親筆。\n\n"
+            "翻開那一頁：\n\n"
+            "「我做了不可挽回的事。\n"
+            " 那一天，我衝進去找米糕，\n"
+            " 是要他還我父親的錢——\n"
+            " 他說沒有，我們起了衝突……\n\n"
+            " 那把鎚子就在旁邊，\n"
+            " 我只是想嚇嚇他。\n"
+            " 我不是故意的。\n"
+            " 上帝作證，我不是。\n\n"
+            " 但艾莉卡在窗外看到了一切。\n"
+            " 她……她沒有說話。她只是跑了。\n"
+            " 艾蜜莉亞也知道了。\n"
+            " 她選擇消失，不是因為膽怯——\n"
+            " 是因為她不知道該告訴誰。」\n\n"
+            "【人物線索】你掌握了天王星的親筆供詞，\n"
+            "以及艾莉卡目睹事件的真相。"
         )
         self._set_options([
             ("帶著這個發現返回大廳", self.scene_hall),
@@ -883,38 +988,81 @@ class HonghuaGame:
         self._refresh_status()
         self._show_image("confront")
 
-        has_talisman = "安魂符" in self.inventory
-        all_lore     = len(self.lore) >= 3
+        has_talisman = "鎮魂歌譜" in self.inventory
+        all_lore     = len(self.lore) >= self.REQUIRED_LORE
         clue_count   = len(self.clues)
+        trust        = self.trust
 
-        if has_talisman and all_lore:
+        if has_talisman and all_lore and trust >= self.TRUST_THRESHOLD_SECRET:
             self._set_story(
-                "你走向紅花，手中握著安魂符。\n\n"
-                "「你……找到了那裡。」她低聲說，\n"
-                "眼神中第一次出現了動搖。\n\n"
-                "「你不只知道那個數字。\n"
-                " 你還知道我的故事……為什麼你要知道？」\n\n"
-                "你注視著她，緩緩說出你在日記和窗台上讀到的一切——\n"
-                "她三年的苦讀，那道詛咒，以及那張「不要讓我白等了」的紙條。\n\n"
-                "紅花怔住了。"
+                "你走向紅花，手中握著那份《鎮魂歌譜》。\n\n"
+                "她的眼神微微一凝——\n"
+                "「你……找到那首曲子了？」\n\n"
+                "然後她看見你帶著的物證，\n"
+                "看見你調查的眼神，\n"
+                "眼中閃過一絲從未有過的動搖。\n\n"
+                "「你不只知道那些數字。\n"
+                " 你還知道……那個晚上發生了什麼。」\n\n"
+                "紅花靜靜地望著你，許久沒有說話。\n"
+                "最後，她緩緩開口：\n"
+                "「說吧。你知道什麼，就說什麼。」"
             )
-            self._set_options([("舉起安魂符，說出真情", self.ending_secret)])
-        elif has_talisman:
+            self._set_options([("展示所有物證，陳述推論", self.ending_secret)])
+        elif has_talisman and all_lore:
             self._set_story(
-                "你走向紅花，手中握著安魂符。\n\n"
+                "你走向紅花，展示了完整物證與供詞。\n\n"
+                "紅花安靜地聽完，點了點頭。\n"
+                "「你的推論成立，證據也完整。」\n\n"
+                "她停頓片刻，視線卻沒有真正落在你身上：\n"
+                "「但我還不確定，能不能把剩下的交給你。」\n\n"
+                "「你破得了案，\n"
+                " 卻還沒真正讓我相信你會善待這個真相。」"
+            )
+            self._set_options([("接受她的決定", self.ending_trust_coldtruth)])
+        elif has_talisman and trust >= self.TRUST_THRESHOLD_TRUE:
+            self._set_story(
+                "你走向紅花，手中握著《鎮魂歌譜》。\n\n"
                 "「你找到了，」她平靜地說，\n"
-                "「解開密碼——找到符紙。」\n\n"
-                "「那就試試吧。」她站起身，\n"
+                "「密碼、歌譜——\n"
+                " 你比大多數人走得更遠。」\n\n"
+                "「那就說說你的推論吧。」\n"
+                "她站起身，\n"
                 "眼中有著你說不清楚的複雜情緒。"
             )
-            self._set_options([("使用安魂符", self.ending_true)])
+            self._set_options([("陳述目前的調查發現", self.ending_true)])
+        elif has_talisman:
+            self._set_story(
+                "你拿出《鎮魂歌譜》與幾項物證。\n\n"
+                "紅花看了一眼，神情冷了下來：\n"
+                "「東西找得到，不代表你值得託付。」\n\n"
+                "「你像是在解一個題目，\n"
+                " 不是在面對一條人命。」\n\n"
+                "她轉身走回書架陰影處：\n"
+                "「今晚到此為止。你先學會『聽』，再來查案。」"
+            )
+            self._set_options([("沉默離開", self.ending_trust_rejected)])
+        elif clue_count >= self.PARTIAL_CLUES and trust >= self.TRUST_THRESHOLD_ALLIANCE:
+            self._set_story(
+                "你走向紅花，帶著尚未完整的物證。\n\n"
+                "她看著你，罕見地先開口：\n"
+                "「證據還不夠，但你查案的方式，我認可。」\n\n"
+                "她從袖中取出一枚舊徽章，放到你手中：\n"
+                "「這是蔚藍學院舊館守備徽章。帶著它，\n"
+                " 明晚你可以直接進地下密室最深處。」\n\n"
+                "「我們不是朋友，」她淡淡說，\n"
+                "「但從現在起，我們是同一邊的人。」"
+            )
+            self._set_options([("收下徽章，約定再查", self.ending_trust_alliance)])
         elif clue_count >= self.PARTIAL_CLUES:
             self._set_story(
-                "你走向紅花，帶著你蒐集到的線索。\n\n"
-                "「線索……你找到了一些，」她說，\n"
+                "你走向紅花，帶著你蒐集到的物證。\n\n"
+                "「物證……你找到了一些，」她說，\n"
                 "「但還不夠。」\n\n"
-                "她嘆了口氣，放下手中的檳榔：\n"
-                "「今晚就到這吧。你不是最差的那種人。」"
+                "她嘆了口氣，放下手邊的書卷：\n"
+                "「今晚就到這吧。\n"
+                " 你不是最糟的那種調查員。\n"
+                " 那把鎚子在書架角落，\n"
+                " 如果你明晚再來，或許我可以多說幾句。」"
             )
             self._set_options([
                 ("接受這個結果", self.ending_normal),
@@ -924,9 +1072,13 @@ class HonghuaGame:
             self._set_story(
                 "你毫無準備地走向紅花。\n\n"
                 "她抬起眼，眼神沒有溫度：\n"
-                "「空手而來。你是在嘲弄我嗎？」\n\n"
-                "一陣檳榔的辛辣氣味彌漫開來——\n"
-                "你感到眩暈，意識開始渙散。"
+                "「空手而來，你是警察，還是觀光客？」\n\n"
+                "「你知道嗎，上一個這樣走進來的人，」\n"
+                "她說，嘴角帶著一絲說不清的弧度，\n"
+                "「現在就埋在學院的某個角落。」\n\n"
+                "「不不不，我是開玩笑的。」她補充道，\n"
+                "「……大概吧。」\n\n"
+                "一陣沉默。"
             )
             self._set_options([("…", self.ending_bad_unprepared)])
 
@@ -935,28 +1087,38 @@ class HonghuaGame:
     # ══════════════════════════════════════════════════════════════════════════
 
     def ending_secret(self) -> None:
-        """Secret ending — all lore + talisman + emotional confession."""
+        """Secret ending — all lore + talisman + full case solved."""
         end_bgm = BGM_END if os.path.exists(BGM_END) else BGM_MAIN
         self.music.switch(end_bgm)
         self._show_image("secret_end")
         self._set_story(
-            "你舉起安魂符，緩緩念出古書上的句子。\n\n"
-            "但同時——你開口說話了：\n\n"
-            "「我看了你的日記。我讀了你窗台上的字條。\n"
-            " 我去了地下室，我知道了一切。\n\n"
-            " 你等了很久了。\n"
-            " 你一個人，在這裡，等了那麼久。\n\n"
-            " 我回來了。」\n\n"
-            "紅花的眼眶紅了。\n\n"
-            "符文從書架上一一熄滅，封印在光芒中消散。\n"
-            "窗外，天邊出現了第一縷晨光。\n\n"
-            "她輕輕落下一滴淚，\n"
-            "然後微笑著，慢慢消失在你眼前——\n"
-            "不是死去，而是……終於自由了。\n\n"
-            "圖書館的燭火一盞一盞熄滅，只剩清晨的陽光。\n\n"
-            "【秘密結局 · 真情告解】\n"
-            "你解開了紅花的詛咒，也解開了她內心的枷鎖。\n"
-            "她等的，就是這一刻。"
+            "你將所有物證一一陳列——\n"
+            "那把刻著「III」的鎚子，艾莉卡的四葉草，\n"
+            "天王星留下的牛仔褲，以及地下室裡的親筆供詞。\n\n"
+            "「天王星，」你緩緩說，\n"
+            "「他因家道中落懷恨，\n"
+            " 那一天衝進來找米糕理論，\n"
+            " 失手——或者說，失控了。\n"
+            " 艾莉卡目睹了一切，嚇到了，逃了。\n"
+            " 艾蜜莉亞知道了，選擇消失。\n"
+            " 而你——」\n\n"
+            "「你也在圖書館裡，」你說，\n"
+            "「你聽見了一切，但你被鎖在裡面。\n"
+            " 兩年了，你守在這裡，等著有人來查清楚。」\n\n"
+            "紅花的眼眶緩緩泛紅。\n\n"
+            "「你……真的都知道了。」她低聲說，\n"
+            "「兩年了。兩年來沒有任何人，\n"
+            " 願意走進這裡，認真去查這件事。」\n\n"
+            "「天王星已經逃到別處了，」她說，\n"
+            "「但你現在有足夠的證據了。\n"
+            " 去吧，英國皇家警察。\n"
+            " 把真相帶回倫敦。」\n\n"
+            "窗外，天邊出現了第一縷晨光。\n"
+            "圖書館的燭火在晨風中搖曳——\n"
+            "不是熄滅，而是向你致意。\n\n"
+            "【秘密結局 · 真相大白】\n"
+            "蔚藍學院的秘案，終於有了答案。\n"
+            "天王星是兇手。紅花，一直在等這一刻。"
         )
         self._set_options([
             ("再玩一次", self.show_intro),
@@ -969,18 +1131,80 @@ class HonghuaGame:
         self.music.switch(end_bgm)
         self._show_image("true_end")
         self._set_story(
-            "你舉起安魂符，低聲念出古書上的字句。\n\n"
-            "符紙燃起紅色的火光，書架上的符文一一暗去。\n\n"
-            "紅花怔怔地望著那片光，\n"
-            "慢慢地，慢慢地，放下了手中的檳榔盒。\n\n"
-            "「三年了，」她低聲說，\n"
-            "「我以為沒有人能找到那個答案。」\n\n"
+            "你將蒐集到的物證一一陳列——\n"
+            "鎚子、四葉草、牛仔褲，以及密碼盒裡的《鎮魂歌譜》。\n\n"
+            "紅花靜靜聆聽，臉上看不出情緒。\n\n"
+            "「不夠，」她最後說，\n"
+            "「你知道案發的跡象，\n"
+            " 但你還不知道完整的真相。\n"
+            " 那個真正的秘密，\n"
+            " 還藏在這圖書館的某處。」\n\n"
             "窗外傳來鳥鳴。天快亮了。\n\n"
-            "封印消散，詛咒解除。\n"
-            "紅花的身影在晨光中逐漸透明。\n\n"
-            "「謝謝你……」她的聲音遠去。\n\n"
-            "【真結局 · 安魂符解封】\n"
-            "你成功化解了圖書館的異變，紅花重獲自由。"
+            "「但你是我見過最認真的調查員了。」\n"
+            "她微微點頭，「下次再來。我會在這裡。」\n\n"
+            "【真結局 · 線索足夠】\n"
+            "案件有了重要進展，但完整的真相尚未揭露。\n"
+            "紅花依然守著圖書館，等待你的下一次造訪。"
+        )
+        self._set_options([
+            ("再玩一次", self.show_intro),
+            ("離開", self.root.destroy),
+        ])
+
+    def ending_trust_alliance(self) -> None:
+        """Affinity ending — high trust without full evidence."""
+        self._show_image("normal_end")
+        self._set_story(
+            "你收下了那枚舊徽章。\n\n"
+            "紅花背對著你，聲音很輕：\n"
+            "「別讓我後悔。」\n\n"
+            "你走出圖書館時，天邊剛泛白。\n"
+            "這一夜你沒有破案，\n"
+            "卻換來了比答案更難得的東西——\n"
+            "紅花的信任。\n\n"
+            "【信任結局 · 共犯不是罪犯】\n"
+            "你與紅花建立了調查同盟。\n"
+            "真相尚未揭曉，但你們將並肩追到最後。"
+        )
+        self._set_options([
+            ("再玩一次", self.show_intro),
+            ("離開", self.root.destroy),
+        ])
+
+    def ending_trust_rejected(self) -> None:
+        """Affinity ending — low trust with talisman."""
+        self._show_image("bad_a")
+        self._set_story(
+            "你站在原地，手中的《鎮魂歌譜》忽然變得沉重。\n\n"
+            "紅花沒有再看你，只說了一句：\n"
+            "「會查案，不等於懂人。」\n\n"
+            "門在你身後緩緩關上。\n"
+            "你帶走了證據，卻帶不走她的配合。\n\n"
+            "【信任結局 · 被拒於門外】\n"
+            "你拿到關鍵物件，卻失去了紅花的信任。\n"
+            "這起案件，變得更難了。"
+        )
+        self._set_options([
+            ("重新開始", self.show_intro),
+            ("離開", self.root.destroy),
+        ])
+
+    def ending_trust_coldtruth(self) -> None:
+        """Affinity ending — case solved but relationship remains distant."""
+        end_bgm = BGM_END if os.path.exists(BGM_END) else BGM_MAIN
+        self.music.switch(end_bgm)
+        self._show_image("true_end")
+        self._set_story(
+            "證據鏈完整，供詞清楚，真相已然浮現。\n\n"
+            "你報出天王星的名字時，\n"
+            "紅花沒有驚訝，也沒有喜悅。\n\n"
+            "「你做到了，」她說，\n"
+            "「但到這裡就好。」\n\n"
+            "她把最後一份檔案留在桌上，\n"
+            "卻沒有把目光留給你。\n\n"
+            "【信任結局 · 冷真相】\n"
+            "你解開了命案，卻沒有解開紅花心中的門。\n"
+            "真相是對的，但你們仍然陌生。"
         )
         self._set_options([
             ("再玩一次", self.show_intro),
@@ -991,19 +1215,22 @@ class HonghuaGame:
         """Normal ending — partial clues."""
         self._show_image("normal_end")
         self._set_story(
-            "你以蒐集到的線索為依據，笨拙地說明著自己的推論。\n\n"
+            "你以蒐集到的物證為依據，\n"
+            "笨拙地說明著自己的推論。\n\n"
             "紅花靜靜地聽完，\n"
             "嘴角浮現一個難以形容的表情——\n"
             "不是滿意，也不是失望。\n\n"
             "「你努力過了，」她說，\n"
             "「今晚就到這裡吧。」\n\n"
-            "她拾起桌上的檳榔，重新咀嚼起來。\n"
-            "圖書館的燭火一如往常地搖曳，沒有任何改變。\n\n"
+            "她抬起眼，看向圖書館的角落——\n"
+            "那裡有一把鏽跡斑斑的鎚子。\n"
+            "「下次來，從那裡開始查。」\n\n"
             "你走出大門，回頭望去，\n"
             "黑暗中還有一點燭光，孤獨地燃著。\n\n"
-            "【普通結局 · 線索不足】\n"
+            "【普通結局 · 物證不足】\n"
             "危機暫緩，但謎團仍在。\n"
-            "紅花依舊守在那座圖書館中，等待著更完整的解答。"
+            "紅花依舊守在廢棄的蔚藍學院圖書館，\n"
+            "等待更完整的調查。"
         )
         self._set_options([
             ("再玩一次", self.show_intro),
@@ -1014,16 +1241,22 @@ class HonghuaGame:
         """Bad ending A — confronted without preparation."""
         self._show_image("bad_a")
         self._set_story(
-            "意識一片混亂。\n\n"
-            "你聽見遠處紅花緩慢說著什麼，\n"
-            "但你已無力分辨。\n\n"
-            "最後一個清晰的畫面，是她嘴角的那抹紅——\n"
-            "不知是唇色，還是那口鮮紅的汁液。\n\n"
-            "「不怕，」她的聲音像從水底傳來，\n"
-            "「你就留下來陪我吧。\n"
-            " 圖書館最不缺的，就是時間。」\n\n"
+            "你毫無準備地走向紅花。\n\n"
+            "一陣沉默，長到有些尷尬。\n\n"
+            "「你知道嗎，」紅花緩緩開口，\n"
+            "「蔚藍學院有個傳說——\n"
+            " 每個空手走進這圖書館的人，\n"
+            " 都會在某個書架後面找到自己的名字。」\n\n"
+            "她停頓了一下。\n\n"
+            "「我是說……刻在木頭上的那種名字。」\n\n"
+            "你感覺到後背一陣發涼。\n\n"
+            "「不過放心，」她補充道，\n"
+            "「我最近沒有空間了。\n"
+            " 你先回去，明天備好物證再來。」\n\n"
             "【壞結局 A · 準備不足】\n"
-            "你失去了主導權，成為了圖書館的另一個守夜人。"
+            "你被請出了圖書館。\n"
+            "紅花依然守在那裡，優雅而神秘，\n"
+            "傳說中的檳榔味，你沒能親身體驗到。"
         )
         self._set_options([
             ("重新開始", self.show_intro),
@@ -1036,14 +1269,20 @@ class HonghuaGame:
         self._set_story(
             "第三次輸入錯誤的瞬間——\n\n"
             "密碼盒劇烈震動。\n"
-            "紅色的霧氣從縫隙中噴湧而出，\n"
-            "帶著一股刺鼻的石灰與檳榔混合的氣味。\n\n"
+            "一股奇異的氣息從縫隙中湧出，\n"
+            "帶著石灰、舊紙與……\n"
+            "隱隱約約的，不知從何而來的檳榔味。\n\n"
             "你試圖後退，卻發現雙腿不聽使喚。\n\n"
-            "紅霧蔓延，燭火一一熄滅。\n"
             "黑暗中，你聽見紅花輕聲說：\n\n"
-            "「猜不出答案的人，就留在這裡成為謎題吧。」\n\n"
+            "「猜不出密碼的人，\n"
+            " 就留在這裡當書的護衛吧。」\n\n"
+            "頓了頓，她補充：\n\n"
+            "「放心，我會好好照顧你的。\n"
+            " ……就像照顧這些書一樣。」\n\n"
             "【壞結局 B · 密碼失敗】\n"
-            "紅霧侵蝕了你的理智。圖書館獲得了新的守護者。"
+            "你成為了圖書館的新住客。\n"
+            "另外——傳說中的檳榔味，\n"
+            "你終於親身體驗到了。"
         )
         self._set_options([
             ("重新開始", self.show_intro),

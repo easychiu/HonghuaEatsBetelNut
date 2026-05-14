@@ -2,24 +2,30 @@
 """
 generate_assets.py — 開發者工具
 ================================
-使用 Mureka.ai API 預先生成遊戲配樂，並儲存至 assets/ 目錄。
-此腳本由開發者在本機執行一次即可，生成的 MP3 可隨遊戲一同發布。
-
-使用方式：
-    python generate_assets.py
-
-環境需求：
-    pip install requests
+可預先生成遊戲配樂與場景圖素材，並儲存至 assets/ 目錄。
 """
+import argparse
 import os
 import sys
 import time
-import requests
+
+try:
+    import requests
+except ImportError:
+    requests = None
+
+try:
+    from PIL import Image, ImageDraw, ImageEnhance, ImageFilter
+except ImportError:
+    Image = ImageDraw = ImageEnhance = ImageFilter = None
 
 MUREKA_URL = "https://api.mureka.ai"
 
 _DIR   = os.path.dirname(os.path.abspath(__file__))
 ASSETS = os.path.join(_DIR, "assets")
+SCENES = os.path.join(ASSETS, "scenes")
+INFO_JPG = os.path.join(_DIR, "info.jpg")
+IMAGE_WIDTH, IMAGE_HEIGHT = 460, 490
 
 TRACKS = [
     {
@@ -44,6 +50,152 @@ TRACKS = [
 POLL_INTERVAL = 3         # seconds between status checks
 TIMEOUT_PER_TRACK = 420   # max seconds to wait per track
 
+INFO_SCENES = {
+    "intro":       (0.58, (30, 0, 0, 80),    None),
+    "prologue":    (0.62, (0, 10, 20, 60),   None),
+    "hall":        (0.52, (0, 15, 35, 70),   None),
+    "book":        (0.68, (50, 30, 0, 90),   (0, 600, 800, 880)),
+    "feather":     (0.65, (20, 35, 10, 85),  (0, 430, 500, 880)),
+    "box":         (0.62, (0, 40, 10, 95),   (550, 580, 1196, 880)),
+    "desk_info":   (0.65, (30, 20, 0, 80),   (0, 450, 950, 880)),
+    "window_info": (0.55, (0, 10, 30, 90),   (0, 0, 500, 500)),
+    "confront":    (0.72, (100, 0, 0, 110),  None),
+    "true_end":    (0.82, (50, 25, 0, 55),   None),
+    "secret_end":  (0.80, (20, 10, 35, 65),  None),
+    "normal_end":  (0.45, (0, 5, 25, 90),    None),
+}
+
+PROC_SCENES = {
+    "bookshelves": (
+        (6, 4, 3),
+        [(70, IMAGE_HEIGHT // 2, 130, (180, 95, 25, 75)),
+         (IMAGE_WIDTH - 60, IMAGE_HEIGHT // 2 + 40, 95, (120, 60, 15, 55))],
+    ),
+    "puzzle_book": (
+        (5, 5, 8),
+        [(IMAGE_WIDTH // 2, IMAGE_HEIGHT // 2, 220, (160, 110, 40, 85)),
+         (IMAGE_WIDTH // 2, IMAGE_HEIGHT // 2, 75, (220, 170, 80, 90))],
+    ),
+    "desk": (
+        (5, 7, 4),
+        [(IMAGE_WIDTH // 2, IMAGE_HEIGHT - 80, 220, (210, 125, 40, 100)),
+         (IMAGE_WIDTH // 2, IMAGE_HEIGHT - 80, 75, (255, 185, 85, 110))],
+    ),
+    "diary": (
+        (11, 7, 4),
+        [(IMAGE_WIDTH // 2, IMAGE_HEIGHT // 2, 185, (200, 155, 75, 90)),
+         (IMAGE_WIDTH // 2 - 70, IMAGE_HEIGHT // 2 + 30, 65, (255, 200, 115, 75))],
+    ),
+    "window": (
+        (4, 7, 12),
+        [(IMAGE_WIDTH // 2, 75, 170, (30, 55, 85, 95)),
+         (IMAGE_WIDTH // 2, 75, 55, (60, 95, 145, 75))],
+    ),
+    "basement": (
+        (3, 3, 7),
+        [(IMAGE_WIDTH // 2, IMAGE_HEIGHT, 210, (18, 25, 58, 80)),
+         (IMAGE_WIDTH // 2, IMAGE_HEIGHT // 2, 38, (38, 48, 88, 55))],
+    ),
+    "basement_deep": (
+        (2, 2, 5),
+        [(IMAGE_WIDTH // 2, IMAGE_HEIGHT // 2, 160, (65, 0, 20, 105)),
+         (IMAGE_WIDTH // 2, IMAGE_HEIGHT // 2, 48, (105, 0, 28, 80))],
+    ),
+    "bad_a": (
+        (5, 0, 0),
+        [(IMAGE_WIDTH // 2, IMAGE_HEIGHT // 2, 190, (155, 0, 0, 120)),
+         (IMAGE_WIDTH // 2, IMAGE_HEIGHT // 2, 58, (200, 20, 20, 95))],
+    ),
+    "bad_b": (
+        (7, 1, 1),
+        [(IMAGE_WIDTH // 2, IMAGE_HEIGHT // 2, 225, (185, 0, 18, 130)),
+         (IMAGE_WIDTH // 4, IMAGE_HEIGHT // 3, 105, (225, 45, 0, 100)),
+         (3 * IMAGE_WIDTH // 4, 2 * IMAGE_HEIGHT // 3, 82, (205, 28, 8, 88))],
+    ),
+}
+
+
+def _tinted(
+    base_img,
+    darken: float = 0.75,
+    tint: tuple = (0, 0, 0, 0),
+    crop: tuple | None = None,
+):
+    img = base_img.copy()
+    if crop:
+        img = img.crop(crop)
+    img = img.resize((IMAGE_WIDTH, IMAGE_HEIGHT), Image.LANCZOS)
+    img = ImageEnhance.Brightness(img.convert("RGB")).enhance(darken).convert("RGBA")
+    if any(tint):
+        overlay = Image.new("RGBA", img.size, tint)
+        img = Image.alpha_composite(img, overlay)
+    return img.convert("RGB")
+
+
+def _atmospheric(base_rgb: tuple, lights: list, blur: float = 2.5):
+    img = Image.new("RGBA", (IMAGE_WIDTH, IMAGE_HEIGHT), base_rgb + (255,))
+    draw = ImageDraw.Draw(img, "RGBA")
+    for cx, cy, r, col in lights:
+        rc, gc, bc, ma = col
+        for rad in range(r, 0, -3):
+            alpha = int(ma * (1 - rad / r) ** 0.65)
+            draw.ellipse([cx - rad, cy - rad, cx + rad, cy + rad],
+                         fill=(rc, gc, bc, alpha))
+    if blur > 0:
+        img = img.filter(ImageFilter.GaussianBlur(blur))
+    vignette = Image.new("RGBA", (IMAGE_WIDTH, IMAGE_HEIGHT), (0, 0, 0, 0))
+    vd = ImageDraw.Draw(vignette, "RGBA")
+    maxr = int((IMAGE_WIDTH ** 2 + IMAGE_HEIGHT ** 2) ** 0.5) // 2 + 40
+    for rad in range(maxr, 0, -5):
+        alpha = int(130 * (rad / maxr) ** 1.5)
+        vd.ellipse(
+            [
+                IMAGE_WIDTH // 2 - rad,
+                IMAGE_HEIGHT // 2 - rad,
+                IMAGE_WIDTH // 2 + rad,
+                IMAGE_HEIGHT // 2 + rad,
+            ],
+            fill=(0, 0, 0, alpha),
+        )
+    return Image.alpha_composite(img, vignette).convert("RGB")
+
+
+def build_scene_image(key: str):
+    if Image is None:
+        return None
+    if key in INFO_SCENES:
+        if not os.path.exists(INFO_JPG):
+            return None
+        base_img = Image.open(INFO_JPG).convert("RGBA")
+        darken, tint, crop = INFO_SCENES[key]
+        return _tinted(base_img, darken, tint, crop)
+    if key in PROC_SCENES:
+        base_rgb, lights = PROC_SCENES[key]
+        return _atmospheric(base_rgb, lights)
+    return None
+
+
+def generate_scene_images(force: bool = False) -> bool:
+    if Image is None:
+        print("缺少 Pillow，無法生成場景圖。請先安裝：pip install Pillow", file=sys.stderr)
+        return False
+
+    os.makedirs(SCENES, exist_ok=True)
+    success = True
+    for key in [*INFO_SCENES.keys(), *PROC_SCENES.keys()]:
+        path = os.path.join(SCENES, f"{key}.png")
+        if os.path.exists(path) and not force:
+            print(f"[scene:{key}] 已存在，跳過。")
+            continue
+        img = build_scene_image(key)
+        if img is None:
+            print(f"[scene:{key}] 生成失敗。", file=sys.stderr)
+            success = False
+            continue
+        img.save(path, "PNG")
+        print(f"[scene:{key}] 已輸出：{path}")
+    return success
+
 
 def generate(track: dict) -> bool:
     name  = track["name"]
@@ -55,6 +207,9 @@ def generate(track: dict) -> bool:
         return True
 
     os.makedirs(ASSETS, exist_ok=True)
+    if requests is None:
+        print(f"[{name}] 缺少 requests，無法呼叫 Mureka API。", file=sys.stderr)
+        return False
     mureka_key = os.getenv("MUREKA_API_KEY", "").strip()
     if not mureka_key:
         print(
@@ -134,18 +289,41 @@ def generate(track: dict) -> bool:
     return False
 
 
+def parse_args() -> argparse.Namespace:
+    parser = argparse.ArgumentParser(description="生成遊戲配樂與場景圖素材")
+    parser.add_argument("--scenes-only", action="store_true", help="只生成場景圖")
+    parser.add_argument("--bgm-only", action="store_true", help="只生成 BGM")
+    parser.add_argument("--force-scenes", action="store_true", help="覆寫既有場景圖")
+    args = parser.parse_args()
+    if args.scenes_only and args.bgm_only:
+        parser.error("--scenes-only 與 --bgm-only 不能同時使用")
+    return args
+
+
 def main() -> None:
-    print("=== 紅花吃檳榔 — 配樂素材生成工具 ===")
+    args = parse_args()
+    print("=== 紅花吃檳榔 — 素材生成工具 ===")
     print(f"輸出目錄：{ASSETS}\n")
 
-    success = all(generate(t) for t in TRACKS)
+    scene_success = True
+    bgm_success = True
+
+    if not args.bgm_only:
+        scene_success = generate_scene_images(force=args.force_scenes)
+
+    if not args.scenes_only:
+        bgm_success = all(generate(t) for t in TRACKS)
 
     print()
-    if success:
-        print("所有配樂生成完成！可將 assets/ 目錄隨遊戲一同發布。")
-    else:
-        print("部分配樂生成失敗，請檢查 API Key 與網路連線。", file=sys.stderr)
-        sys.exit(1)
+    if scene_success and bgm_success:
+        print("素材生成完成！可將 assets/ 目錄隨遊戲一同發布。")
+        return
+
+    if not scene_success:
+        print("場景圖生成失敗，請確認 Pillow 與來源圖片是否存在。", file=sys.stderr)
+    if not bgm_success:
+        print("部分配樂生成失敗，請檢查 requests、API Key 與網路連線。", file=sys.stderr)
+    sys.exit(1)
 
 
 if __name__ == "__main__":
