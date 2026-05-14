@@ -1496,8 +1496,8 @@ class HonghuaGame:
             "傳說中的檳榔味，你沒能親身體驗到。"
         )
         self._set_options([
-            ("重新開始", self.show_intro),
             ("疲憊地離去，沉沉睡去", self.ending_hidden),
+            ("重新開始", self.show_intro),
             ("離開", self.root.destroy),
         ])
 
