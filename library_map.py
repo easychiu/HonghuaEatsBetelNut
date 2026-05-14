@@ -26,7 +26,7 @@ MAP_SCENE_TITLES: dict[str, str] = {
 
 class MapSceneGame(Protocol):
     _map_floor: int
-    inventory: object  # supports __contains__
+    inventory: object  # supports __contains__ (e.g. Collection[str])
 
     def _refresh_status(self) -> None: ...
     def _show_image(self, key: str) -> None: ...
