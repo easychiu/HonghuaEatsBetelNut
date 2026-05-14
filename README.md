@@ -3,8 +3,8 @@
 以 `info.jpg` 哥德式暗黑美學為基礎的視覺小說遊戲 Demo，深化版新增：
 
 - 17世紀英格蘭背景與完整謀殺懸案劇情
-- 哥德式場景插圖（可預先生成至 `assets/scenes/`，並於執行時載入）
-- 哥德式管弦樂 BGM（由 Mureka.ai 預先生成，隨遊戲附帶）
+- 哥德式場景插圖（已隨專案附帶於 `assets/scenes/`）
+- 哥德式管弦樂 BGM（已隨專案附帶）
 - 豐富的多分支劇情與人物線索系統
 - 新增「紅花信任度（非戀愛）」好感度系統
 - 兩種謎題類型與 8 種結局
@@ -20,47 +20,47 @@ pip install Pillow pygame
 ## 執行方式
 
 1. 確認使用 Python 3.10+（內建 tkinter）
-2. 在專案根目錄執行：
+2. 專案已直接附帶場景圖與配樂，不需要另外生成任何圖片或音樂素材
+3. 在專案根目錄執行：
 
 ```bash
 python game.py
 ```
 
-## 開發者：重新生成素材
+## 素材說明
 
-場景圖與配樂檔應隨遊戲一同附帶。  
-若需重新生成素材，執行：
+- 專案已附帶可直接使用的場景圖與配樂：
+  - `assets/scenes/*.png`
+  - `assets/bgm_main.mp3`
+  - `assets/bgm_end.mp3`
+- 一般使用者只需要執行 `python game.py`，**不需要**自行生成任何圖像或音樂。
+
+## 維護者選用：重新生成素材
+
+只有在需要重做內附素材時，才需要使用下列指令。
+
+先安裝：
 
 ```bash
 pip install Pillow requests
-python generate_assets.py
 ```
 
-此腳本會：
-
-- 依 `info.jpg` 的整體哥德式暗色風格，預生成場景圖到 `assets/scenes/`
-- 使用 Mureka.ai API 生成哥德式管弦樂 BGM 到 `assets/`
-
-若只想生成場景圖：
+重新生成場景圖：
 
 ```bash
-python generate_assets.py --scenes-only
+python generate_assets.py --scenes-only --force-scenes
 ```
 
-若只想生成 BGM：
+重新生成 BGM：
+
+> 僅限維護者使用；一般使用者不需要此步驟。
 
 ```bash
 export MUREKA_API_KEY='你的 Mureka API Key'
 python generate_assets.py --bgm-only
 ```
 
-若要重新覆寫場景圖：
-
-```bash
-python generate_assets.py --scenes-only --force-scenes
-```
-
-完成後再將 `assets/` 目錄隨遊戲一同發布即可。
+`generate_assets.py` 會依 `info.jpg` 的整體哥德式暗色風格生成場景圖，並可透過 Mureka.ai API 重做配樂；但這些素材目前都已先行附帶在專案中。
 
 ## 遊戲簡介
 
@@ -97,12 +97,12 @@ python generate_assets.py --scenes-only --force-scenes
 
 - 遊戲會優先讀取 `assets/scenes/*.png`
 - 若場景圖不存在，會回退到程式內建的即時生成版本
-- 目前會預生成開場、大廳、對峙、地下室、各調查節點與結局場景圖
+- 專案已先行附帶開場、大廳、對峙、地下室、各調查節點與結局場景圖
 
 ### 物證與謎題
 
 **三件關鍵物證**（各藏一位密碼數字）：
-1. **陳舊生鏽的鎚子**：鎚柄刻有「III」→ 第一碼
+1. **陳舊生鏽的鎚子**：一把約 **30公分** 的生鏽鎚子，鎚柄刻有「III」→ 第一碼
 2. **幸運四葉草**：葉片上寫著「壹」→ 第二碼
 3. **YV牛仔褲**：內側縫有「第四排」→ 第三碼
 
@@ -130,5 +130,5 @@ python generate_assets.py --scenes-only --force-scenes
 
 ### 配樂
 
-遊戲啟動後直接播放預先生成的配樂素材（`assets/bgm_main.mp3`）。  
+遊戲啟動後直接播放專案內附的配樂素材（`assets/bgm_main.mp3`）。  
 結局場景會淡出切換至 `assets/bgm_end.mp3`。

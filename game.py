@@ -278,6 +278,7 @@ class HonghuaGame:
     REQUIRED_LORE    = 3
     PARTIAL_CLUES    = 2
     MAX_CODE_TRIES   = 3
+    HAMMER_LENGTH_CM = 30
     TRUST_THRESHOLD_SECRET   = 7  # minimum trust for the secret ending
     TRUST_THRESHOLD_TRUE     = 4  # minimum trust for the true ending path
     TRUST_THRESHOLD_ALLIANCE = 6  # minimum trust for the alliance ending
@@ -542,7 +543,7 @@ class HonghuaGame:
             "「你來這裡是為了什麼，我已經知道了。」\n"
             "她淡淡地說，「問題是……\n"
             " 你能找到答案嗎？」\n\n"
-            "你掃視四周——生鏽的鎚子、不知從哪來的四葉草、\n"
+            f"你掃視四周—— 一把長約{self.HAMMER_LENGTH_CM}公分的生鏽鎚子、不知從哪來的四葉草、\n"
             "一件疊得整齊的牛仔褲，以及一個密碼盒。\n\n"
             "天亮之前，必須找到真相。"
         )
@@ -562,7 +563,7 @@ class HonghuaGame:
             "灰塵、蛛網與腐舊的書香充滿了每一個角落。\n"
             "然而，燭光仍在搖曳。有人在守著這裡。\n\n"
             "你掃視四周，注意到幾件不尋常的物品：\n"
-            "一把生鏽的鎚子、一片乾燥的四葉草，\n"
+            f"一把長約{self.HAMMER_LENGTH_CM}公分的生鏽鎚子、一片乾燥的四葉草，\n"
             "以及一件疊得整齊的牛仔褲——\n"
             "這些東西，不應該出現在廢棄的圖書館裡。\n\n"
             "書架深處還有謎題，研究桌上有筆記，\n"
@@ -594,8 +595,8 @@ class HonghuaGame:
         self._refresh_status()
         self._show_image("book")
         self._set_story(
-            "書架角落，一把鏽跡斑斑的鎚子橫臥於塵埃之中。\n\n"
-            "三十公分，沉甸甸——這是一件兇器嗎？\n\n"
+            f"書架角落，一把鏽跡斑斑、長約{self.HAMMER_LENGTH_CM}公分的鎚子橫臥於塵埃之中。\n\n"
+            f"{self.HAMMER_LENGTH_CM}公分，沉甸甸——這是一件兇器嗎？\n\n"
             "鎚柄上有三道深刻的刻痕，像是刻意留下的記號。\n"
             "你在案卷中見過這個記號——\n"
             "案發現場的地面，留下過同樣的痕跡。\n\n"
