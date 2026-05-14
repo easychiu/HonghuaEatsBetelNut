@@ -99,7 +99,7 @@ python generate_assets.py --bgm-only
 - 若場景圖不存在，會先回退到 `assets/scenes/default.png`；若連預設圖都不存在，再使用程式內建的即時生成版本
 - 若有 `HonghuaReadBook.jpg`，`prologue` / `hall` / `bookshelves` / `desk` / `diary` / `window` 會優先使用該圖（紅花在圖書館看書）
 - 若有 `HonghuaInENG.jpg`，`intro` / `confront` / `basement` / `basement_deep` 會優先使用該圖（紅花人物形象）
-- 專案已先行附帶開場、大廳、對峙、地下室、各調查節點與結局場景圖
+- 專案已先行附帶開場、大廳、對峙、地下室、各調查節點與結局場景圖（包含 `assets/scenes/default.png`）
 - 維護者重新生成場景圖時，會一併輸出 `assets/scenes/default.png` 作為紅花主視覺預設場景
 
 ### 物證與謎題
