@@ -6,12 +6,12 @@ HONGHUA_OS_LINES: tuple[str, ...] = (
     "別再看了，再看她也不會吃檳榔給你看。",
 )
 
-BOOKSHELF_CORRECT_ORDER: tuple[str, ...] = (
+BOOKSHELF_CORRECT_ORDER = [
     "失蹤案卷",
     "退學檔案",
     "死亡報告",
     "停課公告",
-)
+]
 
 TRUST_REMARKS = {
     "不信任": "\n紅花的目光像刀，冷冷地釘在你身上。沒有歡迎，沒有客套。",
