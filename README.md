@@ -9,22 +9,40 @@
 - 新增「紅花信任度」好感度系統
 - 兩種謎題類型與 8 種結局
 
-## 安裝依賴
+## 🚀 快速開始（下載即玩）
+
+> **所有場景圖與配樂均已內附，無需自行生成任何素材。**
+
+### 前置需求
+
+- [Python 3.10 或以上版本](https://www.python.org/downloads/)（必要）
+- Pillow + pygame（選用；缺少時以純文字模式執行，無圖像、無音樂）
+
+### Windows 玩家
+
+1. 下載此專案（ZIP 解壓縮 或 `git clone`）
+2. 雙擊 `start_game.bat`
+
+腳本會自動安裝套件並啟動遊戲。
+
+### macOS / Linux 玩家
 
 ```bash
-pip install Pillow pygame
+# 1. 進入專案目錄
+cd HonghuaEatsBetelNut
+
+# 2. 給啟動腳本執行權限（只需一次）
+chmod +x start_game.sh
+
+# 3. 啟動遊戲
+./start_game.sh
 ```
 
-> 若無上述依賴，遊戲仍可以純文字模式執行（無圖像、無音樂）。
-
-## 執行方式
-
-1. 確認使用 Python 3.10+（內建 tkinter）
-2. 專案已直接附帶場景圖與配樂，不需要另外生成任何圖片或音樂素材
-3. 在專案根目錄執行：
+### 手動啟動（任何平台）
 
 ```bash
-python game.py
+pip install -r requirements.txt   # 安裝圖像與音樂套件
+python game.py                     # 啟動遊戲
 ```
 
 ## 素材說明
