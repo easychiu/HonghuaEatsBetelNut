@@ -348,6 +348,12 @@ class MusicPlayer:
 class HonghuaGame:
     # ── puzzle answers ─────────────────────────────────────────────────────────
     CODE_ANSWER      = "314"
+    BOOKSHELF_CORRECT_ORDER = [
+        "失蹤案卷",
+        "退學檔案",
+        "死亡報告",
+        "停課公告",
+    ]
     REQUIRED_CLUES   = 3
     REQUIRED_LORE    = 3
     PARTIAL_CLUES    = 2
@@ -848,12 +854,7 @@ class HonghuaGame:
             wraplength=560,
         ).pack(pady=14, padx=14)
 
-        docs = [
-            "失蹤案卷",
-            "退學檔案",
-            "死亡報告",
-            "停課公告",
-        ]
+        docs = list(self.BOOKSHELF_CORRECT_ORDER)
         selected_order: list[str] = []
         order_var = tk.StringVar(value="目前順序：尚未選擇")
         canvas = tk.Canvas(
@@ -875,7 +876,7 @@ class HonghuaGame:
 
         def redraw_docs() -> None:
             canvas.delete("all")
-            for idx, (doc, box) in enumerate(zip(docs, boxes, strict=False)):
+            for doc, box in zip(docs, boxes, strict=True):
                 x1, y1, x2, y2 = box
                 chosen_idx = selected_order.index(doc) + 1 if doc in selected_order else None
                 outline = C["btn_hl"] if chosen_idx else C["btn_brd"]
@@ -899,7 +900,7 @@ class HonghuaGame:
                     (y1 + y2) // 2,
                     text=doc,
                     fill=C["fg"],
-                    width=180,
+                    width=max(120, x2 - x1 - 40),
                     font=_f(11, True),
                 )
 
@@ -910,12 +911,15 @@ class HonghuaGame:
                 order_var.set("目前順序：尚未選擇")
 
         def select_doc(event: tk.Event) -> None:
-            for doc, box in zip(docs, boxes, strict=False):
+            for doc, box in zip(docs, boxes, strict=True):
                 x1, y1, x2, y2 = box
-                if x1 <= event.x <= x2 and y1 <= event.y <= y2 and doc not in selected_order:
-                    selected_order.append(doc)
-                    update_order_text()
-                    redraw_docs()
+                if x1 <= event.x <= x2 and y1 <= event.y <= y2:
+                    if doc in selected_order:
+                        order_var.set(f"「{doc}」已經選過了，若要重排請按「重新排列」。")
+                    else:
+                        selected_order.append(doc)
+                        update_order_text()
+                        redraw_docs()
                     return
 
         canvas.bind("<Button-1>", select_doc)
@@ -935,7 +939,7 @@ class HonghuaGame:
             if len(selected_order) != len(docs):
                 messagebox.showwarning("尚未完成", "請依序點完四份案卷。", parent=dialog)
                 return
-            if selected_order == docs:
+            if selected_order == self.BOOKSHELF_CORRECT_ORDER:
                 self.inventory.add("地下室鑰匙")
                 self._refresh_status()
                 messagebox.showinfo(
