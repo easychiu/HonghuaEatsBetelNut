@@ -96,10 +96,11 @@ python generate_assets.py --bgm-only
 ### 場景圖素材
 
 - 遊戲會優先讀取 `assets/scenes/*.png`
-- 若場景圖不存在，會回退到程式內建的即時生成版本
+- 若場景圖不存在，會先回退到 `assets/scenes/default.png`；若連預設圖都不存在，再使用程式內建的即時生成版本
 - 若有 `HonghuaReadBook.jpg`，`prologue` / `hall` / `bookshelves` / `desk` / `diary` / `window` 會優先使用該圖（紅花在圖書館看書）
 - 若有 `HonghuaInENG.jpg`，`intro` / `confront` / `basement` / `basement_deep` 會優先使用該圖（紅花人物形象）
 - 專案已先行附帶開場、大廳、對峙、地下室、各調查節點與結局場景圖
+- 維護者重新生成場景圖時，會一併輸出 `assets/scenes/default.png` 作為紅花主視覺預設場景
 
 ### 物證與謎題
 
@@ -109,6 +110,11 @@ python generate_assets.py --bgm-only
 3. **YV牛仔褲**：內側縫有「第四排」→ 第三碼
 
 **案件時間線謎題**：按正確順序排列四份案卷 → 取得地下密室鑰匙
+
+### 操作方式
+
+- 物證與場景內互動改為點擊左側場景圖上的互動區域
+- 離開目前畫面或切換到其他場景時，仍使用右下方按鈕
 
 ### 紅花信任度
 

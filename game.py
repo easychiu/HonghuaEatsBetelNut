@@ -34,6 +34,7 @@ ASSETS    = os.path.join(_DIR, "assets")
 SCENES    = os.path.join(ASSETS, "scenes")
 BGM_MAIN  = os.path.join(ASSETS, "bgm_main.mp3")
 BGM_END   = os.path.join(ASSETS, "bgm_end.mp3")
+DEFAULT_SCENE_PNG = os.path.join(SCENES, "default.png")
 
 SCENE_SOURCE_OVERRIDES: dict[str, str] = {
     "intro": HONGHUA_IN_ENG_JPG,
@@ -46,6 +47,29 @@ SCENE_SOURCE_OVERRIDES: dict[str, str] = {
     "basement": HONGHUA_IN_ENG_JPG,
     "basement_deep": HONGHUA_IN_ENG_JPG,
     "confront": HONGHUA_IN_ENG_JPG,
+}
+
+SCENE_TITLES: dict[str, str] = {
+    "intro": "開場",
+    "prologue": "序章",
+    "hall": "圖書館大廳",
+    "book": "鎚子線索",
+    "feather": "四葉草線索",
+    "box": "牛仔褲線索",
+    "bookshelves": "書架深處",
+    "desk": "研究桌",
+    "diary": "紅花筆記",
+    "window": "窗邊",
+    "window_info": "窗台字條",
+    "desk_info": "案情分析",
+    "basement": "地下密室",
+    "basement_deep": "地下深處",
+    "confront": "面對紅花",
+    "true_end": "真結局",
+    "secret_end": "秘密結局",
+    "normal_end": "普通結局",
+    "bad_a": "壞結局",
+    "bad_b": "密碼失敗",
 }
 
 # ── layout ─────────────────────────────────────────────────────────────────────
@@ -161,11 +185,41 @@ def _load_scene_asset(key: str) -> Optional[object]:
         return ImageTk.PhotoImage(img)
     path = os.path.join(SCENES, f"{key}.png")
     if not os.path.exists(path):
-        return None
+        if os.path.exists(DEFAULT_SCENE_PNG):
+            path = DEFAULT_SCENE_PNG
+        else:
+            return None
     img = Image.open(path).convert("RGB")
     if img.size != (IW, IH):
         img = img.resize((IW, IH), Image.LANCZOS)
     return ImageTk.PhotoImage(img)
+
+
+def _default_scene_image(key: str) -> Optional[object]:
+    if not _PIL:
+        return None
+    source = (
+        SCENE_SOURCE_OVERRIDES.get(key)
+        or (HONGHUA_READ_BOOK_JPG if os.path.exists(HONGHUA_READ_BOOK_JPG) else "")
+        or (HONGHUA_IN_ENG_JPG if os.path.exists(HONGHUA_IN_ENG_JPG) else "")
+        or (INFO_JPG if os.path.exists(INFO_JPG) else "")
+    )
+    if source:
+        img = Image.open(source).convert("RGBA")
+        img = img.resize((IW, IH), Image.LANCZOS)
+        img = ImageEnhance.Brightness(img.convert("RGB")).enhance(0.68).convert("RGBA")
+    else:
+        img = Image.new("RGBA", (IW, IH), (12, 10, 18, 255))
+
+    overlay = Image.new("RGBA", img.size, (16, 8, 14, 92))
+    img = Image.alpha_composite(img, overlay)
+    draw = ImageDraw.Draw(img, "RGBA")
+    draw.rectangle([0, IH - 120, IW, IH], fill=(7, 5, 9, 214))
+    draw.rectangle([18, 18, 138, 48], fill=(85, 20, 28, 180))
+    draw.text((28, 25), "預設場景", fill=(255, 236, 220))
+    draw.text((26, IH - 95), SCENE_TITLES.get(key, "紅花場景"), fill=(230, 214, 192))
+    draw.text((26, IH - 63), "若缺少專屬圖像，先以紅花主視覺代替。", fill=(193, 163, 128))
+    return ImageTk.PhotoImage(img.convert("RGB"))
 
 
 def _build(key: str) -> Optional[object]:
@@ -245,7 +299,7 @@ def _build(key: str) -> Optional[object]:
         base_rgb, lights = PROC[key]
         return _atmospheric(base_rgb, lights)
 
-    return _atmospheric((7, 7, 11), [(IW // 2, IH // 2, 180, (28, 18, 38, 55))])
+    return _default_scene_image(key)
 
 
 class MusicPlayer:
@@ -294,7 +348,6 @@ class MusicPlayer:
 class HonghuaGame:
     # ── puzzle answers ─────────────────────────────────────────────────────────
     CODE_ANSWER      = "314"
-    BOOKSHELF_ANSWER = "A"    # first choice = correct
     REQUIRED_CLUES   = 3
     REQUIRED_LORE    = 3
     PARTIAL_CLUES    = 2
@@ -324,6 +377,8 @@ class HonghuaGame:
         self.code_tries_left = self.MAX_CODE_TRIES
         self._type_job: Optional[str] = None
         self._current_img: Optional[object] = None
+        self._image_actions: list[dict[str, object]] = []
+        self._hover_action: Optional[int] = None
 
         self.music = MusicPlayer()
 
@@ -360,6 +415,9 @@ class HonghuaGame:
             bg=C["panel"], bd=0, highlightthickness=0,
         )
         self.img_canvas.pack()
+        self.img_canvas.bind("<Button-1>", self._on_image_click)
+        self.img_canvas.bind("<Motion>", self._on_image_motion)
+        self.img_canvas.bind("<Leave>", self._on_image_leave)
 
         # right: story + status + buttons
         right = tk.Frame(content, bg=C["bg"])
@@ -414,10 +472,72 @@ class HonghuaGame:
         img = scene_image(key)
         self._current_img = img
         self.img_canvas.delete("all")
+        self._image_actions = []
+        self._hover_action = None
         if img:
             self.img_canvas.create_image(0, 0, anchor="nw", image=img)
         else:
             self.img_canvas.configure(bg=C["panel"])
+
+    def _set_image_actions(self, actions: list[dict[str, object]]) -> None:
+        self._image_actions = actions
+        self._hover_action = None
+        self._render_image_actions()
+
+    def _render_image_actions(self) -> None:
+        self.img_canvas.delete("hotspot")
+        for idx, action in enumerate(self._image_actions):
+            x1, y1, x2, y2 = action["area"]
+            active = idx == self._hover_action
+            outline = C["btn_hl"] if active else C["btn_brd"]
+            width = 3 if active else 2
+            self.img_canvas.create_rectangle(
+                x1,
+                y1,
+                x2,
+                y2,
+                outline=outline,
+                width=width,
+                dash=(6, 3),
+                tags=("hotspot",),
+            )
+            self.img_canvas.create_text(
+                x1 + 8,
+                y1 + 10,
+                anchor="nw",
+                text=f"點擊：{action['label']}",
+                fill=C["btn_hl"] if active else C["fg"],
+                font=_f(10, True),
+                tags=("hotspot",),
+            )
+        self.img_canvas.configure(cursor="hand2" if self._hover_action is not None else "")
+
+    def _image_action_at(self, x: int, y: int) -> Optional[int]:
+        for idx, action in enumerate(self._image_actions):
+            x1, y1, x2, y2 = action["area"]
+            if x1 <= x <= x2 and y1 <= y <= y2:
+                return idx
+        return None
+
+    def _on_image_click(self, event: tk.Event) -> None:
+        idx = self._image_action_at(event.x, event.y)
+        if idx is None:
+            return
+        cb = self._image_actions[idx]["command"]
+        cb()
+
+    def _on_image_motion(self, event: tk.Event) -> None:
+        idx = self._image_action_at(event.x, event.y)
+        if idx == self._hover_action:
+            return
+        self._hover_action = idx
+        self._render_image_actions()
+
+    def _on_image_leave(self, _event: tk.Event) -> None:
+        if self._hover_action is None:
+            return
+        self._hover_action = None
+        self._render_image_actions()
 
     def _set_story(self, text: str, typing: bool = True) -> None:
         if self._type_job:
@@ -590,13 +710,12 @@ class HonghuaGame:
             "書架深處還有謎題，研究桌上有筆記，\n"
             "窗台上似乎藏著什麼，\n"
             "而密碼盒就靜靜地立在書架旁。\n\n"
-            "可以調查的地方：鎚子・四葉草・牛仔褲・書架深處・研究桌・窗邊"
+            "請點擊左側場景圖中的互動區域來調查物證與密碼盒；\n"
+            "若要切換場景，仍使用下方按鈕。\n"
+            "目前可直接點擊：鎚子・四葉草・牛仔褲・密碼盒"
             + basement_hint
         )
         opts: list[tuple[str, Callable]] = [
-            ("調查鎚子", self.inspect_hammer),
-            ("調查四葉草", self.inspect_clover),
-            ("調查牛仔褲", self.inspect_jeans),
             ("前往書架深處", self.scene_bookshelves),
             ("前往研究桌", self.scene_desk),
             ("前往窗邊", self.scene_window),
@@ -604,10 +723,15 @@ class HonghuaGame:
         if has_key:
             opts.append(("打開地下密室", self.scene_basement))
         opts += [
-            ("嘗試解鎖密碼盒", self.try_unlock),
             ("前去面對紅花", self.scene_confront),
         ]
         self._set_options(opts)
+        self._set_image_actions([
+            {"label": "鎚子", "area": (24, 316, 126, 470), "command": self.inspect_hammer},
+            {"label": "四葉草", "area": (152, 266, 246, 386), "command": self.inspect_clover},
+            {"label": "牛仔褲", "area": (286, 316, 426, 468), "command": self.inspect_jeans},
+            {"label": "密碼盒", "area": (316, 146, 448, 278), "command": self.try_unlock},
+        ])
 
     # ── hammer ────────────────────────────────────────────────────────────────
     def inspect_hammer(self) -> None:
@@ -677,7 +801,6 @@ class HonghuaGame:
         )
         self._set_options([
             ("繼續調查", self.scene_hall),
-            ("嘗試解鎖密碼盒", self.try_unlock),
         ])
 
     # ── bookshelves area ──────────────────────────────────────────────────────
@@ -693,11 +816,14 @@ class HonghuaGame:
             "「蔚藍學院的終結，並非始於最後那一聲哀鳴。\n"
             " 按事件發生的時間順序排列，\n"
             " 方可開啟封印。」\n\n"
-            "石板旁有一個小鎖孔，排列正確才能打開。"
+            "石板旁有一個小鎖孔，排列正確才能打開。\n"
+            "請點擊左側書架圖中的案卷區域開始解謎。"
         )
         self._set_options([
-            ("嘗試排列四份案卷（解謎）", self.puzzle_bookshelf),
             ("返回大廳", self.scene_hall),
+        ])
+        self._set_image_actions([
+            {"label": "案卷謎題", "area": (82, 108, 380, 360), "command": self.puzzle_bookshelf},
         ])
 
     def puzzle_bookshelf(self) -> None:
@@ -708,48 +834,108 @@ class HonghuaGame:
 
         dialog = tk.Toplevel(self.root)
         dialog.title("案件時間線——事件排序")
-        dialog.geometry("520x330")
+        dialog.geometry("620x500")
         dialog.configure(bg=C["bg"])
         dialog.transient(self.root)
         dialog.grab_set()
 
         tk.Label(
             dialog,
-            text="請根據蔚藍學院事件的發生順序，選出正確的時間排列：",
+            text="請依事件發生順序，點擊下方四份案卷完成時間線：",
             font=_f(11),
             bg=C["bg"],
             fg=C["fg"],
-            wraplength=480,
+            wraplength=560,
         ).pack(pady=14, padx=14)
 
-        choices = [
-            ("A", "失蹤案卷 → 退學檔案 → 死亡報告 → 停課公告（時間正序）"),
-            ("B", "死亡報告 → 退學檔案 → 失蹤案卷 → 停課公告（倒序）"),
-            ("C", "退學檔案 → 失蹤案卷 → 停課公告 → 死亡報告（混亂）"),
-            ("D", "停課公告 → 死亡報告 → 退學檔案 → 失蹤案卷（完全逆序）"),
+        docs = [
+            "失蹤案卷",
+            "退學檔案",
+            "死亡報告",
+            "停課公告",
         ]
-        selected = tk.StringVar(value="")
+        selected_order: list[str] = []
+        order_var = tk.StringVar(value="目前順序：尚未選擇")
+        canvas = tk.Canvas(
+            dialog,
+            width=560,
+            height=250,
+            bg=C["panel"],
+            highlightbackground=C["border"],
+            highlightthickness=1,
+            bd=0,
+        )
+        canvas.pack(padx=18, pady=(0, 10))
+        boxes = [
+            (30, 24, 260, 108),
+            (300, 24, 530, 108),
+            (30, 142, 260, 226),
+            (300, 142, 530, 226),
+        ]
 
-        for key, label in choices:
-            tk.Radiobutton(
-                dialog,
-                text=f"{key}. {label}",
-                variable=selected,
-                value=key,
-                font=_f(10),
-                bg=C["bg"],
-                fg=C["fg"],
-                selectcolor=C["txt_sel"],
-                activebackground=C["bg"],
-                activeforeground=C["btn_hl"],
-            ).pack(anchor="w", padx=22, pady=3)
+        def redraw_docs() -> None:
+            canvas.delete("all")
+            for idx, (doc, box) in enumerate(zip(docs, boxes, strict=False)):
+                x1, y1, x2, y2 = box
+                chosen_idx = selected_order.index(doc) + 1 if doc in selected_order else None
+                outline = C["btn_hl"] if chosen_idx else C["btn_brd"]
+                canvas.create_rectangle(
+                    x1, y1, x2, y2,
+                    outline=outline,
+                    width=3 if chosen_idx else 2,
+                    fill=C["txt_bg"],
+                )
+                if chosen_idx:
+                    canvas.create_text(
+                        x1 + 18,
+                        y1 + 18,
+                        anchor="nw",
+                        text=f"{chosen_idx}.",
+                        fill=C["btn_hl"],
+                        font=_f(12, True),
+                    )
+                canvas.create_text(
+                    (x1 + x2) // 2,
+                    (y1 + y2) // 2,
+                    text=doc,
+                    fill=C["fg"],
+                    width=180,
+                    font=_f(11, True),
+                )
+
+        def update_order_text() -> None:
+            if selected_order:
+                order_var.set("目前順序：" + " → ".join(selected_order))
+            else:
+                order_var.set("目前順序：尚未選擇")
+
+        def select_doc(event: tk.Event) -> None:
+            for doc, box in zip(docs, boxes, strict=False):
+                x1, y1, x2, y2 = box
+                if x1 <= event.x <= x2 and y1 <= event.y <= y2 and doc not in selected_order:
+                    selected_order.append(doc)
+                    update_order_text()
+                    redraw_docs()
+                    return
+
+        canvas.bind("<Button-1>", select_doc)
+        redraw_docs()
+
+        tk.Label(
+            dialog,
+            textvariable=order_var,
+            font=_f(10),
+            bg=C["bg"],
+            fg=C["fg"],
+            wraplength=560,
+            justify="left",
+        ).pack(fill="x", padx=24)
 
         def confirm() -> None:
-            ans = selected.get()
-            if not ans:
-                messagebox.showwarning("未選擇", "請選擇一個排列順序。", parent=dialog)
+            if len(selected_order) != len(docs):
+                messagebox.showwarning("尚未完成", "請依序點完四份案卷。", parent=dialog)
                 return
-            if ans == self.BOOKSHELF_ANSWER:
+            if selected_order == docs:
                 self.inventory.add("地下室鑰匙")
                 self._refresh_status()
                 messagebox.showinfo(
@@ -767,8 +953,26 @@ class HonghuaGame:
                     parent=dialog,
                 )
 
+        def reset_selection() -> None:
+            selected_order.clear()
+            update_order_text()
+            redraw_docs()
+
+        btns = tk.Frame(dialog, bg=C["bg"])
+        btns.pack(pady=14)
         tk.Button(
-            dialog,
+            btns,
+            text="重新排列",
+            command=reset_selection,
+            font=_f(11, True),
+            bg=C["btn_bg"],
+            fg=C["btn_fg"],
+            relief="flat",
+            padx=12,
+            pady=6,
+        ).pack(side="left", padx=6)
+        tk.Button(
+            btns,
             text="確認排列",
             command=confirm,
             font=_f(11, True),
@@ -777,7 +981,7 @@ class HonghuaGame:
             relief="flat",
             padx=12,
             pady=6,
-        ).pack(pady=14)
+        ).pack(side="left", padx=6)
 
     # ── desk ──────────────────────────────────────────────────────────────────
     def scene_desk(self) -> None:
@@ -789,11 +993,14 @@ class HonghuaGame:
             "以及一份份逐漸發黃的筆記與文件。\n"
             "一根快燃盡的蠟燭在紙堆旁顫抖著。\n\n"
             "桌角有一本合上的筆記本，\n"
-            "封面上縫著水手服的繡章——這是紅花的。"
+            "封面上縫著水手服的繡章——這是紅花的。\n"
+            "請點擊左側桌面圖中的筆記本查看內容。"
         )
         self._set_options([
-            ("閱讀紅花的案情筆記", self.read_case_notes),
             ("返回大廳", self.scene_hall),
+        ])
+        self._set_image_actions([
+            {"label": "紅花的案情筆記", "area": (92, 218, 364, 430), "command": self.read_case_notes},
         ])
 
     def read_case_notes(self) -> None:
@@ -830,11 +1037,14 @@ class HonghuaGame:
             "窗台上的塵埃中，有一個橢圓形的輪廓——\n"
             "像是曾經放過一個相框。但相框已不在了。\n\n"
             "只剩下一縷乾燥的玫瑰花瓣，\n"
-            "以及壓在花瓣下的一張折疊字條。"
+            "以及壓在花瓣下的一張折疊字條。\n"
+            "請點擊左側窗台圖中的字條。"
         )
         self._set_options([
-            ("仔細辨認字條", self.inspect_window_note),
             ("返回大廳", self.scene_hall),
+        ])
+        self._set_image_actions([
+            {"label": "折疊字條", "area": (142, 174, 334, 388), "command": self.inspect_window_note},
         ])
 
     def inspect_window_note(self) -> None:

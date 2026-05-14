@@ -28,6 +28,7 @@ INFO_JPG = os.path.join(_DIR, "info.jpg")
 HONGHUA_READ_BOOK_JPG = os.path.join(_DIR, "HonghuaReadBook.jpg")
 HONGHUA_IN_ENG_JPG = os.path.join(_DIR, "HonghuaInENG.jpg")
 IMAGE_WIDTH, IMAGE_HEIGHT = 460, 490
+DEFAULT_SCENE_PNG = os.path.join(SCENES, "default.png")
 
 TRACKS = [
     {
@@ -129,6 +130,30 @@ SCENE_SOURCE_OVERRIDES = {
     "confront": HONGHUA_IN_ENG_JPG,
 }
 
+SCENE_TITLES = {
+    "default": "紅花預設場景",
+    "intro": "開場",
+    "prologue": "序章",
+    "hall": "圖書館大廳",
+    "book": "鎚子線索",
+    "feather": "四葉草線索",
+    "box": "牛仔褲線索",
+    "bookshelves": "書架深處",
+    "desk": "研究桌",
+    "diary": "紅花筆記",
+    "window": "窗邊",
+    "window_info": "窗台字條",
+    "desk_info": "案情分析",
+    "basement": "地下密室",
+    "basement_deep": "地下深處",
+    "confront": "面對紅花",
+    "true_end": "真結局",
+    "secret_end": "秘密結局",
+    "normal_end": "普通結局",
+    "bad_a": "壞結局",
+    "bad_b": "密碼失敗",
+}
+
 
 def _tinted(
     base_img,
@@ -175,9 +200,39 @@ def _atmospheric(base_rgb: tuple, lights: list, blur: float = 2.5):
     return Image.alpha_composite(img, vignette).convert("RGB")
 
 
+def _default_scene_image(key: str):
+    source = (
+        SCENE_SOURCE_OVERRIDES.get(key)
+        or (HONGHUA_READ_BOOK_JPG if os.path.exists(HONGHUA_READ_BOOK_JPG) else "")
+        or (HONGHUA_IN_ENG_JPG if os.path.exists(HONGHUA_IN_ENG_JPG) else "")
+        or (INFO_JPG if os.path.exists(INFO_JPG) else "")
+    )
+    if source:
+        img = Image.open(source).convert("RGBA").resize(
+            (IMAGE_WIDTH, IMAGE_HEIGHT), Image.LANCZOS
+        )
+        img = ImageEnhance.Brightness(img.convert("RGB")).enhance(0.68).convert("RGBA")
+    else:
+        img = Image.new("RGBA", (IMAGE_WIDTH, IMAGE_HEIGHT), (12, 10, 18, 255))
+
+    img = Image.alpha_composite(
+        img,
+        Image.new("RGBA", img.size, (16, 8, 14, 92)),
+    )
+    draw = ImageDraw.Draw(img, "RGBA")
+    draw.rectangle([0, IMAGE_HEIGHT - 120, IMAGE_WIDTH, IMAGE_HEIGHT], fill=(7, 5, 9, 214))
+    draw.rectangle([18, 18, 138, 48], fill=(85, 20, 28, 180))
+    draw.text((28, 25), "預設場景", fill=(255, 236, 220))
+    draw.text((26, IMAGE_HEIGHT - 95), SCENE_TITLES.get(key, SCENE_TITLES["default"]), fill=(230, 214, 192))
+    draw.text((26, IMAGE_HEIGHT - 63), "若缺少專屬圖像，先以紅花主視覺代替。", fill=(193, 163, 128))
+    return img.convert("RGB")
+
+
 def build_scene_image(key: str):
     if Image is None:
         return None
+    if key == "default":
+        return _default_scene_image(key)
     source = SCENE_SOURCE_OVERRIDES.get(key)
     if source and os.path.exists(source):
         return Image.open(source).convert("RGB").resize(
@@ -192,7 +247,7 @@ def build_scene_image(key: str):
     if key in PROC_SCENES:
         base_rgb, lights = PROC_SCENES[key]
         return _atmospheric(base_rgb, lights)
-    return None
+    return _default_scene_image(key)
 
 
 def generate_scene_images(force: bool = False) -> bool:
@@ -202,7 +257,7 @@ def generate_scene_images(force: bool = False) -> bool:
 
     os.makedirs(SCENES, exist_ok=True)
     success = True
-    for key in [*INFO_SCENES.keys(), *PROC_SCENES.keys()]:
+    for key in ["default", *INFO_SCENES.keys(), *PROC_SCENES.keys()]:
         path = os.path.join(SCENES, f"{key}.png")
         if os.path.exists(path) and not force:
             print(f"[scene:{key}] 已存在，跳過。")
