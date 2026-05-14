@@ -12,13 +12,8 @@ from typing import Optional
 import tkinter as tk
 from tkinter import messagebox
 
+import character_texts as CT
 import story_texts as ST
-from character_texts import (
-    BOOKSHELF_CORRECT_ORDER as BOOKSHELF_ORDER_TEXT,
-    HONGHUA_OS_LINES as HONGHUA_OS_LINES_TEXT,
-    TRUST_REACTIONS,
-    TRUST_REMARKS,
-)
 
 # ── optional dependencies ──────────────────────────────────────────────────────
 try:
@@ -417,8 +412,8 @@ class HonghuaGame:
 
     # ── Honghua click OS lines (cycle on every click) ──────────────────────────
     # "怎麼點擊都是表現優雅，但旁邊台詞會有主角OS"
-    _HONGHUA_OS_LINES = HONGHUA_OS_LINES_TEXT
-    BOOKSHELF_CORRECT_ORDER = BOOKSHELF_ORDER_TEXT
+    _HONGHUA_OS_LINES = CT.HONGHUA_OS_LINES
+    BOOKSHELF_CORRECT_ORDER = CT.BOOKSHELF_CORRECT_ORDER
     REQUIRED_CLUES   = 3
     REQUIRED_LORE    = 3
     PARTIAL_CLUES    = 2
@@ -850,7 +845,7 @@ class HonghuaGame:
         has_key = "地下室鑰匙" in self.inventory
         basement_hint = "\n（口袋中有一把通往地下密室的鑰匙……）" if has_key else ""
 
-        trust_remark = TRUST_REMARKS.get(self._trust_level(), "")
+        trust_remark = CT.TRUST_REMARKS.get(self._trust_level(), "")
         self._set_story(
             ST.HALL.format(
                 trust_remark=trust_remark,
@@ -917,7 +912,7 @@ class HonghuaGame:
         self.clues["鎚子"] = 3
         self._refresh_status()
         self._show_image("book")
-        trust_reaction = TRUST_REACTIONS["inspect_hammer"].get(self._trust_level(), "")
+        trust_reaction = CT.TRUST_REACTIONS["inspect_hammer"].get(self._trust_level(), "")
         self._set_story(
             ST.INSPECT_HAMMER.format(hammer_length=self.HAMMER_LENGTH_CM)
             + trust_reaction
@@ -933,7 +928,7 @@ class HonghuaGame:
         self.clues["四葉草"] = 1
         self._refresh_status()
         self._show_image("feather")
-        trust_reaction = TRUST_REACTIONS["inspect_clover"].get(self._trust_level(), "")
+        trust_reaction = CT.TRUST_REACTIONS["inspect_clover"].get(self._trust_level(), "")
         self._set_story(
             ST.INSPECT_CLOVER
             + trust_reaction
@@ -949,7 +944,7 @@ class HonghuaGame:
         self.clues["牛仔褲"] = 4
         self._refresh_status()
         self._show_image("box")
-        trust_reaction = TRUST_REACTIONS["inspect_jeans"].get(self._trust_level(), "")
+        trust_reaction = CT.TRUST_REACTIONS["inspect_jeans"].get(self._trust_level(), "")
         self._set_story(
             ST.INSPECT_JEANS
             + trust_reaction
@@ -1142,7 +1137,7 @@ class HonghuaGame:
         self.lore.add("紅花案情筆記")
         self._refresh_status()
         self._show_image("diary")
-        trust_reaction = TRUST_REACTIONS["read_case_notes"].get(self._trust_level(), "")
+        trust_reaction = CT.TRUST_REACTIONS["read_case_notes"].get(self._trust_level(), "")
         self._set_story(ST.READ_CASE_NOTES + trust_reaction)
         self._set_options([
             ("繼續探索桌面", self.scene_desk),
@@ -1166,7 +1161,7 @@ class HonghuaGame:
         self.lore.add("艾蜜莉亞線索")
         self._refresh_status()
         self._show_image("window")
-        trust_reaction = TRUST_REACTIONS["inspect_window_note"].get(self._trust_level(), "")
+        trust_reaction = CT.TRUST_REACTIONS["inspect_window_note"].get(self._trust_level(), "")
         self._set_story(ST.INSPECT_WINDOW_NOTE + trust_reaction)
         self._set_options([
             ("返回大廳", self.scene_hall),
