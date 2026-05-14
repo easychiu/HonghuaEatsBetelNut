@@ -49,7 +49,7 @@ DEFAULT_SCENE_PNG = os.path.join(SCENES, "default.png")
 # Only scenes that show a character image (via SCENE_SOURCE_OVERRIDES) are listed.
 _CHAR_ANIM_SCENES: dict[str, str] = {
     "intro":         "talking",
-    "prologue":      "idle",
+    "prologue":      "talking",   # Honghua is actively speaking in the prologue
     "hall":          "idle",
     "bookshelves":   "idle",
     "desk":          "idle",
