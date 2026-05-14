@@ -5,6 +5,7 @@ Enhanced visual novel · scene illustrations · BGM
 from __future__ import annotations
 
 import os
+import random
 import threading
 from collections.abc import Callable
 from typing import Optional
@@ -115,6 +116,10 @@ SCENE_TITLES: dict[str, str] = {
     "basement": "地下密室",
     "basement_deep": "地下深處",
     "confront": "面對紅花",
+    "map_f1": "圖書館地圖・一樓",
+    "map_f2": "圖書館地圖・二樓",
+    "map_f3": "圖書館地圖・三樓",
+    "storage_door": "一樓儲物間",
     "true_end": "真結局",
     "secret_end": "秘密結局",
     "normal_end": "普通結局",
@@ -273,7 +278,60 @@ def _default_scene_image(key: str) -> Optional[object]:
     return ImageTk.PhotoImage(img.convert("RGB"))
 
 
+def _pixel_library_map(floor: int) -> Optional[object]:
+    if not _PIL:
+        return None
+    img = Image.new("RGBA", (IW, IH), (12, 12, 18, 255))
+    draw = ImageDraw.Draw(img, "RGBA")
+    cell = 10
+    for y in range(0, IH, cell):
+        for x in range(0, IW, cell):
+            shade = 18 + ((x // cell + y // cell) % 2) * 10
+            draw.rectangle([x, y, x + cell, y + cell], fill=(shade, shade, shade + 8, 255))
+
+    draw.rectangle([30, 20, IW - 30, IH - 20], outline=(220, 180, 120, 255), width=4)
+    draw.rectangle([70, 60, IW - 70, IH - 60], outline=(130, 190, 255, 255), width=3)
+    draw.rectangle([150, 150, IW - 150, IH - 150], fill=(30, 38, 58, 255), outline=(100, 140, 220, 255), width=3)
+    draw.text((170, 220), "中央挑空", fill=(220, 230, 255, 255))
+
+    draw.rectangle([90, 90, IW - 90, 125], fill=(126, 95, 52, 255))
+    draw.rectangle([90, IH - 125, IW - 90, IH - 90], fill=(126, 95, 52, 255))
+    draw.rectangle([90, 130, 125, IH - 130], fill=(126, 95, 52, 255))
+    draw.rectangle([IW - 125, 130, IW - 90, IH - 130], fill=(126, 95, 52, 255))
+
+    room_color = (66, 82, 110, 255)
+    room_outline = (160, 196, 255, 255)
+    rooms = [
+        (36, 36, 126, 106, "房間A"),
+        (334, 36, 424, 106, "房間B"),
+        (36, 384, 126, 454, "房間C"),
+        (334, 384, 424, 454, "會議1"),
+        (334, 288, 424, 358, "會議2"),
+    ]
+    for x1, y1, x2, y2, label in rooms:
+        draw.rectangle([x1, y1, x2, y2], fill=room_color, outline=room_outline, width=2)
+        draw.text((x1 + 8, y1 + 24), label, fill=(230, 240, 255, 255))
+
+    if floor == 1:
+        draw.rectangle([36, 288, 126, 358], fill=(132, 40, 45, 255), outline=(255, 140, 130, 255), width=3)
+        draw.text((42, 314), "儲物間", fill=(255, 220, 220, 255))
+    if floor == 3:
+        draw.rectangle([168, 24, 292, 84], fill=(42, 108, 88, 255), outline=(146, 255, 212, 255), width=3)
+        draw.text((178, 48), "管理室(紅花)", fill=(220, 255, 240, 255))
+
+    draw.rectangle([0, 0, IW, 28], fill=(48, 16, 28, 220))
+    draw.text((10, 6), f"像素上帝視角地圖・第{floor}層", fill=(255, 220, 190, 255))
+    return ImageTk.PhotoImage(img.convert("RGB"))
+
+
 def _build(key: str) -> Optional[object]:
+    if key == "map_f1":
+        return _pixel_library_map(1)
+    if key == "map_f2":
+        return _pixel_library_map(2)
+    if key == "map_f3":
+        return _pixel_library_map(3)
+
     prebuilt = _load_scene_asset(key)
     if prebuilt is not None:
         return prebuilt
@@ -424,6 +482,7 @@ class HonghuaGame:
     TRUST_THRESHOLD_ALLIANCE = 6  # minimum trust for the alliance ending
     TRUST_THRESHOLD_OBSERVE  = 1  # minimum trust to move past outright distrust
     WINDOW_TITLE     = "紅花吃檳榔：蔚藍學院秘案 - 深夜調查版"
+    STORAGE_AMBUSH_CHANCE = 0.45
 
     # ── init ───────────────────────────────────────────────────────────────────
     def __init__(self, root: tk.Tk) -> None:
@@ -447,6 +506,7 @@ class HonghuaGame:
         self._image_actions: list[dict[str, object]] = []
         self._hover_action: Optional[int] = None
         self._honghua_click_count: int = 0
+        self._map_floor: int = 3
 
         self.music = MusicPlayer()
 
@@ -704,6 +764,7 @@ class HonghuaGame:
         self._trust_events.clear()
         self.code_tries_left = self.MAX_CODE_TRIES
         self._honghua_click_count = 0
+        self._map_floor = 3
         self._refresh_status()
 
     def _trust_level(self) -> str:
@@ -821,7 +882,8 @@ class HonghuaGame:
         self._show_image("prologue")
         self._set_story(ST.PROLOGUE.format(hammer_length=self.HAMMER_LENGTH_CM))
         self._set_options([
-            ("開始調查圖書館", self.scene_hall),
+            ("打開上帝視角地圖", self.scene_map_floor3),
+            ("直接前往管理室外調查", self.scene_hall),
             ("直接上前與紅花說話", self.scene_confront),
         ])
         # Prologue: Honghua is front-and-centre — add her click hotspot.
@@ -854,6 +916,7 @@ class HonghuaGame:
             )
         )
         opts: list[tuple[str, Callable]] = [
+            ("回到上帝視角地圖", self.scene_map_floor3),
             ("前往書架深處", self.scene_bookshelves),
             ("前往研究桌", self.scene_desk),
             ("前往窗邊", self.scene_window),
@@ -905,6 +968,88 @@ class HonghuaGame:
             },
         ]
         self._set_image_actions(hall_actions)
+
+    def scene_map_floor1(self) -> None:
+        self.scene_library_map(1)
+
+    def scene_map_floor2(self) -> None:
+        self.scene_library_map(2)
+
+    def scene_map_floor3(self) -> None:
+        self.scene_library_map(3)
+
+    def scene_library_map(self, floor: int) -> None:
+        self._refresh_status()
+        self._map_floor = max(1, min(3, floor))
+        self._show_image(f"map_f{self._map_floor}")
+        map_texts = {
+            1: ST.MAP_FLOOR_1,
+            2: ST.MAP_FLOOR_2,
+            3: ST.MAP_FLOOR_3,
+        }
+        self._set_story(map_texts[self._map_floor])
+
+        opts: list[tuple[str, Callable]] = [
+            ("查看一樓", self.scene_map_floor1),
+            ("查看二樓", self.scene_map_floor2),
+            ("查看三樓", self.scene_map_floor3),
+        ]
+        if self._map_floor == 1:
+            opts.extend([
+                ("前往一樓儲物間門口", self.scene_storage_door),
+                ("前往書架深處", self.scene_bookshelves),
+            ])
+        elif self._map_floor == 2:
+            opts.extend([
+                ("前往二樓研究桌區", self.scene_desk),
+                ("前往二樓窗邊區", self.scene_window),
+            ])
+        else:
+            opts.extend([
+                ("前往三樓管理室外調查", self.scene_hall),
+                ("直接進管理室找紅花", self.scene_confront),
+            ])
+        self._set_options(opts)
+        self._set_image_actions([
+            {"label": "一樓", "area": (20, 420, 130, 478), "command": self.scene_map_floor1},
+            {"label": "二樓", "area": (170, 420, 280, 478), "command": self.scene_map_floor2},
+            {"label": "三樓", "area": (320, 420, 430, 478), "command": self.scene_map_floor3},
+            {
+                "label": "儲物間警戒",
+                "area": (36, 288, 126, 358),
+                "command": self.scene_storage_door if self._map_floor == 1 else self.scene_map_floor1,
+            },
+            {
+                "label": "管理室",
+                "area": (168, 24, 292, 84),
+                "command": self.scene_hall if self._map_floor == 3 else self.scene_map_floor3,
+            },
+        ])
+
+    def scene_storage_door(self) -> None:
+        self._refresh_status()
+        self._show_image("storage_door")
+        self._set_story(ST.SCENE_STORAGE_DOOR)
+        self._set_options([
+            ("背對儲物間檢查中庭", self.check_storage_ambush),
+            ("保持警戒，返回一樓地圖", self.scene_map_floor1),
+            ("改走三樓管理室", self.scene_map_floor3),
+        ])
+        self._set_image_actions([
+            {"label": "冒險背對", "area": (170, 190, 292, 280), "command": self.check_storage_ambush},
+            {"label": "撤回地圖", "area": (20, 420, 180, 478), "command": self.scene_map_floor1},
+        ])
+
+    def check_storage_ambush(self) -> None:
+        if random.random() < self.STORAGE_AMBUSH_CHANCE:
+            self.ending_storage_ambush()
+            return
+        self._show_image("storage_door")
+        self._set_story(ST.STORAGE_DOOR_SAFE)
+        self._set_options([
+            ("返回一樓地圖", self.scene_map_floor1),
+            ("改往三樓管理室", self.scene_map_floor3),
+        ])
 
     # ── hammer ────────────────────────────────────────────────────────────────
     def inspect_hammer(self) -> None:
@@ -1393,6 +1538,14 @@ class HonghuaGame:
         """Bad ending B — too many code failures."""
         self._show_image("bad_b")
         self._set_story(ST.ENDING_BAD_CODEFAIL)
+        self._set_options([
+            ("重新開始", self.show_intro),
+            ("離開", self.root.destroy),
+        ])
+
+    def ending_storage_ambush(self) -> None:
+        self._show_image("bad_a")
+        self._set_story(ST.ENDING_STORAGE_AMBUSH)
         self._set_options([
             ("重新開始", self.show_intro),
             ("離開", self.root.destroy),
