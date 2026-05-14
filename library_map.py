@@ -26,6 +26,7 @@ MAP_SCENE_TITLES: dict[str, str] = {
 
 class MapSceneGame(Protocol):
     _map_floor: int
+    inventory: object  # supports __contains__
 
     def _refresh_status(self) -> None: ...
     def _show_image(self, key: str) -> None: ...
@@ -39,6 +40,7 @@ class MapSceneGame(Protocol):
     def scene_desk(self) -> None: ...
     def scene_window(self) -> None: ...
     def scene_hall(self) -> None: ...
+    def scene_basement(self) -> None: ...
     def scene_confront(self) -> None: ...
 
 
@@ -65,9 +67,12 @@ def _pixel_library_map(floor: int, iw: int, ih: int) -> Optional[MapImage]:
 
     room_color = (66, 82, 110, 255)
     room_outline = (160, 196, 255, 255)
+    # Per-floor room labels for top-left and top-right rooms
+    _top_left_label  = {1: "房間A", 2: "研究桌", 3: "房間A"}
+    _top_right_label = {1: "房間B", 2: "窗邊",   3: "房間B"}
     rooms = [
-        (36, 36, 126, 106, "房間A"),
-        (334, 36, 424, 106, "房間B"),
+        (36, 36, 126, 106, _top_left_label.get(floor, "房間A")),
+        (334, 36, 424, 106, _top_right_label.get(floor, "房間B")),
         (36, 384, 126, 454, "房間C"),
         (334, 384, 424, 454, "會議1"),
         (334, 288, 424, 358, "會議2"),
@@ -110,6 +115,8 @@ def show_library_map_scene(game: MapSceneGame, floor: int) -> None:
     }
     game._set_story(map_texts[game._map_floor])
 
+    has_key = "地下室鑰匙" in game.inventory
+
     opts = [
         ("查看一樓", game.scene_map_floor1),
         ("查看二樓", game.scene_map_floor2),
@@ -119,6 +126,8 @@ def show_library_map_scene(game: MapSceneGame, floor: int) -> None:
         opts.extend([
             ("前往書架深處（一樓）", game.scene_bookshelves),
         ])
+        if has_key:
+            opts.append(("打開地下密室", game.scene_basement))
     elif game._map_floor == 2:
         opts.extend([
             ("前往二樓研究桌區", game.scene_desk),
@@ -130,18 +139,51 @@ def show_library_map_scene(game: MapSceneGame, floor: int) -> None:
             ("直接進管理室找紅花", game.scene_confront),
         ])
     game._set_options(opts)
-    game._set_image_actions([
+
+    # Floor-switch tabs at the bottom edge of the canvas
+    actions: list[dict[str, object]] = [
         {"label": "一樓", "area": (20, 420, 130, 478), "command": game.scene_map_floor1},
         {"label": "二樓", "area": (170, 420, 280, 478), "command": game.scene_map_floor2},
         {"label": "三樓", "area": (320, 420, 430, 478), "command": game.scene_map_floor3},
-        {
-            "label": "書架區",
+    ]
+
+    if game._map_floor == 1:
+        actions.append({
+            "label": "書架深處",
             "area": (36, 288, 126, 358),
-            "command": game.scene_bookshelves if game._map_floor == 1 else game.scene_map_floor1,
-        },
-        {
-            "label": "管理室",
-            "area": (168, 24, 292, 84),
-            "command": game.scene_hall if game._map_floor == 3 else game.scene_map_floor3,
-        },
-    ])
+            "command": game.scene_bookshelves,
+        })
+        if has_key:
+            actions.append({
+                "label": "地下密室",
+                "area": (36, 384, 126, 454),
+                "command": game.scene_basement,
+            })
+    elif game._map_floor == 2:
+        actions.extend([
+            {
+                "label": "研究桌",
+                "area": (36, 36, 126, 106),
+                "command": game.scene_desk,
+            },
+            {
+                "label": "窗邊",
+                "area": (334, 36, 424, 106),
+                "command": game.scene_window,
+            },
+        ])
+    else:  # 3F
+        actions.extend([
+            {
+                "label": "管理室外",
+                "area": (168, 24, 292, 84),
+                "command": game.scene_hall,
+            },
+            {
+                "label": "進管理室（紅花）",
+                "area": (168, 84, 292, 150),
+                "command": game.scene_confront,
+            },
+        ])
+
+    game._set_image_actions(actions)

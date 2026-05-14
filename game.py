@@ -973,7 +973,7 @@ class HonghuaGame:
             + trust_reaction
         )
         self._set_options([
-            ("繼續調查", self.scene_hall),
+            ("繼續調查", self.scene_map_floor3),
             ("直接面對紅花", self.scene_confront),
         ])
 
@@ -989,7 +989,7 @@ class HonghuaGame:
             + trust_reaction
         )
         self._set_options([
-            ("繼續調查", self.scene_hall),
+            ("繼續調查", self.scene_map_floor3),
             ("直接面對紅花", self.scene_confront),
         ])
 
@@ -1005,7 +1005,7 @@ class HonghuaGame:
             + trust_reaction
         )
         self._set_options([
-            ("繼續調查", self.scene_hall),
+            ("繼續調查", self.scene_map_floor3),
         ])
 
     # ── bookshelves area ──────────────────────────────────────────────────────
@@ -1014,7 +1014,7 @@ class HonghuaGame:
         self._show_image("bookshelves")
         self._set_story(ST.SCENE_BOOKSHELVES)
         self._set_options([
-            ("返回大廳", self.scene_hall),
+            ("離開書架，返回走廊", self.scene_map_floor1),
         ])
         self._set_image_actions([
             {"label": "案卷謎題", "area": (82, 108, 380, 360), "command": self.puzzle_bookshelf},
@@ -1024,7 +1024,7 @@ class HonghuaGame:
     def puzzle_bookshelf(self) -> None:
         if "地下室鑰匙" in self.inventory:
             messagebox.showinfo("已解鎖", "地下密室的鑰匙已在你手中。")
-            self.scene_hall()
+            self.scene_map_floor1()
             return
 
         dialog = tk.Toplevel(self.root)
@@ -1138,7 +1138,7 @@ class HonghuaGame:
                     parent=dialog,
                 )
                 dialog.destroy()
-                self.scene_hall()
+                self.scene_map_floor1()
             else:
                 messagebox.showerror(
                     "順序錯誤",
@@ -1182,7 +1182,7 @@ class HonghuaGame:
         self._show_image("desk")
         self._set_story(ST.SCENE_DESK)
         self._set_options([
-            ("返回大廳", self.scene_hall),
+            ("離開研究桌，返回走廊", self.scene_map_floor2),
         ])
         self._set_image_actions([
             {"label": "紅花的案情筆記", "area": (92, 218, 364, 430), "command": self.read_case_notes},
@@ -1198,7 +1198,7 @@ class HonghuaGame:
         self._set_story(ST.READ_CASE_NOTES + trust_reaction)
         self._set_options([
             ("繼續探索桌面", self.scene_desk),
-            ("返回大廳", self.scene_hall),
+            ("返回走廊", self.scene_map_floor2),
         ])
 
     # ── window ────────────────────────────────────────────────────────────────
@@ -1207,7 +1207,7 @@ class HonghuaGame:
         self._show_image("window")
         self._set_story(ST.SCENE_WINDOW)
         self._set_options([
-            ("返回大廳", self.scene_hall),
+            ("離開窗邊，返回走廊", self.scene_map_floor2),
         ])
         self._set_image_actions([
             {"label": "折疊字條", "area": (142, 174, 334, 388), "command": self.inspect_window_note},
@@ -1222,7 +1222,7 @@ class HonghuaGame:
         trust_reaction = CT.TRUST_REACTIONS["inspect_window_note"].get(self._trust_level(), "")
         self._set_story(ST.INSPECT_WINDOW_NOTE + trust_reaction)
         self._set_options([
-            ("返回大廳", self.scene_hall),
+            ("返回走廊", self.scene_map_floor2),
             ("直接去找紅花", self.scene_confront),
         ])
 
@@ -1234,14 +1234,14 @@ class HonghuaGame:
                 f"你只找到了 {len(self.clues)}/{self.REQUIRED_CLUES} 件物證，\n"
                 "尚不足以推算密碼。",
             )
-            self.scene_hall()
+            self.scene_map_floor3()
             return
         self._create_code_dialog()
 
     def _create_code_dialog(self) -> None:
         if "鎮魂歌譜" in self.inventory:
             messagebox.showinfo("已解鎖", "你已持有《鎮魂歌譜》。")
-            self.scene_hall()
+            self.scene_map_floor3()
             return
 
         dialog = tk.Toplevel(self.root)
@@ -1286,7 +1286,7 @@ class HonghuaGame:
                     parent=dialog,
                 )
                 dialog.destroy()
-                self.scene_hall()
+                self.scene_map_floor3()
             else:
                 self.code_tries_left -= 1
                 self._refresh_status()
@@ -1318,7 +1318,7 @@ class HonghuaGame:
     def scene_basement(self) -> None:
         if "地下室鑰匙" not in self.inventory:
             messagebox.showinfo("門緊閉", "地下密室的門紋絲不動，需要某種鑰匙。")
-            self.scene_hall()
+            self.scene_map_floor1()
             return
         self._refresh_status()
         self._show_image("basement")
@@ -1326,7 +1326,7 @@ class HonghuaGame:
         self._set_options([
             ("推開左側石門，進入倉庫", self.scene_basement_deep),
             ("靠近右側石門（儲藏室）", self.scene_basement_storage_room),
-            ("返回大廳", self.scene_hall),
+            ("離開地下室，返回走廊", self.scene_map_floor1),
         ])
         self._schedule_ambush_check()  # underground – backstab risk
 
@@ -1337,7 +1337,7 @@ class HonghuaGame:
         self._show_image("basement_deep")
         self._set_story(ST.SCENE_BASEMENT_DEEP)
         self._set_options([
-            ("帶著這個發現返回大廳", self.scene_hall),
+            ("帶著這個發現返回走廊", self.scene_map_floor1),
         ])
         self._schedule_ambush_check()  # underground – backstab risk
 
@@ -1348,7 +1348,7 @@ class HonghuaGame:
         self._set_story(ST.SCENE_BASEMENT_STORAGE_ROOM)
         self._set_options([
             ("退開，返回地下入口", self.scene_basement),
-            ("返回大廳", self.scene_hall),
+            ("離開地下室，返回走廊", self.scene_map_floor1),
         ])
         # Very close to the killer's hideout – much higher ambush probability.
         self._schedule_ambush_check(chance=self.STORAGE_AMBUSH_CHANCE_HIGH)
@@ -1382,7 +1382,7 @@ class HonghuaGame:
             self._set_story(ST.CONFRONT_NORMAL_PATH)
             self._set_options([
                 ("接受這個結果", self.ending_normal),
-                ("我還沒放棄——返回調查", self.scene_hall),
+                ("我還沒放棄——返回地圖", self.scene_map_floor3),
             ])
         else:
             self._set_story(ST.CONFRONT_UNPREPARED_PATH)
