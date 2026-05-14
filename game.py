@@ -62,7 +62,7 @@ _CHAR_ANIM_SCENES: dict[str, str] = {
 
 # Scenes where Honghua is present and facing the player; her animation state
 # should reflect the current trust level rather than a fixed value.
-_CHAR_ANIM_TRUST_SCENES: frozenset = frozenset({
+_CHAR_ANIM_TRUST_SCENES: frozenset[str] = frozenset({
     "prologue", "hall", "bookshelves", "desk", "diary", "window", "confront",
 })
 

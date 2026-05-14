@@ -34,10 +34,10 @@ STATE_IDLE      = "idle"
 STATE_TALKING   = "talking"
 STATE_EXCITED   = "excited"
 # Trust-level states (map to trust thresholds in game.py)
-STATE_IMPATIENT = "impatient"   # 不耐煩 — trust = 0
-STATE_PEACEFUL  = "peaceful"    # 和平   — trust 1–3
-STATE_FRIENDLY  = "friendly"    # 友善   — trust 4–6
-STATE_TRUSTED   = "trusted"     # 信任   — trust ≥ 7
+STATE_IMPATIENT = "impatient"   # 不耐煩 — lowest trust tier (trust < TRUST_THRESHOLD_OBSERVE)
+STATE_PEACEFUL  = "peaceful"    # 和平   — observing tier (TRUST_THRESHOLD_OBSERVE ≤ trust < TRUST_THRESHOLD_TRUE)
+STATE_FRIENDLY  = "friendly"    # 友善   — growing trust (TRUST_THRESHOLD_TRUE ≤ trust < TRUST_THRESHOLD_SECRET)
+STATE_TRUSTED   = "trusted"     # 信任   — highest trust (trust ≥ TRUST_THRESHOLD_SECRET)
 
 
 class CharacterAnimator:
@@ -49,11 +49,19 @@ class CharacterAnimator:
     *Floating*       — gentle sine-wave vertical drift (~6 s cycle).
     *Blinking*       — eye-close / open at random intervals (3–7 s).
     *Hair sway*      — 3-band horizontal shift of the top image region (~3.5 s).
-    *Eye highlight*  — twinkling specular dot in the eye area (idle only).
-    *Talking mouth*  — shadow oval that pulses at the mouth (talking/excited).
+    *Eye highlight*  — twinkling specular dot in the eye area
+                       (idle, friendly, and trusted states).
+    *Talking mouth*  — shadow oval that pulses at the mouth
+                       (talking, excited, friendly, and trusted states).
+    *Impatient expr* — furrowed-brow shadow + tight lip bar (impatient state).
+    *Cheek flush*    — rosy ellipses on both cheeks, optional warm glow
+                       (friendly and trusted states).
 
     The amplitude of each effect scales with the current animation state:
-    ``idle`` < ``talking`` < ``excited``.
+    ``trusted`` ≈ ``peaceful`` < ``idle`` < ``talking`` < ``excited``
+    (breathing amp; floating amp varies inversely).  Trust-level states
+    (``impatient``, ``peaceful``, ``friendly``, ``trusted``) also add
+    expression overlays that reflect Honghua's emotional disposition.
 
     Usage::
 
