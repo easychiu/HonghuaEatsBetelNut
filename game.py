@@ -5,6 +5,7 @@ Enhanced visual novel · scene illustrations · BGM
 from __future__ import annotations
 
 import os
+import random
 import threading
 from collections.abc import Callable
 from typing import Optional
@@ -13,6 +14,7 @@ import tkinter as tk
 from tkinter import messagebox
 
 import character_texts as CT
+import library_map as LM
 import story_texts as ST
 
 # ── optional dependencies ──────────────────────────────────────────────────────
@@ -115,6 +117,8 @@ SCENE_TITLES: dict[str, str] = {
     "basement": "地下密室",
     "basement_deep": "地下深處",
     "confront": "面對紅花",
+    **LM.MAP_SCENE_TITLES,
+    "basement_storage": "地下儲藏室",
     "true_end": "真結局",
     "secret_end": "秘密結局",
     "normal_end": "普通結局",
@@ -274,6 +278,10 @@ def _default_scene_image(key: str) -> Optional[object]:
 
 
 def _build(key: str) -> Optional[object]:
+    map_img = LM.build_library_map_image(key, IW, IH)
+    if map_img is not None:
+        return map_img
+
     prebuilt = _load_scene_asset(key)
     if prebuilt is not None:
         return prebuilt
@@ -424,6 +432,8 @@ class HonghuaGame:
     TRUST_THRESHOLD_ALLIANCE = 6  # minimum trust for the alliance ending
     TRUST_THRESHOLD_OBSERVE  = 1  # minimum trust to move past outright distrust
     WINDOW_TITLE     = "紅花吃檳榔：蔚藍學院秘案 - 深夜調查版"
+    STORAGE_AMBUSH_CHANCE = 0.20          # generalised 1F/2F backstab chance
+    STORAGE_AMBUSH_CHANCE_HIGH = 0.65    # near the killer's hideout (basement storage room)
 
     # ── init ───────────────────────────────────────────────────────────────────
     def __init__(self, root: tk.Tk) -> None:
@@ -447,6 +457,8 @@ class HonghuaGame:
         self._image_actions: list[dict[str, object]] = []
         self._hover_action: Optional[int] = None
         self._honghua_click_count: int = 0
+        self._map_floor: int = 3
+        self._ambush_job: Optional[str] = None
 
         self.music = MusicPlayer()
 
@@ -540,6 +552,10 @@ class HonghuaGame:
 
     # ── helpers ────────────────────────────────────────────────────────────────
     def _show_image(self, key: str) -> None:
+        # Cancel any pending backstab ambush from the previous scene.
+        if self._ambush_job:
+            self.root.after_cancel(self._ambush_job)
+            self._ambush_job = None
         self._current_scene = key
         self.animator.stop()
         self.img_canvas.delete("all")
@@ -697,6 +713,9 @@ class HonghuaGame:
         self.status_var.set(self._format_status_text(items, len(self.clues), tries, lore_n))
 
     def _reset_state(self) -> None:
+        if self._ambush_job:
+            self.root.after_cancel(self._ambush_job)
+            self._ambush_job = None
         self.inventory.clear()
         self.clues.clear()
         self.lore.clear()
@@ -704,7 +723,29 @@ class HonghuaGame:
         self._trust_events.clear()
         self.code_tries_left = self.MAX_CODE_TRIES
         self._honghua_click_count = 0
+        self._map_floor = 3
         self._refresh_status()
+
+    def _schedule_ambush_check(self, chance: Optional[float] = None) -> None:
+        """Schedule a backstab check 800 ms after a risky scene loads.
+
+        Used by 1F/2F and basement scenes.
+        The delay lets the player read the scene before the ambush fires.
+        Navigating away cancels the check via _show_image().
+        """
+        if chance is None:
+            chance = self.STORAGE_AMBUSH_CHANCE
+        if self._ambush_job:
+            self.root.after_cancel(self._ambush_job)
+        self._ambush_job = self.root.after(
+            800,
+            lambda: self._resolve_ambush(chance),
+        )
+
+    def _resolve_ambush(self, chance: float) -> None:
+        self._ambush_job = None
+        if random.random() < chance:
+            self.ending_storage_ambush()
 
     def _trust_level(self) -> str:
         if self.trust >= self.TRUST_THRESHOLD_SECRET:
@@ -821,7 +862,8 @@ class HonghuaGame:
         self._show_image("prologue")
         self._set_story(ST.PROLOGUE.format(hammer_length=self.HAMMER_LENGTH_CM))
         self._set_options([
-            ("開始調查圖書館", self.scene_hall),
+            ("查看地圖", self.scene_map_floor3),
+            ("直接前往管理室外調查", self.scene_hall),
             ("直接上前與紅花說話", self.scene_confront),
         ])
         # Prologue: Honghua is front-and-centre — add her click hotspot.
@@ -854,6 +896,7 @@ class HonghuaGame:
             )
         )
         opts: list[tuple[str, Callable]] = [
+            ("回到上帝視角地圖", self.scene_map_floor3),
             ("前往書架深處", self.scene_bookshelves),
             ("前往研究桌", self.scene_desk),
             ("前往窗邊", self.scene_window),
@@ -906,6 +949,18 @@ class HonghuaGame:
         ]
         self._set_image_actions(hall_actions)
 
+    def scene_map_floor1(self) -> None:
+        self.scene_library_map(1)
+
+    def scene_map_floor2(self) -> None:
+        self.scene_library_map(2)
+
+    def scene_map_floor3(self) -> None:
+        self.scene_library_map(3)
+
+    def scene_library_map(self, floor: int) -> None:
+        LM.show_library_map_scene(self, floor)
+
     # ── hammer ────────────────────────────────────────────────────────────────
     def inspect_hammer(self) -> None:
         self._gain_trust("inspect_hammer", 1)
@@ -918,7 +973,7 @@ class HonghuaGame:
             + trust_reaction
         )
         self._set_options([
-            ("繼續調查", self.scene_hall),
+            ("繼續調查", self.scene_map_floor3),
             ("直接面對紅花", self.scene_confront),
         ])
 
@@ -934,7 +989,7 @@ class HonghuaGame:
             + trust_reaction
         )
         self._set_options([
-            ("繼續調查", self.scene_hall),
+            ("繼續調查", self.scene_map_floor3),
             ("直接面對紅花", self.scene_confront),
         ])
 
@@ -950,7 +1005,7 @@ class HonghuaGame:
             + trust_reaction
         )
         self._set_options([
-            ("繼續調查", self.scene_hall),
+            ("繼續調查", self.scene_map_floor3),
         ])
 
     # ── bookshelves area ──────────────────────────────────────────────────────
@@ -959,16 +1014,17 @@ class HonghuaGame:
         self._show_image("bookshelves")
         self._set_story(ST.SCENE_BOOKSHELVES)
         self._set_options([
-            ("返回大廳", self.scene_hall),
+            ("離開書架，返回走廊", self.scene_map_floor1),
         ])
         self._set_image_actions([
             {"label": "案卷謎題", "area": (82, 108, 380, 360), "command": self.puzzle_bookshelf},
         ])
+        self._schedule_ambush_check()  # 1F – backstab risk
 
     def puzzle_bookshelf(self) -> None:
         if "地下室鑰匙" in self.inventory:
             messagebox.showinfo("已解鎖", "地下密室的鑰匙已在你手中。")
-            self.scene_hall()
+            self.scene_map_floor1()
             return
 
         dialog = tk.Toplevel(self.root)
@@ -1082,7 +1138,7 @@ class HonghuaGame:
                     parent=dialog,
                 )
                 dialog.destroy()
-                self.scene_hall()
+                self.scene_map_floor1()
             else:
                 messagebox.showerror(
                     "順序錯誤",
@@ -1126,11 +1182,12 @@ class HonghuaGame:
         self._show_image("desk")
         self._set_story(ST.SCENE_DESK)
         self._set_options([
-            ("返回大廳", self.scene_hall),
+            ("離開研究桌，返回走廊", self.scene_map_floor2),
         ])
         self._set_image_actions([
             {"label": "紅花的案情筆記", "area": (92, 218, 364, 430), "command": self.read_case_notes},
         ])
+        self._schedule_ambush_check()  # 2F – backstab risk
 
     def read_case_notes(self) -> None:
         self._gain_trust("read_case_notes", 2)
@@ -1141,7 +1198,7 @@ class HonghuaGame:
         self._set_story(ST.READ_CASE_NOTES + trust_reaction)
         self._set_options([
             ("繼續探索桌面", self.scene_desk),
-            ("返回大廳", self.scene_hall),
+            ("返回走廊", self.scene_map_floor2),
         ])
 
     # ── window ────────────────────────────────────────────────────────────────
@@ -1150,11 +1207,12 @@ class HonghuaGame:
         self._show_image("window")
         self._set_story(ST.SCENE_WINDOW)
         self._set_options([
-            ("返回大廳", self.scene_hall),
+            ("離開窗邊，返回走廊", self.scene_map_floor2),
         ])
         self._set_image_actions([
             {"label": "折疊字條", "area": (142, 174, 334, 388), "command": self.inspect_window_note},
         ])
+        self._schedule_ambush_check()  # 2F – backstab risk
 
     def inspect_window_note(self) -> None:
         self._gain_trust("inspect_window_note", 2)
@@ -1164,7 +1222,7 @@ class HonghuaGame:
         trust_reaction = CT.TRUST_REACTIONS["inspect_window_note"].get(self._trust_level(), "")
         self._set_story(ST.INSPECT_WINDOW_NOTE + trust_reaction)
         self._set_options([
-            ("返回大廳", self.scene_hall),
+            ("返回走廊", self.scene_map_floor2),
             ("直接去找紅花", self.scene_confront),
         ])
 
@@ -1176,14 +1234,14 @@ class HonghuaGame:
                 f"你只找到了 {len(self.clues)}/{self.REQUIRED_CLUES} 件物證，\n"
                 "尚不足以推算密碼。",
             )
-            self.scene_hall()
+            self.scene_map_floor3()
             return
         self._create_code_dialog()
 
     def _create_code_dialog(self) -> None:
         if "鎮魂歌譜" in self.inventory:
             messagebox.showinfo("已解鎖", "你已持有《鎮魂歌譜》。")
-            self.scene_hall()
+            self.scene_map_floor3()
             return
 
         dialog = tk.Toplevel(self.root)
@@ -1228,7 +1286,7 @@ class HonghuaGame:
                     parent=dialog,
                 )
                 dialog.destroy()
-                self.scene_hall()
+                self.scene_map_floor3()
             else:
                 self.code_tries_left -= 1
                 self._refresh_status()
@@ -1260,15 +1318,17 @@ class HonghuaGame:
     def scene_basement(self) -> None:
         if "地下室鑰匙" not in self.inventory:
             messagebox.showinfo("門緊閉", "地下密室的門紋絲不動，需要某種鑰匙。")
-            self.scene_hall()
+            self.scene_map_floor1()
             return
         self._refresh_status()
         self._show_image("basement")
         self._set_story(ST.SCENE_BASEMENT)
         self._set_options([
-            ("推開石門探索", self.scene_basement_deep),
-            ("返回大廳", self.scene_hall),
+            ("推開左側石門，進入倉庫", self.scene_basement_deep),
+            ("靠近右側石門（儲藏室）", self.scene_basement_storage_room),
+            ("離開地下室，返回走廊", self.scene_map_floor1),
         ])
+        self._schedule_ambush_check()  # underground – backstab risk
 
     def scene_basement_deep(self) -> None:
         self._gain_trust("scene_basement_deep", 2)
@@ -1277,8 +1337,21 @@ class HonghuaGame:
         self._show_image("basement_deep")
         self._set_story(ST.SCENE_BASEMENT_DEEP)
         self._set_options([
-            ("帶著這個發現返回大廳", self.scene_hall),
+            ("帶著這個發現返回走廊", self.scene_map_floor1),
         ])
+        self._schedule_ambush_check()  # underground – backstab risk
+
+    def scene_basement_storage_room(self) -> None:
+        """The sealed storage room where the killer has been hiding."""
+        self._refresh_status()
+        self._show_image("basement")
+        self._set_story(ST.SCENE_BASEMENT_STORAGE_ROOM)
+        self._set_options([
+            ("退開，返回地下入口", self.scene_basement),
+            ("離開地下室，返回走廊", self.scene_map_floor1),
+        ])
+        # Very close to the killer's hideout – much higher ambush probability.
+        self._schedule_ambush_check(chance=self.STORAGE_AMBUSH_CHANCE_HIGH)
 
     # ── confrontation ─────────────────────────────────────────────────────────
     def scene_confront(self) -> None:
@@ -1309,7 +1382,7 @@ class HonghuaGame:
             self._set_story(ST.CONFRONT_NORMAL_PATH)
             self._set_options([
                 ("接受這個結果", self.ending_normal),
-                ("我還沒放棄——返回調查", self.scene_hall),
+                ("我還沒放棄——返回地圖", self.scene_map_floor3),
             ])
         else:
             self._set_story(ST.CONFRONT_UNPREPARED_PATH)
@@ -1393,6 +1466,14 @@ class HonghuaGame:
         """Bad ending B — too many code failures."""
         self._show_image("bad_b")
         self._set_story(ST.ENDING_BAD_CODEFAIL)
+        self._set_options([
+            ("重新開始", self.show_intro),
+            ("離開", self.root.destroy),
+        ])
+
+    def ending_storage_ambush(self) -> None:
+        self._show_image("bad_a")
+        self._set_story(ST.ENDING_STORAGE_AMBUSH)
         self._set_options([
             ("重新開始", self.show_intro),
             ("離開", self.root.destroy),
