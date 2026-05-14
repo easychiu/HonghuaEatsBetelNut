@@ -406,6 +406,14 @@ class _NullAnimator:
 class HonghuaGame:
     # ── puzzle answers ─────────────────────────────────────────────────────────
     CODE_ANSWER      = "314"
+
+    # ── Honghua click OS lines (cycle on every click) ──────────────────────────
+    # "怎麼點擊都是表現優雅，但旁邊台詞會有主角OS"
+    _HONGHUA_OS_LINES: tuple[str, ...] = (
+        "聽說她會吃檳榔。",
+        "不知道真的假的，好想看看。",
+        "別再看了，再看她也不會吃檳榔給你看。",
+    )
     BOOKSHELF_CORRECT_ORDER = [
         "失蹤案卷",
         "退學檔案",
@@ -444,6 +452,7 @@ class HonghuaGame:
         self._current_scene: str = ""
         self._image_actions: list[dict[str, object]] = []
         self._hover_action: Optional[int] = None
+        self._honghua_click_count: int = 0
 
         self.music = MusicPlayer()
 
@@ -590,11 +599,14 @@ class HonghuaGame:
                 dash=(6, 3),
                 tags=("hotspot",),
             )
+            # Use a custom hover hint when provided; otherwise fall back to the
+            # default "點擊：{label}" format.
+            hint = action.get("hint", f"點擊：{action['label']}")
             self.img_canvas.create_text(
                 x1 + 8,
                 y1 + 10,
                 anchor="nw",
-                text=f"點擊：{action['label']}",
+                text=hint,
                 fill=C["btn_hl"] if active else C["fg"],
                 font=_f(10, True),
                 tags=("hotspot",),
@@ -697,6 +709,7 @@ class HonghuaGame:
         self.trust = 0
         self._trust_events.clear()
         self.code_tries_left = self.MAX_CODE_TRIES
+        self._honghua_click_count = 0
         self._refresh_status()
 
     def _trust_level(self) -> str:
@@ -739,6 +752,66 @@ class HonghuaGame:
             f"道具:{items} | 物證:{clue_count}/{self.REQUIRED_CLUES} | "
             f"密碼:{tries} | 線索:{lore_n}/{self.REQUIRED_LORE} | 信任:{self.trust}({trust_label})"
         )
+
+    # ── interactive OS helpers ─────────────────────────────────────────────────
+
+    def _append_os(self, text: str) -> None:
+        """Append a protagonist inner-monologue (OS) line to the story box.
+
+        Unlike ``_set_story``, this does *not* clear the existing text or
+        trigger a page navigation — it just appends to whatever is currently
+        visible, giving the feel of a live thought bubble.
+        """
+        if self._type_job:
+            self.root.after_cancel(self._type_job)
+            self._type_job = None
+        self.story_text.configure(state="normal")
+        self.story_text.insert("end", f"\n\n【主角OS】{text}")
+        self.story_text.see("end")
+        self.story_text.configure(state="disabled")
+
+    def _on_honghua_click(self) -> None:
+        """Cycle through the protagonist's inner thoughts when clicking Honghua.
+
+        Honghua herself stays graceful (animation state unchanged); only the
+        story text gains a new OS line.  Lines rotate every 3 clicks.
+        """
+        line = self._HONGHUA_OS_LINES[
+            self._honghua_click_count % len(self._HONGHUA_OS_LINES)
+        ]
+        self._honghua_click_count += 1
+        self._append_os(line)
+
+    def _on_book_regular_click(self) -> None:
+        """Protagonist notices an unremarkable book on the shelf."""
+        self._append_os("就是一本書……")
+
+    def _on_book_bl_click(self) -> None:
+        """Easter-egg: protagonist spots the suspicious title on a spine."""
+        self._append_os(
+            "等等這書名是啥……\n"
+            "《傑克森與伍茲的冬夜》……\n"
+            "居然還有這種一看書名就是BL的書。"
+        )
+
+    def _on_book_clue_click(self) -> None:
+        """Game-relevant clue hidden in an old annual report on the shelf.
+
+        First interaction gives +1 trust (the player is being thorough) and
+        adds the clue to ``lore``; subsequent clicks just remind the player.
+        """
+        if "圖書館年報" not in self.lore:
+            self.lore.add("圖書館年報")
+            self._gain_trust("book_annual", 1)
+            self._refresh_status()
+            self._append_os(
+                "《蔚藍學院圖書館・年度登記冊》……\n"
+                "翻到案發當夜那一頁——\n"
+                "入館紀錄第三欄：T.S.（天王星）　23:14 入館。\n"
+                "【線索】天王星案發當晚確實在場。"
+            )
+        else:
+            self._append_os("（已記下年度登記冊的入館紀錄。）")
 
     # ══════════════════════════════════════════════════════════════════════════
     #  Scenes
@@ -794,6 +867,17 @@ class HonghuaGame:
             ("開始調查圖書館", self.scene_hall),
             ("直接上前與紅花說話", self.scene_confront),
         ])
+        # Prologue: Honghua is front-and-centre — add her click hotspot.
+        # Coordinates cover her body in HonghuaReadBook.jpg (460×490 canvas).
+        # Adjust x1/y1/x2/y2 to match the actual image if needed.
+        self._set_image_actions([
+            {
+                "label": "紅花",
+                "area": (70, 30, 360, 280),
+                "command": self._on_honghua_click,
+                "hint": "……",
+            },
+        ])
 
     # ── main hall (hub) ───────────────────────────────────────────────────────
     def scene_hall(self) -> None:
@@ -824,7 +908,8 @@ class HonghuaGame:
             "而密碼盒就靜靜地立在書架旁。\n\n"
             "請點擊左側場景圖中的互動區域來調查物證與密碼盒；\n"
             "若要切換場景，仍使用下方按鈕。\n"
-            "目前可直接點擊：鎚子・四葉草・牛仔褲・密碼盒"
+            "目前可直接點擊：鎚子・四葉草・牛仔褲・密碼盒\n"
+            "也可點擊書架上的書籍或紅花本人。"
             + basement_hint
         )
         opts: list[tuple[str, Callable]] = [
@@ -838,12 +923,46 @@ class HonghuaGame:
             ("前去面對紅花", self.scene_confront),
         ]
         self._set_options(opts)
-        self._set_image_actions([
-            {"label": "鎚子", "area": (24, 316, 126, 470), "command": self.inspect_hammer},
+        # ── image hotspots ────────────────────────────────────────────────────
+        # All coordinates are for the 460×490 canvas (HonghuaReadBook.jpg).
+        # More-specific (smaller) areas are listed BEFORE the larger Honghua
+        # area so they take priority when both overlap at the same pixel.
+        # Adjust coordinates to match the actual image layout if needed.
+        hall_actions: list[dict[str, object]] = [
+            # ── existing investigation items ─────────────────────────────────
+            {"label": "鎚子",  "area": (24, 316, 126, 470), "command": self.inspect_hammer},
             {"label": "四葉草", "area": (152, 266, 246, 386), "command": self.inspect_clover},
             {"label": "牛仔褲", "area": (286, 316, 426, 468), "command": self.inspect_jeans},
             {"label": "密碼盒", "area": (316, 146, 448, 278), "command": self.try_unlock},
-        ])
+            # ── book hotspots (upper-left bookshelf area) ────────────────────
+            {
+                "label": "書架上的書",
+                "area": (14, 44, 118, 152),
+                "command": self._on_book_regular_click,
+                "hint": "點擊：書架上的書",
+            },
+            {
+                "label": "角落的舊書",
+                "area": (126, 44, 256, 152),
+                "command": self._on_book_bl_click,
+                "hint": "點擊：角落的舊書",
+            },
+            {
+                "label": "封面泛黃的年報",
+                "area": (14, 158, 160, 258),
+                "command": self._on_book_clue_click,
+                "hint": "點擊：封面泛黃的年報",
+            },
+            # ── Honghua (centre of image; listed last so books take priority
+            #    where areas overlap) ──────────────────────────────────────────
+            {
+                "label": "紅花",
+                "area": (70, 30, 310, 260),
+                "command": self._on_honghua_click,
+                "hint": "……",
+            },
+        ]
+        self._set_image_actions(hall_actions)
 
     # ── hammer ────────────────────────────────────────────────────────────────
     def inspect_hammer(self) -> None:
