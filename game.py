@@ -727,8 +727,9 @@ class HonghuaGame:
         self._refresh_status()
 
     def _schedule_ambush_check(self, chance: Optional[float] = None) -> None:
-        """Schedule a backstab check 800 ms after a 1F/2F scene loads.
+        """Schedule a backstab check 800 ms after a risky scene loads.
 
+        Used by 1F/2F and basement scenes.
         The delay lets the player read the scene before the ambush fires.
         Navigating away cancels the check via _show_image().
         """
@@ -861,7 +862,7 @@ class HonghuaGame:
         self._show_image("prologue")
         self._set_story(ST.PROLOGUE.format(hammer_length=self.HAMMER_LENGTH_CM))
         self._set_options([
-            ("打開上帝視角地圖", self.scene_map_floor3),
+            ("查看地圖", self.scene_map_floor3),
             ("直接前往管理室外調查", self.scene_hall),
             ("直接上前與紅花說話", self.scene_confront),
         ])
