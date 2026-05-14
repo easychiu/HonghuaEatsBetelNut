@@ -28,10 +28,23 @@ except ImportError:
 # ── paths ──────────────────────────────────────────────────────────────────────
 _DIR      = os.path.dirname(os.path.abspath(__file__))
 INFO_JPG  = os.path.join(_DIR, "info.jpg")
+HONGHUA_READ_BOOK_JPG = os.path.join(_DIR, "HonghuaReadBook.jpg")
+HONGHUA_IN_ENG_JPG = os.path.join(_DIR, "HonghuaInENG.jpg")
 ASSETS    = os.path.join(_DIR, "assets")
 SCENES    = os.path.join(ASSETS, "scenes")
 BGM_MAIN  = os.path.join(ASSETS, "bgm_main.mp3")
 BGM_END   = os.path.join(ASSETS, "bgm_end.mp3")
+
+SCENE_SOURCE_OVERRIDES: dict[str, str] = {
+    "intro": HONGHUA_IN_ENG_JPG,
+    "prologue": HONGHUA_READ_BOOK_JPG,
+    "hall": HONGHUA_READ_BOOK_JPG,
+    "bookshelves": HONGHUA_READ_BOOK_JPG,
+    "desk": HONGHUA_READ_BOOK_JPG,
+    "diary": HONGHUA_READ_BOOK_JPG,
+    "window": HONGHUA_READ_BOOK_JPG,
+    "confront": HONGHUA_IN_ENG_JPG,
+}
 
 # ── layout ─────────────────────────────────────────────────────────────────────
 WIN_W, WIN_H = 1100, 700
@@ -138,6 +151,12 @@ def scene_image(key: str) -> Optional[object]:
 def _load_scene_asset(key: str) -> Optional[object]:
     if not _PIL:
         return None
+    path = SCENE_SOURCE_OVERRIDES.get(key, "")
+    if path and os.path.exists(path):
+        img = Image.open(path).convert("RGB")
+        if img.size != (IW, IH):
+            img = img.resize((IW, IH), Image.LANCZOS)
+        return ImageTk.PhotoImage(img)
     path = os.path.join(SCENES, f"{key}.png")
     if not os.path.exists(path):
         return None
@@ -647,7 +666,7 @@ class HonghuaGame:
             "褲腿內側縫著手寫的文字：\n"
             "「R.U. · 第四排 · 入場許可」\n\n"
             "R.U.——你腦海中浮現一個名字：\n"
-            "天王星（Uranus）。退學生天王星，\n"
+            "天王星（Starscream）。退學生天王星，\n"
             "曾因家道中落憤恨離校，愛攀關係，\n"
             "卻也因此對某些人懷恨在心。\n\n"
             "而「第四排」，正是學院劇場的黑市座位……\n\n"
@@ -961,7 +980,7 @@ class HonghuaGame:
             "桌上放著一封未完成的信，\n"
             "以及一本翻開的日記——\n"
             "日記的頁面上，你辨認出了熟悉的字體：\n"
-            "「天王星（Uranus）」的親筆。\n\n"
+            "「天王星（Starscream）」的親筆。\n\n"
             "翻開那一頁：\n\n"
             "「我做了不可挽回的事。\n"
             " 那一天，我衝進去找米糕，\n"

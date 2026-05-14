@@ -25,6 +25,8 @@ _DIR   = os.path.dirname(os.path.abspath(__file__))
 ASSETS = os.path.join(_DIR, "assets")
 SCENES = os.path.join(ASSETS, "scenes")
 INFO_JPG = os.path.join(_DIR, "info.jpg")
+HONGHUA_READ_BOOK_JPG = os.path.join(_DIR, "HonghuaReadBook.jpg")
+HONGHUA_IN_ENG_JPG = os.path.join(_DIR, "HonghuaInENG.jpg")
 IMAGE_WIDTH, IMAGE_HEIGHT = 460, 490
 
 TRACKS = [
@@ -114,6 +116,17 @@ PROC_SCENES = {
     ),
 }
 
+SCENE_SOURCE_OVERRIDES = {
+    "intro": HONGHUA_IN_ENG_JPG,
+    "prologue": HONGHUA_READ_BOOK_JPG,
+    "hall": HONGHUA_READ_BOOK_JPG,
+    "bookshelves": HONGHUA_READ_BOOK_JPG,
+    "desk": HONGHUA_READ_BOOK_JPG,
+    "diary": HONGHUA_READ_BOOK_JPG,
+    "window": HONGHUA_READ_BOOK_JPG,
+    "confront": HONGHUA_IN_ENG_JPG,
+}
+
 
 def _tinted(
     base_img,
@@ -163,6 +176,11 @@ def _atmospheric(base_rgb: tuple, lights: list, blur: float = 2.5):
 def build_scene_image(key: str):
     if Image is None:
         return None
+    source = SCENE_SOURCE_OVERRIDES.get(key, "")
+    if source and os.path.exists(source):
+        return Image.open(source).convert("RGB").resize(
+            (IMAGE_WIDTH, IMAGE_HEIGHT), Image.LANCZOS
+        )
     if key in INFO_SCENES:
         if not os.path.exists(INFO_JPG):
             return None
