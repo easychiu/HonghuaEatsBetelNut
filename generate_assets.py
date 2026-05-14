@@ -25,7 +25,7 @@ _DIR   = os.path.dirname(os.path.abspath(__file__))
 ASSETS = os.path.join(_DIR, "assets")
 SCENES = os.path.join(ASSETS, "scenes")
 INFO_JPG = os.path.join(_DIR, "info.jpg")
-IW, IH = 460, 490
+IMAGE_WIDTH, IMAGE_HEIGHT = 460, 490
 
 TRACKS = [
     {
@@ -68,49 +68,49 @@ INFO_SCENES = {
 PROC_SCENES = {
     "bookshelves": (
         (6, 4, 3),
-        [(70, IH // 2, 130, (180, 95, 25, 75)),
-         (IW - 60, IH // 2 + 40, 95, (120, 60, 15, 55))],
+        [(70, IMAGE_HEIGHT // 2, 130, (180, 95, 25, 75)),
+         (IMAGE_WIDTH - 60, IMAGE_HEIGHT // 2 + 40, 95, (120, 60, 15, 55))],
     ),
     "puzzle_book": (
         (5, 5, 8),
-        [(IW // 2, IH // 2, 220, (160, 110, 40, 85)),
-         (IW // 2, IH // 2, 75, (220, 170, 80, 90))],
+        [(IMAGE_WIDTH // 2, IMAGE_HEIGHT // 2, 220, (160, 110, 40, 85)),
+         (IMAGE_WIDTH // 2, IMAGE_HEIGHT // 2, 75, (220, 170, 80, 90))],
     ),
     "desk": (
         (5, 7, 4),
-        [(IW // 2, IH - 80, 220, (210, 125, 40, 100)),
-         (IW // 2, IH - 80, 75, (255, 185, 85, 110))],
+        [(IMAGE_WIDTH // 2, IMAGE_HEIGHT - 80, 220, (210, 125, 40, 100)),
+         (IMAGE_WIDTH // 2, IMAGE_HEIGHT - 80, 75, (255, 185, 85, 110))],
     ),
     "diary": (
         (11, 7, 4),
-        [(IW // 2, IH // 2, 185, (200, 155, 75, 90)),
-         (IW // 2 - 70, IH // 2 + 30, 65, (255, 200, 115, 75))],
+        [(IMAGE_WIDTH // 2, IMAGE_HEIGHT // 2, 185, (200, 155, 75, 90)),
+         (IMAGE_WIDTH // 2 - 70, IMAGE_HEIGHT // 2 + 30, 65, (255, 200, 115, 75))],
     ),
     "window": (
         (4, 7, 12),
-        [(IW // 2, 75, 170, (30, 55, 85, 95)),
-         (IW // 2, 75, 55, (60, 95, 145, 75))],
+        [(IMAGE_WIDTH // 2, 75, 170, (30, 55, 85, 95)),
+         (IMAGE_WIDTH // 2, 75, 55, (60, 95, 145, 75))],
     ),
     "basement": (
         (3, 3, 7),
-        [(IW // 2, IH, 210, (18, 25, 58, 80)),
-         (IW // 2, IH // 2, 38, (38, 48, 88, 55))],
+        [(IMAGE_WIDTH // 2, IMAGE_HEIGHT, 210, (18, 25, 58, 80)),
+         (IMAGE_WIDTH // 2, IMAGE_HEIGHT // 2, 38, (38, 48, 88, 55))],
     ),
     "basement_deep": (
         (2, 2, 5),
-        [(IW // 2, IH // 2, 160, (65, 0, 20, 105)),
-         (IW // 2, IH // 2, 48, (105, 0, 28, 80))],
+        [(IMAGE_WIDTH // 2, IMAGE_HEIGHT // 2, 160, (65, 0, 20, 105)),
+         (IMAGE_WIDTH // 2, IMAGE_HEIGHT // 2, 48, (105, 0, 28, 80))],
     ),
     "bad_a": (
         (5, 0, 0),
-        [(IW // 2, IH // 2, 190, (155, 0, 0, 120)),
-         (IW // 2, IH // 2, 58, (200, 20, 20, 95))],
+        [(IMAGE_WIDTH // 2, IMAGE_HEIGHT // 2, 190, (155, 0, 0, 120)),
+         (IMAGE_WIDTH // 2, IMAGE_HEIGHT // 2, 58, (200, 20, 20, 95))],
     ),
     "bad_b": (
         (7, 1, 1),
-        [(IW // 2, IH // 2, 225, (185, 0, 18, 130)),
-         (IW // 4, IH // 3, 105, (225, 45, 0, 100)),
-         (3 * IW // 4, 2 * IH // 3, 82, (205, 28, 8, 88))],
+        [(IMAGE_WIDTH // 2, IMAGE_HEIGHT // 2, 225, (185, 0, 18, 130)),
+         (IMAGE_WIDTH // 4, IMAGE_HEIGHT // 3, 105, (225, 45, 0, 100)),
+         (3 * IMAGE_WIDTH // 4, 2 * IMAGE_HEIGHT // 3, 82, (205, 28, 8, 88))],
     ),
 }
 
@@ -124,7 +124,7 @@ def _tinted(
     img = base_img.copy()
     if crop:
         img = img.crop(crop)
-    img = img.resize((IW, IH), Image.LANCZOS)
+    img = img.resize((IMAGE_WIDTH, IMAGE_HEIGHT), Image.LANCZOS)
     img = ImageEnhance.Brightness(img.convert("RGB")).enhance(darken).convert("RGBA")
     if any(tint):
         overlay = Image.new("RGBA", img.size, tint)
@@ -133,7 +133,7 @@ def _tinted(
 
 
 def _atmospheric(base_rgb: tuple, lights: list, blur: float = 2.5):
-    img = Image.new("RGBA", (IW, IH), base_rgb + (255,))
+    img = Image.new("RGBA", (IMAGE_WIDTH, IMAGE_HEIGHT), base_rgb + (255,))
     draw = ImageDraw.Draw(img, "RGBA")
     for cx, cy, r, col in lights:
         rc, gc, bc, ma = col
@@ -143,13 +143,18 @@ def _atmospheric(base_rgb: tuple, lights: list, blur: float = 2.5):
                          fill=(rc, gc, bc, alpha))
     if blur > 0:
         img = img.filter(ImageFilter.GaussianBlur(blur))
-    vignette = Image.new("RGBA", (IW, IH), (0, 0, 0, 0))
+    vignette = Image.new("RGBA", (IMAGE_WIDTH, IMAGE_HEIGHT), (0, 0, 0, 0))
     vd = ImageDraw.Draw(vignette, "RGBA")
-    maxr = int((IW ** 2 + IH ** 2) ** 0.5) // 2 + 40
+    maxr = int((IMAGE_WIDTH ** 2 + IMAGE_HEIGHT ** 2) ** 0.5) // 2 + 40
     for rad in range(maxr, 0, -5):
         alpha = int(130 * (rad / maxr) ** 1.5)
         vd.ellipse(
-            [IW // 2 - rad, IH // 2 - rad, IW // 2 + rad, IH // 2 + rad],
+            [
+                IMAGE_WIDTH // 2 - rad,
+                IMAGE_HEIGHT // 2 - rad,
+                IMAGE_WIDTH // 2 + rad,
+                IMAGE_HEIGHT // 2 + rad,
+            ],
             fill=(0, 0, 0, alpha),
         )
     return Image.alpha_composite(img, vignette).convert("RGB")

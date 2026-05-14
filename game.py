@@ -275,12 +275,13 @@ class HonghuaGame:
     CODE_ANSWER      = "314"
     BOOKSHELF_ANSWER = "A"    # first choice = correct
     REQUIRED_CLUES   = 3
+    REQUIRED_LORE    = 3
     PARTIAL_CLUES    = 2
     MAX_CODE_TRIES   = 3
-    TRUST_THRESHOLD_SECRET   = 7
-    TRUST_THRESHOLD_TRUE     = 4
-    TRUST_THRESHOLD_ALLIANCE = 6
-    TRUST_THRESHOLD_OBSERVE  = 1
+    TRUST_THRESHOLD_SECRET   = 7  # minimum trust for the secret ending
+    TRUST_THRESHOLD_TRUE     = 4  # minimum trust for the true ending path
+    TRUST_THRESHOLD_ALLIANCE = 6  # minimum trust for the alliance ending
+    TRUST_THRESHOLD_OBSERVE  = 1  # minimum trust to move past outright distrust
     WINDOW_TITLE     = "紅花吃檳榔：蔚藍學院秘案 - 深夜調查版"
 
     # ── init ───────────────────────────────────────────────────────────────────
@@ -454,13 +455,9 @@ class HonghuaGame:
 
     def _refresh_status(self) -> None:
         items  = "、".join(sorted(self.inventory)) or "無"
-        clues  = " | ".join(f"{k}:{v}" for k, v in sorted(self.clues.items())) or "尚未蒐集"
         lore_n = len(self.lore)
         tries  = self.code_tries_left
-        trust_label = self._trust_level()
-        self.status_var.set(
-            f"道具:{items} | 物證:{len(self.clues)}/{self.REQUIRED_CLUES} | 密碼:{tries} | 線索:{lore_n}/3 | 信任:{self.trust}({trust_label})"
-        )
+        self.status_var.set(self._format_status_text(items, len(self.clues), tries, lore_n))
 
     def _reset_state(self) -> None:
         self.inventory.clear()
@@ -485,6 +482,19 @@ class HonghuaGame:
             return
         self._trust_events.add(event)
         self.trust += points
+
+    def _format_status_text(
+        self,
+        items: str,
+        clue_count: int,
+        tries: int,
+        lore_n: int,
+    ) -> str:
+        trust_label = self._trust_level()
+        return (
+            f"道具:{items} | 物證:{clue_count}/{self.REQUIRED_CLUES} | "
+            f"密碼:{tries} | 線索:{lore_n}/{self.REQUIRED_LORE} | 信任:{self.trust}({trust_label})"
+        )
 
     # ══════════════════════════════════════════════════════════════════════════
     #  Scenes
@@ -978,7 +988,7 @@ class HonghuaGame:
         self._show_image("confront")
 
         has_talisman = "鎮魂歌譜" in self.inventory
-        all_lore     = len(self.lore) >= 3
+        all_lore     = len(self.lore) >= self.REQUIRED_LORE
         clue_count   = len(self.clues)
         trust        = self.trust
 
