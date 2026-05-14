@@ -260,7 +260,11 @@ class HonghuaGame:
     REQUIRED_CLUES   = 3
     PARTIAL_CLUES    = 2
     MAX_CODE_TRIES   = 3
-    WINDOW_TITLE     = "紅花吃檳榔：蔚藍學院秘案 — 深夜調查版"
+    TRUST_THRESHOLD_SECRET   = 7
+    TRUST_THRESHOLD_TRUE     = 4
+    TRUST_THRESHOLD_ALLIANCE = 6
+    TRUST_THRESHOLD_OBSERVE  = 1
+    WINDOW_TITLE     = "紅花吃檳榔：蔚藍學院秘案 - 深夜調查版"
 
     # ── init ───────────────────────────────────────────────────────────────────
     def __init__(self, root: tk.Tk) -> None:
@@ -275,6 +279,8 @@ class HonghuaGame:
         self.inventory: set[str] = set()
         self.clues: dict[str, int] = {}
         self.lore: set[str] = set()
+        self.trust = 0
+        self._trust_events: set[str] = set()
         self.code_tries_left = self.MAX_CODE_TRIES
         self._type_job: Optional[str] = None
         self._current_img: Optional[object] = None
@@ -434,16 +440,34 @@ class HonghuaGame:
         clues  = " | ".join(f"{k}:{v}" for k, v in sorted(self.clues.items())) or "尚未蒐集"
         lore_n = len(self.lore)
         tries  = self.code_tries_left
+        trust_label = self._trust_level()
         self.status_var.set(
-            f"道具：{items}　　物證：{clues}　　密碼剩餘 {tries} 次　　人物線索：{lore_n}/3"
+            f"道具:{items} | 物證:{len(self.clues)}/{self.REQUIRED_CLUES} | 密碼:{tries} | 線索:{lore_n}/3 | 信任:{self.trust}({trust_label})"
         )
 
     def _reset_state(self) -> None:
         self.inventory.clear()
         self.clues.clear()
         self.lore.clear()
+        self.trust = 0
+        self._trust_events.clear()
         self.code_tries_left = self.MAX_CODE_TRIES
         self._refresh_status()
+
+    def _trust_level(self) -> str:
+        if self.trust >= self.TRUST_THRESHOLD_SECRET:
+            return "高度信任"
+        if self.trust >= self.TRUST_THRESHOLD_TRUE:
+            return "逐步信任"
+        if self.trust >= self.TRUST_THRESHOLD_OBSERVE:
+            return "觀望中"
+        return "不信任"
+
+    def _gain_trust(self, event: str, points: int) -> None:
+        if event in self._trust_events:
+            return
+        self._trust_events.add(event)
+        self.trust += points
 
     # ══════════════════════════════════════════════════════════════════════════
     #  Scenes
@@ -538,6 +562,7 @@ class HonghuaGame:
 
     # ── hammer ────────────────────────────────────────────────────────────────
     def inspect_hammer(self) -> None:
+        self._gain_trust("inspect_hammer", 1)
         self.clues["鎚子"] = 3
         self._refresh_status()
         self._show_image("book")
@@ -558,6 +583,7 @@ class HonghuaGame:
 
     # ── four-leaf clover ──────────────────────────────────────────────────────
     def inspect_clover(self) -> None:
+        self._gain_trust("inspect_clover", 1)
         self.clues["四葉草"] = 1
         self._refresh_status()
         self._show_image("feather")
@@ -581,6 +607,7 @@ class HonghuaGame:
 
     # ── YV jeans ──────────────────────────────────────────────────────────────
     def inspect_jeans(self) -> None:
+        self._gain_trust("inspect_jeans", 1)
         self.clues["牛仔褲"] = 4
         self._refresh_status()
         self._show_image("box")
@@ -721,6 +748,7 @@ class HonghuaGame:
         ])
 
     def read_case_notes(self) -> None:
+        self._gain_trust("read_case_notes", 2)
         self.lore.add("紅花案情筆記")
         self._refresh_status()
         self._show_image("diary")
@@ -761,6 +789,7 @@ class HonghuaGame:
         ])
 
     def inspect_window_note(self) -> None:
+        self._gain_trust("inspect_window_note", 2)
         self.lore.add("艾蜜莉亞線索")
         self._refresh_status()
         self._show_image("window")
@@ -831,6 +860,7 @@ class HonghuaGame:
         def submit() -> None:
             code = entry.get().strip()
             if code == self.CODE_ANSWER:
+                self._gain_trust("unlock_code", 1)
                 self.inventory.add("鎮魂歌譜")
                 self._refresh_status()
                 messagebox.showinfo(
@@ -894,6 +924,7 @@ class HonghuaGame:
         ])
 
     def scene_basement_deep(self) -> None:
+        self._gain_trust("scene_basement_deep", 2)
         self.lore.add("天王星供詞")
         self._refresh_status()
         self._show_image("basement_deep")
@@ -932,8 +963,9 @@ class HonghuaGame:
         has_talisman = "鎮魂歌譜" in self.inventory
         all_lore     = len(self.lore) >= 3
         clue_count   = len(self.clues)
+        trust        = self.trust
 
-        if has_talisman and all_lore:
+        if has_talisman and all_lore and trust >= self.TRUST_THRESHOLD_SECRET:
             self._set_story(
                 "你走向紅花，手中握著那份《鎮魂歌譜》。\n\n"
                 "她的眼神微微一凝——\n"
@@ -948,7 +980,18 @@ class HonghuaGame:
                 "「說吧。你知道什麼，就說什麼。」"
             )
             self._set_options([("展示所有物證，陳述推論", self.ending_secret)])
-        elif has_talisman:
+        elif has_talisman and all_lore:
+            self._set_story(
+                "你走向紅花，展示了完整物證與供詞。\n\n"
+                "紅花安靜地聽完，點了點頭。\n"
+                "「你的推論成立，證據也完整。」\n\n"
+                "她停頓片刻，視線卻沒有真正落在你身上：\n"
+                "「但我還不確定，能不能把剩下的交給你。」\n\n"
+                "「你破得了案，\n"
+                " 卻還沒真正讓我相信你會善待這個真相。」"
+            )
+            self._set_options([("接受她的決定", self.ending_trust_coldtruth)])
+        elif has_talisman and trust >= self.TRUST_THRESHOLD_TRUE:
             self._set_story(
                 "你走向紅花，手中握著《鎮魂歌譜》。\n\n"
                 "「你找到了，」她平靜地說，\n"
@@ -959,6 +1002,29 @@ class HonghuaGame:
                 "眼中有著你說不清楚的複雜情緒。"
             )
             self._set_options([("陳述目前的調查發現", self.ending_true)])
+        elif has_talisman:
+            self._set_story(
+                "你拿出《鎮魂歌譜》與幾項物證。\n\n"
+                "紅花看了一眼，神情冷了下來：\n"
+                "「東西找得到，不代表你值得託付。」\n\n"
+                "「你像是在解一個題目，\n"
+                " 不是在面對一條人命。」\n\n"
+                "她轉身走回書架陰影處：\n"
+                "「今晚到此為止。你先學會『聽』，再來查案。」"
+            )
+            self._set_options([("沉默離開", self.ending_trust_rejected)])
+        elif clue_count >= self.PARTIAL_CLUES and trust >= self.TRUST_THRESHOLD_ALLIANCE:
+            self._set_story(
+                "你走向紅花，帶著尚未完整的物證。\n\n"
+                "她看著你，罕見地先開口：\n"
+                "「證據還不夠，但你查案的方式，我認可。」\n\n"
+                "她從袖中取出一枚舊徽章，放到你手中：\n"
+                "「這是蔚藍學院舊館守備徽章。帶著它，\n"
+                " 明晚你可以直接進地下密室最深處。」\n\n"
+                "「我們不是朋友，」她淡淡說，\n"
+                "「但從現在起，我們是同一邊的人。」"
+            )
+            self._set_options([("收下徽章，約定再查", self.ending_trust_alliance)])
         elif clue_count >= self.PARTIAL_CLUES:
             self._set_story(
                 "你走向紅花，帶著你蒐集到的物證。\n\n"
@@ -1051,6 +1117,66 @@ class HonghuaGame:
             "【真結局 · 線索足夠】\n"
             "案件有了重要進展，但完整的真相尚未揭露。\n"
             "紅花依然守著圖書館，等待你的下一次造訪。"
+        )
+        self._set_options([
+            ("再玩一次", self.show_intro),
+            ("離開", self.root.destroy),
+        ])
+
+    def ending_trust_alliance(self) -> None:
+        """Affinity ending — high trust without full evidence."""
+        self._show_image("normal_end")
+        self._set_story(
+            "你收下了那枚舊徽章。\n\n"
+            "紅花背對著你，聲音很輕：\n"
+            "「別讓我後悔。」\n\n"
+            "你走出圖書館時，天邊剛泛白。\n"
+            "這一夜你沒有破案，\n"
+            "卻換來了比答案更難得的東西——\n"
+            "紅花的信任。\n\n"
+            "【信任結局 · 共犯不是罪犯】\n"
+            "你與紅花建立了調查同盟。\n"
+            "真相尚未揭曉，但你們將並肩追到最後。"
+        )
+        self._set_options([
+            ("再玩一次", self.show_intro),
+            ("離開", self.root.destroy),
+        ])
+
+    def ending_trust_rejected(self) -> None:
+        """Affinity ending — low trust with talisman."""
+        self._show_image("bad_a")
+        self._set_story(
+            "你站在原地，手中的《鎮魂歌譜》忽然變得沉重。\n\n"
+            "紅花沒有再看你，只說了一句：\n"
+            "「會查案，不等於懂人。」\n\n"
+            "門在你身後緩緩關上。\n"
+            "你帶走了證據，卻帶不走她的配合。\n\n"
+            "【信任結局 · 被拒於門外】\n"
+            "你拿到關鍵物件，卻失去了紅花的信任。\n"
+            "這起案件，變得更難了。"
+        )
+        self._set_options([
+            ("重新開始", self.show_intro),
+            ("離開", self.root.destroy),
+        ])
+
+    def ending_trust_coldtruth(self) -> None:
+        """Affinity ending — case solved but relationship remains distant."""
+        end_bgm = BGM_END if os.path.exists(BGM_END) else BGM_MAIN
+        self.music.switch(end_bgm)
+        self._show_image("true_end")
+        self._set_story(
+            "證據鏈完整，供詞清楚，真相已然浮現。\n\n"
+            "你報出天王星的名字時，\n"
+            "紅花沒有驚訝，也沒有喜悅。\n\n"
+            "「你做到了，」她說，\n"
+            "「但到這裡就好。」\n\n"
+            "她把最後一份檔案留在桌上，\n"
+            "卻沒有把目光留給你。\n\n"
+            "【信任結局 · 冷真相】\n"
+            "你解開了命案，卻沒有解開紅花心中的門。\n"
+            "真相是對的，但你們仍然陌生。"
         )
         self._set_options([
             ("再玩一次", self.show_intro),
