@@ -14,8 +14,14 @@ from typing import Optional
 try:
     from PIL import Image, ImageTk
     _PIL = True
+    # Use Resampling enum (Pillow ≥ 9.1); fall back to legacy constants on 9.0.
+    _RESAMPLING = getattr(Image, "Resampling", None)
+    _BILINEAR   = _RESAMPLING.BILINEAR if _RESAMPLING else Image.BILINEAR  # type: ignore[attr-defined]
+    _LANCZOS    = _RESAMPLING.LANCZOS  if _RESAMPLING else Image.LANCZOS   # type: ignore[attr-defined]
+    _NEAREST    = _RESAMPLING.NEAREST  if _RESAMPLING else Image.NEAREST   # type: ignore[attr-defined]
 except ImportError:
     _PIL = False
+    _BILINEAR = _LANCZOS = _NEAREST = 2  # unused when _PIL is False
 
 # ── animation states ───────────────────────────────────────────────────────────
 STATE_IDLE    = "idle"
@@ -158,7 +164,7 @@ class CharacterAnimator:
         bphase = 2 * math.pi * t / (self.FPS * self.BREATH_CYCLE)
         scale  = 1.0 + self.BREATH_AMP * breath_mult * math.sin(bphase)
         new_h  = int(h * scale)
-        scaled = self._base.resize((w, new_h), Image.BILINEAR)
+        scaled = self._base.resize((w, new_h), _BILINEAR)
         crop_y = (new_h - h) // 2
         img    = scaled.crop((0, crop_y, w, crop_y + h))
 
@@ -221,7 +227,7 @@ class CharacterAnimator:
         lid_src_y1 = max(0, eye_y1 - 4)
         lid_src_y2 = max(lid_src_y1 + 1, eye_y1)
         lid_strip  = img.crop((0, lid_src_y1, w, lid_src_y2))
-        lid_strip  = lid_strip.resize((w, lid_h), Image.NEAREST)
+        lid_strip  = lid_strip.resize((w, lid_h), _NEAREST)
         result     = img.copy()
         result.paste(lid_strip, (0, eye_y1))
         return result

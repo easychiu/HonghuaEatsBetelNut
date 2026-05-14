@@ -16,8 +16,11 @@ from tkinter import messagebox
 try:
     from PIL import Image, ImageDraw, ImageFilter, ImageEnhance, ImageTk
     _PIL = True
+    _RESAMPLING = getattr(Image, "Resampling", None)
+    _LANCZOS    = _RESAMPLING.LANCZOS if _RESAMPLING else Image.LANCZOS  # type: ignore[attr-defined]
 except ImportError:
     _PIL = False
+    _LANCZOS = 1  # unused when _PIL is False
 
 try:
     import pygame as _pygame
@@ -68,7 +71,7 @@ def _get_char_pil(path: str) -> Optional[object]:
         try:
             img = Image.open(path).convert("RGBA")
             if img.size != (IW, IH):
-                img = img.resize((IW, IH), Image.LANCZOS)
+                img = img.resize((IW, IH), _LANCZOS)
             _char_pil_cache[path] = img
         except Exception:
             return None
