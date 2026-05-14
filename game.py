@@ -43,6 +43,8 @@ SCENE_SOURCE_OVERRIDES: dict[str, str] = {
     "desk": HONGHUA_READ_BOOK_JPG,
     "diary": HONGHUA_READ_BOOK_JPG,
     "window": HONGHUA_READ_BOOK_JPG,
+    "basement": HONGHUA_IN_ENG_JPG,
+    "basement_deep": HONGHUA_IN_ENG_JPG,
     "confront": HONGHUA_IN_ENG_JPG,
 }
 

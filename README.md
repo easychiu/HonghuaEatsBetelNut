@@ -98,6 +98,7 @@ python generate_assets.py --bgm-only
 - 遊戲會優先讀取 `assets/scenes/*.png`
 - 若場景圖不存在，會回退到程式內建的即時生成版本
 - 若有 `HonghuaReadBook.jpg`，圖書館相關場景會優先使用該圖（紅花在圖書館看書）
+- 若有 `HonghuaInENG.jpg`，地下密室與對峙場景會優先使用該圖（紅花人物形象）
 - 專案已先行附帶開場、大廳、對峙、地下室、各調查節點與結局場景圖
 
 ### 物證與謎題
