@@ -116,19 +116,34 @@ class CharacterAnimator:
     MOUTH_Y1_FRAC = 0.44   # mouth region top bound (fraction of h)
     MOUTH_Y2_FRAC = 0.54   # mouth region bottom bound
     TALK_CYCLE    = 0.38   # seconds per mouth open/close cycle (~2.6 Hz)
+    # Two-sine model: primary amp + harmonic at TALK_HARMONIC_RATIO produce a
+    # natural, aperiodic open/close cadence (≈ 2–3 syllables per second).
+    TALK_PRIMARY_AMP    = 0.55   # amplitude of the primary sine wave
+    TALK_SECONDARY_AMP  = 0.35   # amplitude of the secondary harmonic
+    TALK_HARMONIC_RATIO = 1.9    # irrational ratio → avoids strict periodicity
+    TALK_DC_BIAS        = 0.05   # positive offset keeps mouth open ~65 % of cycle
+    TALK_OPEN_THRESHOLD = 0.04   # skip drawing if open_factor is below this
+    TALK_SHADOW_ALPHA   = 115    # peak alpha of the mouth-shadow ellipse
 
     # Brow furrow overlay (impatient state)
-    BROW_Y1_FRAC     = 0.16   # inner-brow shadow top (fraction of h)
-    BROW_Y2_FRAC     = 0.21   # inner-brow shadow bottom
-    LIP_PRESS_Y_FRAC = 0.49   # tight-lip horizontal bar centre (fraction of h)
+    BROW_Y1_FRAC      = 0.16   # inner-brow shadow top (fraction of h)
+    BROW_Y2_FRAC      = 0.21   # inner-brow shadow bottom
+    LIP_PRESS_Y_FRAC  = 0.49   # tight-lip horizontal bar centre (fraction of h)
+    # Brow furrow polygon geometry (in pixels from the image centre)
+    BROW_FURROW_HALF_W = 22    # half-width of the inverted-V brow shadow
+    BROW_FURROW_DEPTH  = 3     # how many px the apex rises above the brow top
 
     # Cheek flush (friendly / trusted states)
-    CHEEK_L_X_FRAC = 0.27   # left cheek centre (fraction of w)
-    CHEEK_R_X_FRAC = 0.73   # right cheek centre
-    CHEEK_Y_FRAC   = 0.36   # cheek vertical centre (fraction of h)
-    CHEEK_RX       = 26     # horizontal radius of cheek ellipse (px)
-    CHEEK_RY       = 13     # vertical radius of cheek ellipse (px)
-    CHEEK_CYCLE    = 4.2    # seconds per cheek-flush pulse
+    CHEEK_L_X_FRAC  = 0.27   # left cheek centre (fraction of w)
+    CHEEK_R_X_FRAC  = 0.73   # right cheek centre
+    CHEEK_Y_FRAC    = 0.36   # cheek vertical centre (fraction of h)
+    CHEEK_RX        = 26     # horizontal radius of cheek ellipse (px)
+    CHEEK_RY        = 13     # vertical radius of cheek ellipse (px)
+    CHEEK_CYCLE     = 4.2    # seconds per cheek-flush pulse
+    # Warm face glow constants (trusted state only)
+    GLOW_BASE_ALPHA  = 9     # minimum alpha of the amber overlay
+    GLOW_VAR_ALPHA   = 4     # amplitude of the pulsing alpha variation
+    GLOW_PHASE_MULT  = 0.65  # slows the glow pulse relative to the cheek cycle
 
     def __init__(self, canvas: object, width: int, height: int) -> None:
         self._canvas   = canvas
@@ -407,9 +422,15 @@ class CharacterAnimator:
         The composite is done only on the small mouth crop for speed.
         """
         phase       = 2 * math.pi * t / (self.FPS * self.TALK_CYCLE)
-        # Primary wave + harmonic at ×1.9 with small positive bias
-        open_factor = max(0.0, 0.55 * math.sin(phase) + 0.35 * math.sin(phase * 1.9) + 0.05)
-        if open_factor < 0.04:
+        # Primary wave + harmonic at TALK_HARMONIC_RATIO with a small positive
+        # bias keeps open_factor > 0 for ~65 % of the cycle (speech-like).
+        open_factor = max(
+            0.0,
+            self.TALK_PRIMARY_AMP   * math.sin(phase)
+            + self.TALK_SECONDARY_AMP * math.sin(phase * self.TALK_HARMONIC_RATIO)
+            + self.TALK_DC_BIAS,
+        )
+        if open_factor < self.TALK_OPEN_THRESHOLD:
             return img
         mx1 = int(w * self.MOUTH_X1_FRAC)
         mx2 = int(w * self.MOUTH_X2_FRAC)
@@ -418,7 +439,7 @@ class CharacterAnimator:
         mw  = mx2 - mx1
         mh  = max(1, my2 - my1)
         open_h = max(2, int(mh * 0.50 * open_factor))
-        alpha  = int(115 * open_factor)
+        alpha  = int(self.TALK_SHADOW_ALPHA * open_factor)
         sy1    = (mh - open_h) // 2
         pad    = mw // 5
         # Work on a crop of the mouth region only to minimise composite cost.
@@ -445,7 +466,9 @@ class CharacterAnimator:
         by2 = int(h * self.BROW_Y2_FRAC)
         cx  = w // 2
         draw.polygon(
-            [(cx - 22, by2), (cx, by1 + 3), (cx + 22, by2)],
+            [(cx - self.BROW_FURROW_HALF_W, by2),
+             (cx, by1 + self.BROW_FURROW_DEPTH),
+             (cx + self.BROW_FURROW_HALF_W, by2)],
             fill=(10, 4, 4, 52),
         )
         # Lip press: thin dark bar at mouth centre (pursed lips)
@@ -480,7 +503,7 @@ class CharacterAnimator:
             draw.ellipse([cx - rx, cy - ry, cx + rx, cy + ry], fill=colour)
         if warm:
             # Soft amber face glow — very subtle warmth for the trusted state.
-            glow_a = int(9 + 4 * math.sin(phase * 0.65))
+            glow_a = int(self.GLOW_BASE_ALPHA + self.GLOW_VAR_ALPHA * math.sin(phase * self.GLOW_PHASE_MULT))
             draw.rectangle(
                 [int(w * 0.16), int(h * 0.10),
                  int(w * 0.84), int(h * 0.58)],

@@ -868,8 +868,10 @@ class HonghuaGame:
             ("直接上前與紅花說話", self.scene_confront),
         ])
         # Prologue: Honghua is front-and-centre — add her click hotspot.
-        # Coordinates cover her body in HonghuaReadBook.jpg (460×490 canvas).
-        # Adjust x1/y1/x2/y2 to match the actual image if needed.
+        # Coordinates are (x1, y1, x2, y2) measured from the top-left corner
+        # of the 460×490 canvas in pixels.  To adjust: open HonghuaReadBook.jpg
+        # in any image editor, hover over the character boundary and read off
+        # the pixel coordinates shown in the status bar.
         self._set_image_actions([
             {
                 "label": "紅花",
@@ -924,10 +926,11 @@ class HonghuaGame:
         ]
         self._set_options(opts)
         # ── image hotspots ────────────────────────────────────────────────────
-        # All coordinates are for the 460×490 canvas (HonghuaReadBook.jpg).
+        # All coordinates are (x1, y1, x2, y2) from the top-left of the
+        # 460×490 canvas in pixels.  To calibrate: open HonghuaReadBook.jpg
+        # in an image editor and read pixel coordinates from its status bar.
         # More-specific (smaller) areas are listed BEFORE the larger Honghua
         # area so they take priority when both overlap at the same pixel.
-        # Adjust coordinates to match the actual image layout if needed.
         hall_actions: list[dict[str, object]] = [
             # ── existing investigation items ─────────────────────────────────
             {"label": "鎚子",  "area": (24, 316, 126, 470), "command": self.inspect_hammer},
