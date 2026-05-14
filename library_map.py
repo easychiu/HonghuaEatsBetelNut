@@ -1,9 +1,14 @@
 """Library map rendering and interaction flow."""
 from __future__ import annotations
 
-from typing import Protocol, Optional
+from typing import TYPE_CHECKING, Protocol, Optional, TypeAlias
 
 import story_texts as ST
+
+if TYPE_CHECKING:
+    from PIL.ImageTk import PhotoImage as MapImage
+else:
+    MapImage: TypeAlias = object
 
 try:
     from PIL import Image, ImageDraw, ImageTk
@@ -37,7 +42,7 @@ class MapSceneGame(Protocol):
     def scene_confront(self) -> None: ...
 
 
-def _pixel_library_map(floor: int, iw: int, ih: int) -> Optional[object]:
+def _pixel_library_map(floor: int, iw: int, ih: int) -> Optional[MapImage]:
     if not _PIL:
         return None
     img = Image.new("RGBA", (iw, ih), (12, 12, 18, 255))
@@ -83,7 +88,7 @@ def _pixel_library_map(floor: int, iw: int, ih: int) -> Optional[object]:
     return ImageTk.PhotoImage(img.convert("RGB"))
 
 
-def build_library_map_image(key: str, iw: int, ih: int) -> Optional[object]:
+def build_library_map_image(key: str, iw: int, ih: int) -> Optional[MapImage]:
     if key == "map_f1":
         return _pixel_library_map(1, iw, ih)
     if key == "map_f2":
