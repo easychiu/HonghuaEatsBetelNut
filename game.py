@@ -68,6 +68,7 @@ SCENE_TITLES: dict[str, str] = {
     "true_end": "真結局",
     "secret_end": "秘密結局",
     "normal_end": "普通結局",
+    "hidden_end": "隱藏結局",
     "bad_a": "壞結局",
     "bad_b": "密碼失敗",
 }
@@ -241,6 +242,7 @@ def _build(key: str) -> Optional[object]:
         "true_end":    (0.82, (50, 25, 0, 55),    None),
         "secret_end":  (0.80, (20, 10, 35, 65),   None),
         "normal_end":  (0.45, (0, 5, 25, 90),     None),
+        "hidden_end":  (0.60, (10, 20, 45, 100),  None),
     }
     if key in INFO:
         d, t, c = INFO[key]
@@ -1495,6 +1497,7 @@ class HonghuaGame:
         )
         self._set_options([
             ("重新開始", self.show_intro),
+            ("疲憊地離去，沉沉睡去", self.ending_hidden),
             ("離開", self.root.destroy),
         ])
 
@@ -1521,6 +1524,58 @@ class HonghuaGame:
         )
         self._set_options([
             ("重新開始", self.show_intro),
+            ("離開", self.root.destroy),
+        ])
+
+    def ending_hidden(self) -> None:
+        """Hidden ending — dream revelation."""
+        self.music.switch(BGM_END)
+        self._show_image("hidden_end")
+        self._set_story(
+            "你走出圖書館，肩膀沉得像灌了鉛。\n"
+            "夜色把街道壓得很低，你連回頭的力氣都沒有。\n\n"
+            "你只記得自己倒在某個安全的角落，\n"
+            "眼皮一沉，便墜進了沒有盡頭的黑。\n\n"
+            "——睡著了。\n\n"
+            "再睜開眼時，你正坐在診間裡。\n"
+            "白色牆壁亮得刺眼，空氣裡全是消毒水的氣味。\n\n"
+            "你對面的醫生翻著病歷，\n"
+            "胸前名牌赫然寫著——「Yv」。\n\n"
+            "他抬起頭，帶著一抹神秘的微笑：\n"
+            "「要不要打胰島素？」\n\n"
+            "那笑意停在嘴角，說不清是關心還是試探，\n"
+            "你的背脊忽然一陣發涼。\n\n"
+            "你匆匆走出診間，\n"
+            "在醫院大門旁的鏡子前停下腳步。\n\n"
+            "鏡中的人，不是什麼英國皇家警察。\n"
+            "那張臉，是艾蜜莉亞（Amelia）。\n"
+            "你就是艾蜜莉亞。\n\n"
+            "真相像冷水一樣潑下來——\n"
+            "根本沒有什麼英國皇家警察。\n"
+            "那只是昨晚一段不愉快的記憶：\n"
+            "法國警察在街頭攔下你，查驗身分，\n"
+            "讓你緊張、惱火，卻又無從發作。\n\n"
+            "那股情緒太重，重到壓進夢裡。\n"
+            "你把那個追問你的人，變成了自己；\n"
+            "在夢中反過來扮演追問真相的警察。\n"
+            "你把角色繞進了自己的夢境。\n\n"
+            "你推開醫院大門，陽光刺得你瞇起眼。\n"
+            "門口等著的人是提莫（Timo），\n"
+            "當初接應你的民宿老闆，仍是那副親切模樣。\n"
+            "旁邊站著你現在的鄰居珊珊（Shanshan），\n"
+            "她朝你輕輕擺了擺手。\n\n"
+            "也許，你該考慮回倫敦一趟了。\n"
+            "帶著這個奇怪的夢，\n"
+            "帶著那段不愉快的法國夜晚，\n"
+            "帶著從未真正說清楚的故事——\n"
+            "也許倫敦，才有你真正的答案。\n\n"
+            "【隱藏結局 · 夢醒時分】\n"
+            "你不是警察，你是艾蜜莉亞。\n"
+            "那一夜的追問，只是一場夢的投影。\n"
+            "結束。"
+        )
+        self._set_options([
+            ("再玩一次", self.show_intro),
             ("離開", self.root.destroy),
         ])
 
