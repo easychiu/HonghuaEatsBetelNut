@@ -96,11 +96,13 @@ class CharacterAnimator:
     EYE_HL_CYCLE  = 5.0    # seconds per twinkle pulse
 
     # Talking mouth — shadow oval pulsing at the mouth region
+    # TALK_CYCLE ≈ 0.38 s → ~2.6 mouth open/close cycles per second,
+    # which matches natural fast speech cadence (2–3 syllables/s).
     MOUTH_X1_FRAC = 0.25   # mouth region left bound (fraction of w)
     MOUTH_X2_FRAC = 0.75   # mouth region right bound
     MOUTH_Y1_FRAC = 0.44   # mouth region top bound (fraction of h)
     MOUTH_Y2_FRAC = 0.54   # mouth region bottom bound
-    TALK_CYCLE    = 0.38   # seconds per mouth open/close cycle
+    TALK_CYCLE    = 0.38   # seconds per mouth open/close cycle (~2.6 Hz)
 
     def __init__(self, canvas: object, width: int, height: int) -> None:
         self._canvas   = canvas
@@ -347,11 +349,14 @@ class CharacterAnimator:
     def _apply_talking_anim(self, img: object, w: int, h: int, t: int) -> object:
         """Pulse a mouth-shadow oval to suggest the lips parting when talking.
 
-        Two overlapping sine waves at different frequencies produce an
-        irregular, speech-like cadence rather than a mechanical beat.
+        Two sine waves at an irrational frequency ratio (1.0 : 1.9) produce an
+        aperiodic, speech-like cadence.  Coefficients: 0.55 (primary amplitude),
+        0.35 (secondary), +0.05 (DC bias) keep ``open_factor`` positive for
+        roughly 65 % of the cycle so the mouth appears mostly active.
         The composite is done only on the small mouth crop for speed.
         """
         phase       = 2 * math.pi * t / (self.FPS * self.TALK_CYCLE)
+        # Primary wave + harmonic at ×1.9 with small positive bias
         open_factor = max(0.0, 0.55 * math.sin(phase) + 0.35 * math.sin(phase * 1.9) + 0.05)
         if open_factor < 0.04:
             return img
