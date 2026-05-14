@@ -60,6 +60,12 @@ _CHAR_ANIM_SCENES: dict[str, str] = {
     "confront":      "excited",
 }
 
+# Scenes where Honghua is present and facing the player; her animation state
+# should reflect the current trust level rather than a fixed value.
+_CHAR_ANIM_TRUST_SCENES: frozenset = frozenset({
+    "prologue", "hall", "bookshelves", "desk", "diary", "window", "confront",
+})
+
 _char_pil_cache: dict[str, object] = {}
 
 
@@ -435,6 +441,7 @@ class HonghuaGame:
         self.code_tries_left = self.MAX_CODE_TRIES
         self._type_job: Optional[str] = None
         self._current_img: Optional[object] = None
+        self._current_scene: str = ""
         self._image_actions: list[dict[str, object]] = []
         self._hover_action: Optional[int] = None
 
@@ -530,6 +537,7 @@ class HonghuaGame:
 
     # ── helpers ────────────────────────────────────────────────────────────────
     def _show_image(self, key: str) -> None:
+        self._current_scene = key
         self.animator.stop()
         self.img_canvas.delete("all")
         self._image_actions = []
@@ -539,6 +547,11 @@ class HonghuaGame:
         anim_state = _CHAR_ANIM_SCENES.get(key)
         src_path   = SCENE_SOURCE_OVERRIDES.get(key)
         if anim_state and src_path and _PIL and os.path.exists(src_path):
+            # For scenes where Honghua is present and interacting with the
+            # player, override the static state with a trust-based one so her
+            # expression reflects how she currently feels about the player.
+            if key in _CHAR_ANIM_TRUST_SCENES:
+                anim_state = self._trust_anim_state()
             base = _get_char_pil(src_path)
             if base is not None:
                 self.animator.load_image(base)
@@ -695,11 +708,24 @@ class HonghuaGame:
             return "觀望中"
         return "不信任"
 
+    def _trust_anim_state(self) -> str:
+        """Return the animator state string matching the current trust tier."""
+        if self.trust >= self.TRUST_THRESHOLD_SECRET:
+            return "trusted"
+        if self.trust >= self.TRUST_THRESHOLD_TRUE:
+            return "friendly"
+        if self.trust >= self.TRUST_THRESHOLD_OBSERVE:
+            return "peaceful"
+        return "impatient"
+
     def _gain_trust(self, event: str, points: int) -> None:
         if event in self._trust_events:
             return
         self._trust_events.add(event)
         self.trust += points
+        # If Honghua is currently visible, update her expression immediately.
+        if self._current_scene in _CHAR_ANIM_TRUST_SCENES:
+            self.animator.set_state(self._trust_anim_state())
 
     def _format_status_text(
         self,
@@ -775,10 +801,20 @@ class HonghuaGame:
         self._show_image("hall")
         has_key = "地下室鑰匙" in self.inventory
         basement_hint = "\n（口袋中有一把通往地下密室的鑰匙……）" if has_key else ""
+
+        trust_remarks = {
+            "不信任": "\n紅花的目光像刀，冷冷地釘在你身上。沒有歡迎，沒有客套。",
+            "觀望中": "\n她側過臉，用眼角餘光確認了你的位置——沒有說話，卻也沒有移開視線。",
+            "逐步信任": "\n「……隨便你，」她輕聲說，目光重新落回書頁，但翻頁的動作慢了許多。",
+            "高度信任": "\n「慢慢來，」她輕聲說，挪了挪燭台，讓光線照進了更多的角落。",
+        }
+        trust_remark = trust_remarks.get(self._trust_level(), "")
+
         self._set_story(
             "蔚藍學院圖書館——廢棄兩年的舊址。\n"
             "灰塵、蛛網與腐舊的書香充滿了每一個角落。\n"
-            "然而，燭光仍在搖曳。有人在守著這裡。\n\n"
+            "然而，燭光仍在搖曳。有人在守著這裡。\n"
+            + trust_remark + "\n\n"
             "你掃視四周，注意到幾件不尋常的物品：\n"
             f"一把長約{self.HAMMER_LENGTH_CM}公分的生鏽鎚子、一片乾燥的四葉草，\n"
             "以及一件疊得整齊的牛仔褲——\n"
@@ -815,6 +851,12 @@ class HonghuaGame:
         self.clues["鎚子"] = 3
         self._refresh_status()
         self._show_image("book")
+        trust_reaction = {
+            "不信任":  "",
+            "觀望中":  "\n\n（從書架那頭，你聽見翻頁的聲音停了。）",
+            "逐步信任": "\n\n「鎚柄上的刻痕……你注意到了？」\n她的聲音飄過來，比你預期的輕。",
+            "高度信任": "\n\n「那三道刻痕是計數用的，」她說，\n「每隔一年，有人就在那裡刻一道。」",
+        }.get(self._trust_level(), "")
         self._set_story(
             f"書架角落，一把鏽跡斑斑、長約{self.HAMMER_LENGTH_CM}公分的鎚子橫臥於塵埃之中。\n\n"
             f"{self.HAMMER_LENGTH_CM}公分，沉甸甸——這是一件兇器嗎？\n\n"
@@ -824,6 +866,7 @@ class HonghuaGame:
             "鎚柄底端刻著羅馬數字「III」。\n\n"
             "【物證取得】第一碼是 3。\n"
             "【推斷】這把鎚子，極可能是米糕店長遇害的兇器。"
+            + trust_reaction
         )
         self._set_options([
             ("繼續調查", self.scene_hall),
@@ -836,6 +879,12 @@ class HonghuaGame:
         self.clues["四葉草"] = 1
         self._refresh_status()
         self._show_image("feather")
+        trust_reaction = {
+            "不信任":  "",
+            "觀望中":  "\n\n（你感覺她微微坐直了身子。）",
+            "逐步信任": "\n\n「艾莉卡那個孩子……，」\n她輕聲說，沒有繼續。",
+            "高度信任": "\n\n「她說『順路帶來好運』，」紅花說，\n「但她逃跑時沒帶走這片葉子——好運已經用完了。」",
+        }.get(self._trust_level(), "")
         self._set_story(
             "一片乾燥的四葉草，夾在書架縫隙中，\n"
             "邊緣已泛黃，但保存得出奇完好。\n\n"
@@ -848,6 +897,7 @@ class HonghuaGame:
             "但案發當晚，她已不知去向。\n\n"
             "【物證取得】第二碼是 1。\n"
             "【推斷】艾莉卡可能是案發現場的目擊者。"
+            + trust_reaction
         )
         self._set_options([
             ("繼續調查", self.scene_hall),
@@ -860,6 +910,12 @@ class HonghuaGame:
         self.clues["牛仔褲"] = 4
         self._refresh_status()
         self._show_image("box")
+        trust_reaction = {
+            "不信任":  "",
+            "觀望中":  "\n\n（遠處燭光輕輕搖曳。她好像在等你繼續。）",
+            "逐步信任": "\n\n「R.U.……，」她從書架那頭說，\n「他當年離校時，把怨氣也一起打包走了。」",
+            "高度信任": "\n\n「第四排，」她輕聲重複，\n「那是他和米糕第一次正面衝突的地方。\n 你找到正確的線索了。」",
+        }.get(self._trust_level(), "")
         self._set_story(
             "書架底層，一件疊得整整齊齊的牛仔褲。\n\n"
             "標籤上印著「YV」兩個字母——\n"
@@ -874,6 +930,7 @@ class HonghuaGame:
             "而「第四排」，正是學院劇場的黑市座位……\n\n"
             "【物證取得】第三碼是 4。\n"
             "【推斷】天王星曾在案發前後秘密返回學院。"
+            + trust_reaction
         )
         self._set_options([
             ("繼續調查", self.scene_hall),
@@ -1082,6 +1139,12 @@ class HonghuaGame:
         self.lore.add("紅花案情筆記")
         self._refresh_status()
         self._show_image("diary")
+        trust_reaction = {
+            "不信任":  "\n\n【你感覺到她的目光穿過書架的縫隙——像在確認你是否值得信任。】",
+            "觀望中":  "\n\n【你隱約聽見她從書架另一側輕聲嘆了口氣。】",
+            "逐步信任": "\n\n「那個門，」她從你身後輕聲說，\n「自動上鎖那種感覺——我做夢夢到過好幾次。」",
+            "高度信任": "\n\n「謝謝你讀完了。」\n她走近了一步，燭光映在她臉上，\n你第一次看見她臉上有了不是防備的表情。",
+        }.get(self._trust_level(), "")
         self._set_story(
             "【紅花的案情紀錄 · 第七三頁】\n\n"
             "米糕的死絕非偶然。\n"
@@ -1095,6 +1158,7 @@ class HonghuaGame:
             "等一個不只懂劍，也懂心的人。\n\n"
             "——紅花　謹記\n\n"
             "【人物線索】你了解了紅花所掌握的秘密。"
+            + trust_reaction
         )
         self._set_options([
             ("繼續探索桌面", self.scene_desk),
@@ -1126,6 +1190,12 @@ class HonghuaGame:
         self.lore.add("艾蜜莉亞線索")
         self._refresh_status()
         self._show_image("window")
+        trust_reaction = {
+            "不信任":  "\n\n【她沒有說話。遠處的燭光在風中搖了幾下，又穩住了。】",
+            "觀望中":  "\n\n（你聽見她放下了什麼——是書嗎，還是什麼別的東西？）",
+            "逐步信任": "\n\n「艾蜜莉亞選擇沉默，」她輕聲說，\n「但她留下了這張字條。沉默有時候也是一種陳述。」",
+            "高度信任": "\n\n「那封信是我寫的，」她說，語氣平靜如水，\n「在她消失的那個晚上。我知道她不會回來了。\n 但我希望她知道——有人懂。」",
+        }.get(self._trust_level(), "")
         self._set_story(
             "字條的字跡在燭光下若隱若現：\n\n"
             "「艾蜜莉亞，你知道他做了什麼。\n"
@@ -1138,6 +1208,7 @@ class HonghuaGame:
             "艾蜜莉亞——那個消失的學生聯誼會委員。\n"
             "她當時目睹了什麼，讓她必須逃離這裡？\n\n"
             "【人物線索】你了解了艾蜜莉亞消失的原因。"
+            + trust_reaction
         )
         self._set_options([
             ("返回大廳", self.scene_hall),

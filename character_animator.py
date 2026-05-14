@@ -30,9 +30,14 @@ except ImportError:
     _IMAGETK = False
 
 # ── animation states ───────────────────────────────────────────────────────────
-STATE_IDLE    = "idle"
-STATE_TALKING = "talking"
-STATE_EXCITED = "excited"
+STATE_IDLE      = "idle"
+STATE_TALKING   = "talking"
+STATE_EXCITED   = "excited"
+# Trust-level states (map to trust thresholds in game.py)
+STATE_IMPATIENT = "impatient"   # 不耐煩 — trust = 0
+STATE_PEACEFUL  = "peaceful"    # 和平   — trust 1–3
+STATE_FRIENDLY  = "friendly"    # 友善   — trust 4–6
+STATE_TRUSTED   = "trusted"     # 信任   — trust ≥ 7
 
 
 class CharacterAnimator:
@@ -104,6 +109,19 @@ class CharacterAnimator:
     MOUTH_Y2_FRAC = 0.54   # mouth region bottom bound
     TALK_CYCLE    = 0.38   # seconds per mouth open/close cycle (~2.6 Hz)
 
+    # Brow furrow overlay (impatient state)
+    BROW_Y1_FRAC     = 0.16   # inner-brow shadow top (fraction of h)
+    BROW_Y2_FRAC     = 0.21   # inner-brow shadow bottom
+    LIP_PRESS_Y_FRAC = 0.49   # tight-lip horizontal bar centre (fraction of h)
+
+    # Cheek flush (friendly / trusted states)
+    CHEEK_L_X_FRAC = 0.27   # left cheek centre (fraction of w)
+    CHEEK_R_X_FRAC = 0.73   # right cheek centre
+    CHEEK_Y_FRAC   = 0.36   # cheek vertical centre (fraction of h)
+    CHEEK_RX       = 26     # horizontal radius of cheek ellipse (px)
+    CHEEK_RY       = 13     # vertical radius of cheek ellipse (px)
+    CHEEK_CYCLE    = 4.2    # seconds per cheek-flush pulse
+
     def __init__(self, canvas: object, width: int, height: int) -> None:
         self._canvas   = canvas
         self._w        = width
@@ -131,8 +149,13 @@ class CharacterAnimator:
         self._blink_subframe = 0
 
     def set_state(self, state: str) -> None:
-        """Switch animation state: ``idle`` | ``talking`` | ``excited``."""
+        """Switch animation state: ``idle`` | ``talking`` | ``excited``
+        | ``impatient`` | ``peaceful`` | ``friendly`` | ``trusted``."""
+        if self._state == state:
+            return
         self._state = state
+        # Reset blink cadence to match the new emotional state.
+        self._next_blink = self._rand_blink_interval()
 
     def start(self) -> None:
         """Begin (or restart) the animation loop."""
@@ -159,6 +182,12 @@ class CharacterAnimator:
     # ── internals ──────────────────────────────────────────────────────────────
 
     def _rand_blink_interval(self) -> int:
+        if self._state == STATE_IMPATIENT:
+            # Nervous / irritated — frequent blinking (~2–4 s).
+            return random.randint(2 * self.FPS, 4 * self.FPS)
+        if self._state == STATE_TRUSTED:
+            # Very relaxed — unhurried blinking (~5–9 s).
+            return random.randint(5 * self.FPS, 9 * self.FPS)
         return random.randint(self.BLINK_INTERVAL_MIN, self.BLINK_INTERVAL_MAX)
 
     def _tick(self) -> None:
@@ -184,6 +213,14 @@ class CharacterAnimator:
             breath_mult, float_mult = 1.8, 1.5
         elif self._state == STATE_TALKING:
             breath_mult, float_mult = 1.3, 0.7
+        elif self._state == STATE_IMPATIENT:
+            breath_mult, float_mult = 1.6, 0.5   # tense: jittery breath, suppressed float
+        elif self._state == STATE_PEACEFUL:
+            breath_mult, float_mult = 0.7, 1.3   # calm: slow breath, gentle drift
+        elif self._state == STATE_FRIENDLY:
+            breath_mult, float_mult = 1.0, 1.1   # warm and engaged
+        elif self._state == STATE_TRUSTED:
+            breath_mult, float_mult = 0.6, 1.4   # most relaxed
         else:
             breath_mult, float_mult = 1.0, 1.0
 
@@ -221,13 +258,19 @@ class CharacterAnimator:
         if self._blink_phase > 0:
             img = self._apply_blink(img, w, h)
 
-        # 5. Eye highlight — twinkling specular dot (idle state only) ──────────
-        if self._state == STATE_IDLE:
+        # 5. Eye highlight — twinkling specular dot (idle, friendly, trusted)
+        if self._state in (STATE_IDLE, STATE_FRIENDLY, STATE_TRUSTED):
             img = self._apply_eye_highlight(img, w, h, t)
 
-        # 6. Talking mouth animation (talking / excited states) ─────────────────
-        if self._state in (STATE_TALKING, STATE_EXCITED):
+        # 6. Talking mouth animation (talking / excited / friendly / trusted)
+        if self._state in (STATE_TALKING, STATE_EXCITED, STATE_FRIENDLY, STATE_TRUSTED):
             img = self._apply_talking_anim(img, w, h, t)
+
+        # 7. Trust-level expression overlays
+        if self._state == STATE_IMPATIENT:
+            img = self._apply_impatient_expression(img, w, h)
+        elif self._state in (STATE_FRIENDLY, STATE_TRUSTED):
+            img = self._apply_cheek_flush(img, w, h, t, self._state == STATE_TRUSTED)
 
         return img
 
@@ -379,3 +422,60 @@ class CharacterAnimator:
         result     = img.copy()
         result.paste(composited, (mx1, my1))
         return result
+
+    def _apply_impatient_expression(self, img: object, w: int, h: int) -> object:
+        """Furrowed-brow shadow + tight lip-press bar for the *impatient* state.
+
+        A subtle dark V-polygon is drawn over the inner-brow area to suggest a
+        frown, and a short horizontal rectangle replaces the open mouth with a
+        thin pressed line, conveying suppressed irritation.
+        """
+        overlay = Image.new("RGBA", (w, h), (0, 0, 0, 0))
+        draw    = ImageDraw.Draw(overlay)
+        # Inner-brow furrow: dark inverted-V shadow
+        by1 = int(h * self.BROW_Y1_FRAC)
+        by2 = int(h * self.BROW_Y2_FRAC)
+        cx  = w // 2
+        draw.polygon(
+            [(cx - 22, by2), (cx, by1 + 3), (cx + 22, by2)],
+            fill=(10, 4, 4, 52),
+        )
+        # Lip press: thin dark bar at mouth centre (pursed lips)
+        ly  = int(h * self.LIP_PRESS_Y_FRAC)
+        lx1 = int(w * self.MOUTH_X1_FRAC) + int(w * 0.09)
+        lx2 = int(w * self.MOUTH_X2_FRAC) - int(w * 0.09)
+        draw.rectangle([lx1, ly - 1, lx2, ly + 2], fill=(20, 7, 7, 65))
+        return Image.alpha_composite(img, overlay)
+
+    def _apply_cheek_flush(
+        self, img: object, w: int, h: int, t: int, warm: bool
+    ) -> object:
+        """Rosy cheek ovals for the *friendly* and *trusted* states.
+
+        *warm* = ``True`` (trusted) produces a deeper rose with a broad amber
+        face glow; ``False`` (friendly) uses a softer, lighter pink.
+        Both pulse gently via a slow sine wave so the flush feels alive rather
+        than painted on.
+        """
+        phase      = 2 * math.pi * t / (self.FPS * self.CHEEK_CYCLE)
+        base_alpha = 44 if warm else 30
+        var_alpha  = 16 if warm else 12
+        alpha      = int(base_alpha + var_alpha * math.sin(phase))
+        colour     = (198, 78, 68, alpha) if warm else (215, 100, 88, alpha)
+        rx         = self.CHEEK_RX + (4 if warm else 0)
+        ry         = self.CHEEK_RY + (2 if warm else 0)
+        cy         = int(h * self.CHEEK_Y_FRAC)
+        overlay    = Image.new("RGBA", (w, h), (0, 0, 0, 0))
+        draw       = ImageDraw.Draw(overlay)
+        for cx_frac in (self.CHEEK_L_X_FRAC, self.CHEEK_R_X_FRAC):
+            cx = int(w * cx_frac)
+            draw.ellipse([cx - rx, cy - ry, cx + rx, cy + ry], fill=colour)
+        if warm:
+            # Soft amber face glow — very subtle warmth for the trusted state.
+            glow_a = int(9 + 4 * math.sin(phase * 0.65))
+            draw.rectangle(
+                [int(w * 0.16), int(h * 0.10),
+                 int(w * 0.84), int(h * 0.58)],
+                fill=(192, 142, 72, glow_a),
+            )
+        return Image.alpha_composite(img, overlay)
