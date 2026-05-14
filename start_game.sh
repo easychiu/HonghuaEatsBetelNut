@@ -10,8 +10,8 @@ echo
 PYTHON=""
 for cmd in python3 python; do
     if command -v "$cmd" &>/dev/null; then
-        ver=$("$cmd" -c "import sys; print(sys.version_info[:2] >= (3,10))" 2>/dev/null)
-        if [ "$ver" = "True" ]; then
+        ver=$("$cmd" -c "import sys; print(sys.version_info[:2] >= (3, 10))" 2>/dev/null)
+        if [ "$ver" = "True" ]; then  # Python 3.10+
             PYTHON="$cmd"
             break
         fi
