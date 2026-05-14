@@ -25,6 +25,12 @@ try:
 except ImportError:
     _PYGAME = False
 
+try:
+    from character_animator import CharacterAnimator as _CharacterAnimator
+    _ANIMATOR = True
+except ImportError:
+    _ANIMATOR = False
+
 # ── paths ──────────────────────────────────────────────────────────────────────
 _DIR      = os.path.dirname(os.path.abspath(__file__))
 INFO_JPG  = os.path.join(_DIR, "info.jpg")
@@ -35,6 +41,38 @@ SCENES    = os.path.join(ASSETS, "scenes")
 BGM_MAIN  = os.path.join(ASSETS, "bgm_main.mp3")
 BGM_END   = os.path.join(ASSETS, "bgm_end.mp3")
 DEFAULT_SCENE_PNG = os.path.join(SCENES, "default.png")
+
+# ── character animation: scene → animator state ────────────────────────────────
+# Only scenes that show a character image (via SCENE_SOURCE_OVERRIDES) are listed.
+_CHAR_ANIM_SCENES: dict[str, str] = {
+    "intro":         "talking",
+    "prologue":      "idle",
+    "hall":          "idle",
+    "bookshelves":   "idle",
+    "desk":          "idle",
+    "diary":         "idle",
+    "window":        "idle",
+    "basement":      "talking",
+    "basement_deep": "excited",
+    "confront":      "excited",
+}
+
+_char_pil_cache: dict[str, object] = {}
+
+
+def _get_char_pil(path: str) -> Optional[object]:
+    """Return a cached RGBA PIL Image sized to the canvas for the given path."""
+    if not _PIL:
+        return None
+    if path not in _char_pil_cache:
+        try:
+            img = Image.open(path).convert("RGBA")
+            if img.size != (IW, IH):
+                img = img.resize((IW, IH), Image.LANCZOS)
+            _char_pil_cache[path] = img
+        except Exception:
+            return None
+    return _char_pil_cache.get(path)
 
 SCENE_SOURCE_OVERRIDES: dict[str, str] = {
     "intro": HONGHUA_IN_ENG_JPG,
@@ -344,6 +382,15 @@ class MusicPlayer:
                 pass
 
 
+class _NullAnimator:
+    """No-op animator used when character_animator is unavailable."""
+
+    def load_image(self, _: object) -> None: ...
+    def set_state(self, _: str) -> None: ...
+    def start(self) -> None: ...
+    def stop(self) -> None: ...
+
+
 # ══════════════════════════════════════════════════════════════════════════════
 #  HonghuaGame
 # ══════════════════════════════════════════════════════════════════════════════
@@ -391,6 +438,9 @@ class HonghuaGame:
         self.music = MusicPlayer()
 
         self._build_ui()
+        self.animator: object = (
+            _CharacterAnimator(self.img_canvas, IW, IH) if _ANIMATOR else _NullAnimator()
+        )
         self.music.play(BGM_MAIN)
         self.show_intro()
 
@@ -477,11 +527,26 @@ class HonghuaGame:
 
     # ── helpers ────────────────────────────────────────────────────────────────
     def _show_image(self, key: str) -> None:
-        img = scene_image(key)
-        self._current_img = img
+        self.animator.stop()
         self.img_canvas.delete("all")
         self._image_actions = []
-        self._hover_action = None
+        self._hover_action  = None
+
+        # Use the character animator for scenes that show a character image.
+        anim_state = _CHAR_ANIM_SCENES.get(key)
+        src_path   = SCENE_SOURCE_OVERRIDES.get(key)
+        if anim_state and src_path and _PIL and os.path.exists(src_path):
+            base = _get_char_pil(src_path)
+            if base is not None:
+                self.animator.load_image(base)
+                self.animator.set_state(anim_state)
+                self.animator.start()
+                self._current_img = None
+                return
+
+        # Fall back to the static scene image.
+        img = scene_image(key)
+        self._current_img = img
         if img:
             self.img_canvas.create_image(0, 0, anchor="nw", image=img)
         else:
