@@ -71,6 +71,11 @@ python game.py                     # 啟動遊戲
 ### 後續階段（仍待補齊）
 
 - 更多場景熱區精修（目前已支援主流程地圖、館長室外密碼盒與廢棄閱覽室牛仔褲點擊）
+- 待補場景圖（`index.html` 已引用但目前路徑缺檔）：
+  - `assets/scenes/archive_room.png`
+  - `assets/scenes/guard_room.png`
+  - `assets/scenes/workshop.png`
+  - `assets/scenes/abandoned_room.png`
 - 完整伏擊機制
 - 更多互動音效與完整 UI 動畫
 - 與 Python 版所有場景細節逐項對齊（含隱藏線後續章節完整互動）
