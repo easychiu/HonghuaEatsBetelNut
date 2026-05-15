@@ -297,22 +297,41 @@ def _normalize_floor_regions(
     if not (centers[0] < centers[1] < centers[2]):
         return ordered
 
-    top = max(0, min(r[1] for r in ordered))
-    bottom = min(h - 1, max(r[3] for r in ordered))
-    if bottom <= top:
-        return ordered
-
-    # Keep all floors on a shared frame width, but center that frame on each
-    # detected floor so edge floors do not drift sideways after stretching.
-    half_width = max(
-        max(cx - x1, x2 - cx)
-        for (x1, _y1, x2, _y2), cx in zip(ordered, centers)
-    )
-
     normalized: list[tuple[int, int, int, int]] = []
-    for cx in centers:
-        left = max(0, cx - half_width)
-        right = min(w - 1, cx + half_width)
+    target_aspect = _MAP_BASE_W / _MAP_BASE_H
+    for x1, y1, x2, y2 in ordered:
+        region_w = x2 - x1 + 1
+        region_h = y2 - y1 + 1
+        if region_w <= 0 or region_h <= 0:
+            return ordered
+
+        crop_w = float(region_w)
+        crop_h = float(region_h)
+        if crop_w / crop_h < target_aspect:
+            crop_w = crop_h * target_aspect
+        else:
+            crop_h = crop_w / target_aspect
+
+        cx = (x1 + x2) / 2
+        cy = (y1 + y2) / 2
+        left = int(round(cx - crop_w / 2))
+        right = left + int(round(crop_w)) - 1
+        top = int(round(cy - crop_h / 2))
+        bottom = top + int(round(crop_h)) - 1
+
+        if left < 0:
+            right = min(w - 1, right - left)
+            left = 0
+        if right >= w:
+            left = max(0, left - (right - (w - 1)))
+            right = w - 1
+        if top < 0:
+            bottom = min(h - 1, bottom - top)
+            top = 0
+        if bottom >= h:
+            top = max(0, top - (bottom - (h - 1)))
+            bottom = h - 1
+
         normalized.append((left, top, right, bottom))
     return normalized
 
