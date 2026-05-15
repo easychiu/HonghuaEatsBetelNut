@@ -132,7 +132,7 @@
     <main class="card main">
       <div class="scene-img-wrap">
         <img id="sceneImg" src="" alt="" />
-        <div id="sceneHotspots" class="scene-hotspots" aria-label="場景互動熱區" aria-live="polite"></div>
+        <div id="sceneHotspots" class="scene-hotspots" aria-label="場景互動熱區"></div>
       </div>
       <div class="scene-name" id="sceneName"></div>
       <div class="scene" id="sceneText"></div>
@@ -357,7 +357,7 @@ const TEXT_ARCHIVE = {
       ],
     };
 
-    let currentSceneOptionButtons = [];
+    let optionButtons = [];
 
     const ARCHIVE_LABELS = {
       "story_texts.py": "主劇情文本（story_texts.py）",
@@ -475,7 +475,7 @@ const TEXT_ARCHIVE = {
     }
 
     function clickOptionByMatch(match) {
-      const buttons = currentSceneOptionButtons;
+      const buttons = optionButtons;
       const normalize = (text) => (text || "").trim();
       const exact = buttons.find((b) => normalize(b.textContent) === match);
       if (exact) {
@@ -513,7 +513,6 @@ const TEXT_ARCHIVE = {
         hotspotBtn.className = "scene-hotspot";
         hotspotBtn.textContent = hotspot.label;
         hotspotBtn.title = hotspot.label;
-        hotspotBtn.setAttribute("aria-label", hotspot.label);
         hotspotBtn.style.left = `${left}%`;
         hotspotBtn.style.top = `${top}%`;
         hotspotBtn.style.width = `${width}%`;
@@ -795,7 +794,7 @@ const TEXT_ARCHIVE = {
         restart.onclick = () => { S = initialState(); render(); };
         optionsEl.appendChild(restart);
       }
-      currentSceneOptionButtons = [...optionsEl.querySelectorAll("button")];
+      optionButtons = [...optionsEl.querySelectorAll("button")];
       renderHotspots();
 
       document.getElementById("log").innerHTML = S.log.map(x => `<div>${x}</div>`).join("");
