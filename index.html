@@ -520,7 +520,7 @@ const TEXT_ARCHIVE = {
         hotspotBtn.style.height = `${height}%`;
         hotspotBtn.onclick = () => {
           if (!clickOptionByMatch(hotspot.match)) {
-            pushLog(`⚠ 互動區「${hotspot.label}」暫時無法使用，請改用按鈕選項（期望匹配：${hotspot.match}）`);
+            pushLog(`⚠ 互動區「${hotspot.label}」暫時無法使用，請改用按鈕選項。`);
             render();
           }
         };
