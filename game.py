@@ -494,8 +494,8 @@ class HonghuaGame:
     STORAGE_AMBUSH_CHANCE = 0.20          # generalised 1F/2F backstab chance
     STORAGE_AMBUSH_CHANCE_HIGH = 0.65    # near the killer's hideout (basement storage room)
     # ── time & killer system ─────────────────────────────────────────────────
-    GAME_START_HOUR    = 23              # game clock starts at 23:00
-    KILLER_EMERGE_ELAPSED = 180          # minutes of game-time before 2AM (23:00 + 3h)
+    GAME_START_HOUR    = 15              # game clock starts at 15:00
+    KILLER_EMERGE_ELAPSED = 180          # minutes of game-time before 18:00 (15:00 + 3h)
     KILLER_MAP_AMBUSH_CHANCE = 0.30      # per floor-map visit after 2AM
     KILLER_MAP_AMBUSH_CHANCE_3F = 0.05   # 3F is much safer (away from killer's basement lair)
     KILLER_PATROL_INTERVAL_MS = 90_000   # ms between killer floor changes
@@ -563,6 +563,14 @@ class HonghuaGame:
             bg=C["title_bg"],
             fg=C["title_fg"],
         ).pack(side="left", padx=16, pady=10)
+        self.time_var = tk.StringVar(value="")
+        tk.Label(
+            title_bar,
+            textvariable=self.time_var,
+            font=_f(12, True),
+            bg=C["title_bg"],
+            fg=C["title_fg"],
+        ).pack(side="right", padx=16, pady=10)
 
         # main content row
         content = tk.Frame(self.root, bg=C["bg"])
@@ -821,6 +829,7 @@ class HonghuaGame:
         lore_n = len(self.lore)
         tries  = self.code_tries_left
         self.status_var.set(self._format_status_text(items, len(self.clues), tries, lore_n))
+        self.time_var.set(self._format_time())
 
     def _reset_state(self) -> None:
         if self._ambush_job:
@@ -893,9 +902,9 @@ class HonghuaGame:
             return SCENE1_TIME_OF_DAY_OVERRIDE
         total = (self.GAME_START_HOUR * 60 + self._game_elapsed) % (24 * 60)
         hour = total // 60
-        if 6 <= hour < 17:
+        if 6 <= hour < 16:
             return "day"
-        if 17 <= hour < 19:
+        if 16 <= hour < 17:
             return "dusk"
         return "night"
 
@@ -1247,17 +1256,17 @@ class HonghuaGame:
         self._set_image_actions(hall_actions)
 
     def scene_map_floor1(self) -> None:
-        self._advance_time(2)
+        self._advance_time(15)
         if not self._check_map_killer(1):
             self.scene_library_map(1)
 
     def scene_map_floor2(self) -> None:
-        self._advance_time(2)
+        self._advance_time(15)
         if not self._check_map_killer(2):
             self.scene_library_map(2)
 
     def scene_map_floor3(self) -> None:
-        self._advance_time(2)
+        self._advance_time(15)
         if not self._check_map_killer(3):
             self.scene_library_map(3)
 
