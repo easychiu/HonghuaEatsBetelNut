@@ -647,8 +647,8 @@ class HonghuaGame:
                 self.animator.clear_focus()
                 self.animator.set_lip_sync_intensity(0.0)
                 self.animator.start()
-                # Always continue to draw scene art in the game window; the
-                # real Live2D model is shown in the dedicated Live2D window.
+                # Continue to draw scene art in the game window; the animator
+                # overlays subtle motion on top of the static character image.
 
         # Fall back to the static scene image.
         img = scene_image(key)
