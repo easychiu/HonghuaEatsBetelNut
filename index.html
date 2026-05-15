@@ -57,6 +57,24 @@
       font-size: 15px;
     }
     .scene-name { margin: 14px 0 8px; color: #b59cde; letter-spacing: 2px; font-size: 13px; }
+    .scene-img-wrap { width: 100%; margin-bottom: 10px; border-radius: 8px; overflow: hidden; background: #0e0a12; display: flex; align-items: center; justify-content: center; position: relative; }
+    #sceneImg { width: 100%; max-height: 380px; object-fit: cover; display: block; border-radius: 8px; }
+    .scene-hotspots { position: absolute; inset: 0; pointer-events: none; }
+    .scene-hotspot {
+      position: absolute;
+      pointer-events: auto;
+      border: 1px dashed rgba(205, 186, 238, 0.9);
+      background: rgba(159, 132, 214, 0.18);
+      color: #e7dbff;
+      font-size: 11px;
+      border-radius: 6px;
+      padding: 2px 4px;
+      text-align: left;
+      overflow: hidden;
+      white-space: nowrap;
+      text-overflow: ellipsis;
+    }
+    .scene-hotspot:hover { background: rgba(159, 132, 214, 0.32); border-color: #d9c8fa; }
     .btns { display: grid; gap: 8px; margin-top: 12px; }
     button {
       width: 100%;
@@ -112,6 +130,10 @@
     </aside>
 
     <main class="card main">
+      <div class="scene-img-wrap">
+        <img id="sceneImg" src="" alt="" />
+        <div id="sceneHotspots" class="scene-hotspots" aria-label="場景互動熱區"></div>
+      </div>
       <div class="scene-name" id="sceneName"></div>
       <div class="scene" id="sceneText"></div>
       <div class="status" id="statusLine"></div>
@@ -131,6 +153,25 @@
     const DEFAULT_CLUES = { honghua: false, amelia: false, starscream: false };
     const DEFAULT_FLAGS = { basementOpen: false, trueSong: false };
     const DEFAULT_ARCHIVE = { group: "story_texts.py", key: null };
+
+    const SCENE_IMAGES = {
+      intro:          "assets/scenes/outside.png",
+      prologue:       "assets/scenes/prologue.png",
+      map3:           "assets/scenes/TopMap.png",
+      map2:           "assets/scenes/TopMap.png",
+      map1:           "assets/scenes/TopMap.png",
+      hall:           "assets/scenes/hall.png",
+      desk:           "assets/scenes/desk.png",
+      window:         "assets/scenes/window.png",
+      bookshelves:    "assets/scenes/bookshelves.png",
+      basement:       "assets/scenes/basement.png",
+      basementDeep:   "assets/scenes/basement_deep.png",
+      ending_secret:  "assets/scenes/secret_end.png",
+      ending_true:    "assets/scenes/true_end.png",
+      ending_trust:   "assets/scenes/normal_end.png",
+      ending_normal:  "assets/scenes/normal_end.png",
+      ending_bad:     "assets/scenes/bad_a.png",
+    };
 
 const TEXT_ARCHIVE = {
   "story_texts.py": {
@@ -254,7 +295,7 @@ const TEXT_ARCHIVE = {
       map3:
 `【3F 地圖】
 你可先調查本層，再切換到 1F/2F 搜證。
-（MVP 版本：先用按鈕導覽，熱區點擊後續補上）`,
+可直接點擊地圖熱區進行移動與互動。`,
       map2:
 `【2F 地圖】
 研究桌與窗邊有重要人物線索。`,
@@ -289,9 +330,56 @@ const TEXT_ARCHIVE = {
       }
     };
 
+    const SCENE_HOTSPOTS = {
+      map3: [
+        { label: "館長室外", rect: [30, 44, 27, 18], match: "調查館長室外展示區" },
+        { label: "前往 2F", rect: [59, 40, 18, 18], match: "前往 2F" },
+        { label: "前往 1F", rect: [79, 40, 18, 18], match: "前往 1F" },
+        { label: "面對紅花", rect: [59, 62, 38, 18], match: "直接面對紅花（結算）" },
+      ],
+      map2: [
+        { label: "研究桌", rect: [22, 40, 20, 20], match: "研究桌" },
+        { label: "窗邊", rect: [44, 40, 20, 20], match: "窗邊" },
+        { label: "返回 3F", rect: [66, 40, 15, 20], match: "返回 3F" },
+        { label: "前往 1F", rect: [83, 40, 15, 20], match: "前往 1F" },
+      ],
+      map1: [
+        { label: "書架深處", rect: [20, 40, 25, 20], match: "書架深處（解謎）" },
+        { label: "返回 3F", rect: [47, 40, 15, 20], match: "返回 3F" },
+        { label: "前往 2F", rect: [64, 40, 15, 20], match: "前往 2F" },
+        { label: "地下密室", rect: [81, 40, 17, 20], match: "進入地下密室", visibleWhen: (state) => state.flags.basementOpen },
+      ],
+      hall: [
+        { label: "鎚子", rect: [10, 36, 18, 20], match: "鎚子" },
+        { label: "四葉草", rect: [31, 36, 18, 20], match: "四葉草" },
+        { label: "牛仔褲", rect: [52, 36, 18, 20], match: "牛仔褲" },
+        { label: "回地圖", rect: [73, 36, 18, 20], match: "回到 3F 地圖" },
+      ],
+    };
+
+    let currentSceneOptionButtons = [];
+
     const ARCHIVE_LABELS = {
       "story_texts.py": "主劇情文本（story_texts.py）",
       "character_texts.py": "角色文本（character_texts.py）",
+    };
+    const SCENE_ALT_TEXTS = {
+      intro: "學院外觀",
+      prologue: "三樓展示區與紅花",
+      map3: "圖書館三樓地圖",
+      map2: "圖書館二樓地圖",
+      map1: "圖書館一樓地圖",
+      hall: "館長室外展示區",
+      desk: "研究桌與筆記",
+      window: "破損窗台與字條",
+      bookshelves: "書架深處案卷區",
+      basement: "地下區域岔路",
+      basementDeep: "地下倉庫供詞區",
+      ending_secret: "秘密結局場景",
+      ending_true: "真結局場景",
+      ending_trust: "信任結局場景",
+      ending_normal: "普通結局場景",
+      ending_bad: "壞結局場景",
     };
 
     function archiveKeys(group) {
@@ -384,6 +472,60 @@ const TEXT_ARCHIVE = {
     function goto(scene) {
       S.scene = scene;
       render();
+    }
+
+    function clickOptionByMatch(match) {
+      const buttons = currentSceneOptionButtons;
+      const normalize = (text) => (text || "").trim();
+      const exact = buttons.find((b) => normalize(b.textContent) === match);
+      if (exact) {
+        exact.click();
+        return true;
+      }
+      const starts = buttons.filter((b) => normalize(b.textContent).startsWith(match));
+      if (starts.length === 1) {
+        starts[0].click();
+        return true;
+      }
+      const includes = buttons.filter((b) => normalize(b.textContent).includes(match));
+      if (includes.length === 1) {
+        includes[0].click();
+        return true;
+      }
+      return false;
+    }
+
+    function renderHotspots() {
+      const wrap = document.getElementById("sceneHotspots");
+      wrap.innerHTML = "";
+      const imgSrc = SCENE_IMAGES[S.scene] || "";
+      const defs = SCENE_HOTSPOTS[S.scene] || [];
+      if (!imgSrc || !defs.length) {
+        wrap.style.display = "none";
+        return;
+      }
+      wrap.style.display = "block";
+      defs.forEach((hotspot) => {
+        if (typeof hotspot.visibleWhen === "function" && !hotspot.visibleWhen(S)) return;
+        const [left, top, width, height] = hotspot.rect;
+        const hotspotBtn = document.createElement("button");
+        hotspotBtn.type = "button";
+        hotspotBtn.className = "scene-hotspot";
+        hotspotBtn.textContent = hotspot.label;
+        hotspotBtn.title = hotspot.label;
+        hotspotBtn.setAttribute("aria-label", `互動：${hotspot.label}`);
+        hotspotBtn.style.left = `${left}%`;
+        hotspotBtn.style.top = `${top}%`;
+        hotspotBtn.style.width = `${width}%`;
+        hotspotBtn.style.height = `${height}%`;
+        hotspotBtn.onclick = () => {
+          if (!clickOptionByMatch(hotspot.match)) {
+            pushLog(`⚠ 互動區「${hotspot.label}」暫時無法使用，請改用按鈕選項。`);
+            render();
+          }
+        };
+        wrap.appendChild(hotspotBtn);
+      });
     }
 
     function sceneText(key) {
@@ -622,6 +764,12 @@ const TEXT_ARCHIVE = {
       const isEnding = S.scene.startsWith("ending_");
       const inArchive = S.scene.startsWith("archive_");
       document.getElementById("sceneName").textContent = isEnding ? "ENDING" : (inArchive ? "TEXT ARCHIVE" : S.scene.toUpperCase());
+
+      const imgEl = document.getElementById("sceneImg");
+      const imgSrc = SCENE_IMAGES[S.scene] || "";
+      imgEl.src = imgSrc;
+      imgEl.alt = SCENE_ALT_TEXTS[S.scene] || `${S.scene.toUpperCase()} 場景`;
+      imgEl.style.display = imgSrc ? "block" : "none";
       const sceneEl = document.getElementById("sceneText");
       if (isEnding) {
         sceneEl.innerHTML = `<span class="ending">${endingText()}</span>`;
@@ -647,6 +795,8 @@ const TEXT_ARCHIVE = {
         restart.onclick = () => { S = initialState(); render(); };
         optionsEl.appendChild(restart);
       }
+      currentSceneOptionButtons = [...optionsEl.querySelectorAll("button")];
+      renderHotspots();
 
       document.getElementById("log").innerHTML = S.log.map(x => `<div>${x}</div>`).join("");
     }
