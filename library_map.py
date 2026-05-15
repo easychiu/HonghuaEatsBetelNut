@@ -308,15 +308,11 @@ def _normalize_floor_regions(
         max(cx - x1, x2 - cx)
         for (x1, _y1, x2, _y2), cx in zip(ordered, centers)
     )
-    if half_width < _TOP_MAP_MIN_REGION_PX:
-        return ordered
 
     normalized: list[tuple[int, int, int, int]] = []
     for cx in centers:
         left = max(0, cx - half_width)
         right = min(w - 1, cx + half_width)
-        if right <= left:
-            return ordered
         normalized.append((left, top, right, bottom))
     return normalized
 
