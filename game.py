@@ -1836,6 +1836,78 @@ class HonghuaGame:
         self._show_image("hidden_end")
         self._set_story(ST.ENDING_HIDDEN)
         self._set_options([
+            ("乘船前往倫敦，尋找真正的答案", self.scene_london_hidden_start),
+            ("再玩一次", self.show_intro),
+            ("離開", self.root.destroy),
+        ])
+
+    # ── 🔒 隱藏結局分支：《航向倫敦》（17世紀設定）──────────────────────────
+
+    def scene_london_hidden_start(self) -> None:
+        """London hidden branch — choice screen."""
+        self._show_image("hidden_end")
+        self._set_story(ST.LONDON_HIDDEN_PROLOGUE)
+        self._set_options([
+            ("◆ 選項B｜借用Yv醫生身份，啟程前往倫敦", self.scene_london_hidden_identity),
+            ("◆ 選項A｜留在原地，讓這一切就此落幕", self.show_intro),
+        ])
+
+    def scene_london_hidden_identity(self) -> None:
+        """London hidden branch — identity chapter."""
+        self._show_image("hidden_end")
+        self._set_story(ST.LONDON_HIDDEN_IDENTITY)
+        self._set_options([
+            ("收起介紹信，啟程前往倫敦", self.scene_london_hidden_ch1_arrive),
+        ])
+
+    def scene_london_hidden_ch1_arrive(self) -> None:
+        """London hidden branch — Ch.1 arrival at the Mariners' Guild Hall."""
+        self._show_image("hidden_end")
+        self._set_story(ST.LONDON_HIDDEN_CH1_ARRIVE)
+        self._set_options([
+            ("走向大門，以Yv醫生身份應對門衛", self.scene_london_hidden_ch1_gate),
+        ])
+
+    def scene_london_hidden_ch1_gate(self) -> None:
+        """London hidden branch — Ch.1 gate dialogue."""
+        self._show_image("hidden_end")
+        self._set_story(ST.LONDON_HIDDEN_CH1_GATE)
+        self._set_options([
+            ("上三樓書庫", self.scene_london_hidden_ch2_arrive),
+        ])
+
+    def scene_london_hidden_ch2_arrive(self) -> None:
+        """London hidden branch — Ch.2 archive investigation."""
+        self._show_image("hidden_end")
+        self._set_story(ST.LONDON_HIDDEN_CH2_ARRIVE)
+        self._set_options([
+            ("〔調查〕書架後方的窄門", self.scene_london_hidden_ch2_secretroom),
+            ("〔等待〕先環顧四周，暫不輕舉妄動", self.scene_london_hidden_ch2_arrive),
+        ])
+
+    def scene_london_hidden_ch2_secretroom(self) -> None:
+        """London hidden branch — Ch.2 secret records room."""
+        self._show_image("hidden_end")
+        self._set_story(ST.LONDON_HIDDEN_CH2_SECRETROOM)
+        self._set_options([
+            ("謹慎地放回原位，推開另一側的窄門", self.scene_london_hidden_ch3),
+        ])
+
+    def scene_london_hidden_ch3(self) -> None:
+        """London hidden branch — Ch.3 unexpected encounter."""
+        self._show_image("hidden_end")
+        self._set_story(ST.LONDON_HIDDEN_CH3_ENCOUNTER)
+        self._set_options([
+            ("〔謹慎〕以Yv醫生身份繼續詢問", self.scene_london_hidden_preview),
+            ("〔冒險〕透露一點真相，試探他", self.scene_london_hidden_preview),
+            ("〔沉默〕靜靜地看著他的反應", self.scene_london_hidden_preview),
+        ])
+
+    def scene_london_hidden_preview(self) -> None:
+        """London hidden branch — ending preview / next chapter teaser."""
+        self._show_image("hidden_end")
+        self._set_story(ST.LONDON_HIDDEN_PREVIEW)
+        self._set_options([
             ("再玩一次", self.show_intro),
             ("離開", self.root.destroy),
         ])
