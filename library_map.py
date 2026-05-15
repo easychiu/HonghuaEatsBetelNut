@@ -48,6 +48,30 @@ _FLOOR_ACTION_LABELS = {
     },
 }
 
+_PIXEL_MAP_ROOM_LABELS = {
+    1: {
+        "top_left": "閱覽室A",
+        "top_right": "閱覽室B",
+        "bottom_left": "收藏室",
+        "bottom_right": "守衛室",
+        "mid_right": "會議I",
+    },
+    2: {
+        "top_left": "研究室A",
+        "top_right": "研究室B",
+        "bottom_left": "檔案室",
+        "bottom_right": "修復工坊",
+        "mid_right": "會議II",
+    },
+    3: {
+        "top_left": "私人研究室",
+        "top_right": "觀景閱覽室",
+        "bottom_left": "封閉儲藏室",
+        "bottom_right": "塔通道",
+        "mid_right": "館長室",
+    },
+}
+
 _MAP_BASE_W = 460
 _MAP_BASE_H = 490
 _MAP_CANVAS_W = 1462
@@ -118,14 +142,13 @@ def _pixel_library_map(floor: int, iw: int, ih: int) -> Optional[MapImage]:
     room_color = (66, 82, 110, 255)
     room_outline = (160, 196, 255, 255)
     # Per-floor room labels for top-left and top-right rooms
-    _top_left_label  = {1: "閱覽室A", 2: "研究室A", 3: "私人研究室"}
-    _top_right_label = {1: "閱覽室B", 2: "研究室B", 3: "觀景閱覽室"}
+    floor_labels = _PIXEL_MAP_ROOM_LABELS.get(floor, _PIXEL_MAP_ROOM_LABELS[1])
     rooms = [
-        (36, 36, 126, 106, _top_left_label.get(floor, "房間A")),
-        (334, 36, 424, 106, _top_right_label.get(floor, "房間B")),
-        (36, 384, 126, 454, {1: "收藏室", 2: "檔案室", 3: "封閉儲藏室"}.get(floor, "房間C")),
-        (334, 384, 424, 454, {1: "守衛室", 2: "修復工坊", 3: "塔通道"}.get(floor, "會議1")),
-        (334, 288, 424, 358, {1: "會議I", 2: "會議II", 3: "館長室"}.get(floor, "會議2")),
+        (36, 36, 126, 106, floor_labels["top_left"]),
+        (334, 36, 424, 106, floor_labels["top_right"]),
+        (36, 384, 126, 454, floor_labels["bottom_left"]),
+        (334, 384, 424, 454, floor_labels["bottom_right"]),
+        (334, 288, 424, 358, floor_labels["mid_right"]),
     ]
     for x1, y1, x2, y2, label in rooms:
         draw.rectangle([x1, y1, x2, y2], fill=room_color, outline=room_outline, width=2)
@@ -261,15 +284,15 @@ def _top_map_floor_image(floor: int, iw: int, ih: int) -> Optional[MapImage]:
         return None
     try:
         img = Image.open(_TOP_MAP_PATH).convert("RGB")
+        regions = _detect_top_map_floor_regions(img)
+        idx = min(len(regions) - 1, max(0, floor - 1))
+        x1, y1, x2, y2 = regions[idx]
+        crop = img.crop((x1, y1, x2 + 1, y2 + 1))
+        if crop.size != (iw, ih):
+            crop = crop.resize((iw, ih), _LANCZOS)
+        return ImageTk.PhotoImage(crop)
     except Exception:
         return None
-    regions = _detect_top_map_floor_regions(img)
-    idx = min(len(regions) - 1, max(0, floor - 1))
-    x1, y1, x2, y2 = regions[idx]
-    crop = img.crop((x1, y1, x2 + 1, y2 + 1))
-    if crop.size != (iw, ih):
-        crop = crop.resize((iw, ih), _LANCZOS)
-    return ImageTk.PhotoImage(crop)
 
 
 def build_library_map_image(key: str, iw: int, ih: int) -> Optional[MapImage]:
