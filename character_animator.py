@@ -17,6 +17,7 @@ FOCUS_SMOOTH = 0.16
 LIP_DECAY = 0.90
 
 _STATE_CFG: dict[str, tuple[float, float]] = {
+    # state: (breathing amplitude, floating amplitude)
     "idle": (0.007, 1.6),
     "talking": (0.010, 2.4),
     "excited": (0.014, 3.2),
@@ -52,6 +53,9 @@ class CharacterAnimator:
     def load_image(self, pil_image: object) -> None:
         if not _PIL:
             return
+        if not hasattr(pil_image, "copy") or not hasattr(pil_image, "convert"):
+            self._base_image = None
+            return
         try:
             img = pil_image.copy().convert("RGBA")
             if img.size != (self._width, self._height):
@@ -66,8 +70,8 @@ class CharacterAnimator:
         self._state = state if state in _STATE_CFG else "idle"
 
     def set_focus_point(self, x: int, y: int) -> None:
-        self._target_focus_x = max(-1.0, min(1.0, (x / max(1, self._width)) * 2.0 - 1.0))
-        self._target_focus_y = max(-1.0, min(1.0, (y / max(1, self._height)) * 2.0 - 1.0))
+        self._target_focus_x = self._normalize_coordinate(x, self._width)
+        self._target_focus_y = self._normalize_coordinate(y, self._height)
 
     def clear_focus(self) -> None:
         self._target_focus_x = 0.0
@@ -134,3 +138,7 @@ class CharacterAnimator:
             self._canvas.itemconfigure(self._item_id, image=self._photo)
         self._canvas.tag_raise(self._item_id)
         self._canvas.tag_lower(self._item_id, "hotspot")
+
+    @staticmethod
+    def _normalize_coordinate(coord: int, size: int) -> float:
+        return max(-1.0, min(1.0, (coord / max(1, size)) * 2.0 - 1.0))
