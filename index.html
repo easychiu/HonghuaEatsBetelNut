@@ -551,8 +551,6 @@ const TEXT_ARCHIVE = {
       audioGestureBound = true;
       const resume = () => {
         if (audioEnabled) tryPlayBgm();
-        window.removeEventListener("pointerdown", resume);
-        window.removeEventListener("keydown", resume);
       };
       window.addEventListener("pointerdown", resume, { once: true });
       window.addEventListener("keydown", resume, { once: true });
