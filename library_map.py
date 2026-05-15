@@ -89,6 +89,7 @@ _TOP_MAP_MIN_COMPONENT_H_RATIO = 0.20
 _TOP_MAP_MIN_COMPONENT_DIM_ABS = 90
 _TOP_MAP_MAX_CANDIDATES = 8
 _TOP_MAP_COLUMN_GUTTER_RATIO = 0.006
+_TOP_MAP_MIN_COLUMN_GUTTER_PX = 6
 _top_map_floor_regions_cache: dict[tuple[int, int], list[tuple[int, int, int, int]]] = {}
 
 
@@ -296,6 +297,8 @@ def _normalize_floor_regions(
 
     mid12 = (centers[0] + centers[1]) // 2
     mid23 = (centers[1] + centers[2]) // 2
+    # Reflect left/right bounds from adjacent midpoints so edge floors keep
+    # similar horizontal coverage to the center floor instead of tight bboxes.
     left = max(0, min(ordered[0][0], 2 * centers[0] - mid12))
     right = min(w - 1, max(ordered[2][2], 2 * centers[2] - mid23))
     top = max(0, min(r[1] for r in ordered))
@@ -303,7 +306,8 @@ def _normalize_floor_regions(
     if right <= left or bottom <= top:
         return ordered
 
-    gutter = max(6, int(w * _TOP_MAP_COLUMN_GUTTER_RATIO))
+    gutter = max(_TOP_MAP_MIN_COLUMN_GUTTER_PX, int(w * _TOP_MAP_COLUMN_GUTTER_RATIO))
+    # Keep at least one pixel width per region and avoid boundary overlaps.
     b1 = max(left + 1, min(right - 2, mid12 - gutter))
     b2 = max(b1 + 1, min(right - 1, mid23 + gutter))
     if b2 >= right:
