@@ -53,7 +53,7 @@
 
       async function pollState() {
         try {
-          const res = await fetch(`/api/state?t=${Date.now()}`, { cache: "no-store" });
+          const res = await fetch("/api/state", { cache: "no-store" });
           const data = await res.json();
           state.focusX = Number(data.focus_x || 0);
           state.focusY = Number(data.focus_y || 0);

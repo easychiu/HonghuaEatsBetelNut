@@ -96,8 +96,8 @@ class CharacterAnimator:
 
     def set_focus_point(self, x: int, y: int) -> None:
         # The caller sends canvas coordinates; normalize against canonical size.
-        nx = max(-1.0, min(1.0, (x / (CANVAS_WIDTH - 1.0)) * 2.0 - 1.0))
-        ny = max(-1.0, min(1.0, (y / (CANVAS_HEIGHT - 1.0)) * 2.0 - 1.0))
+        nx = max(-1.0, min(1.0, (x / CANVAS_WIDTH) * 2.0 - 1.0))
+        ny = max(-1.0, min(1.0, (y / CANVAS_HEIGHT) * 2.0 - 1.0))
         self._state_store.set("focus_x", nx)
         self._state_store.set("focus_y", ny)
 
