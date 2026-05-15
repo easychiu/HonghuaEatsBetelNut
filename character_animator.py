@@ -156,6 +156,9 @@ class CharacterAnimator:
 
     # Typing-driven lip-sync activity
     LIP_SYNC_DECAY = 0.88
+    LIP_SYNC_THRESHOLD = 0.12
+    DEFAULT_SPEAKING_ACTIVITY = 0.45
+    FOCUS_HL_SHIFT_SCALE = 0.8
 
     def __init__(self, canvas: object, width: int, height: int) -> None:
         self._canvas   = canvas
@@ -214,7 +217,7 @@ class CharacterAnimator:
     def set_lip_sync_intensity(self, intensity: float) -> None:
         """Boost temporary mouth movement (0.0–1.0), e.g. during text typing."""
         value = max(0.0, min(1.0, intensity))
-        self._lip_sync = max(self._lip_sync, value)
+        self._lip_sync = value
 
     def start(self) -> None:
         """Begin (or restart) the animation loop."""
@@ -351,13 +354,16 @@ class CharacterAnimator:
         is_speaking_state = self._state in (
             STATE_TALKING, STATE_EXCITED, STATE_FRIENDLY, STATE_TRUSTED
         )
-        if is_speaking_state or self._lip_sync > 0.12:
+        if is_speaking_state or self._lip_sync > self.LIP_SYNC_THRESHOLD:
             img = self._apply_talking_anim(
                 img,
                 w,
                 h,
                 t,
-                activity=max(self._lip_sync, 0.45 if is_speaking_state else 0.0),
+                activity=max(
+                    self._lip_sync,
+                    self.DEFAULT_SPEAKING_ACTIVITY if is_speaking_state else 0.0,
+                ),
             )
 
         # 7. Trust-level expression overlays
@@ -532,8 +538,8 @@ class CharacterAnimator:
             return img
         hx = int(w * self.EYE_HL_X_FRAC)
         hy = int(h * self.EYE_HL_Y_FRAC)
-        hx += int(self.FOCUS_EYE_SHIFT_X * self._focus_x * 0.8)
-        hy += int(self.FOCUS_EYE_SHIFT_Y * self._focus_y * 0.8)
+        hx += int(self.FOCUS_EYE_SHIFT_X * self._focus_x * self.FOCUS_HL_SHIFT_SCALE)
+        hy += int(self.FOCUS_EYE_SHIFT_Y * self._focus_y * self.FOCUS_HL_SHIFT_SCALE)
         r  = self.EYE_HL_R
         overlay = Image.new("RGBA", (w, h), (0, 0, 0, 0))
         draw    = ImageDraw.Draw(overlay)
