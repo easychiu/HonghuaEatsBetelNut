@@ -311,8 +311,15 @@ def _normalize_floor_regions(
 
     gutter = max(_TOP_MAP_MIN_COLUMN_GUTTER_PX, int(w * _TOP_MAP_COLUMN_GUTTER_RATIO))
     # Keep at least one pixel width per region and avoid boundary overlaps.
-    b1 = max(left + _TOP_MAP_MIN_REGION_PX, min(right - _TOP_MAP_BOUNDARY_TAIL_GUARD_PX, mid12 - gutter))
-    b2 = max(b1 + _TOP_MAP_MIN_REGION_PX, min(right - _TOP_MAP_MIN_REGION_PX, mid23 - gutter))
+    min_b1 = left + _TOP_MAP_MIN_REGION_PX
+    max_b1 = right - _TOP_MAP_BOUNDARY_TAIL_GUARD_PX
+    preferred_b1 = mid12 - gutter
+    b1 = max(min_b1, min(max_b1, preferred_b1))
+
+    min_b2 = b1 + _TOP_MAP_MIN_REGION_PX
+    max_b2 = right - _TOP_MAP_MIN_REGION_PX
+    preferred_b2 = mid23 - gutter
+    b2 = max(min_b2, min(max_b2, preferred_b2))
     if b2 >= right:
         return ordered
 
