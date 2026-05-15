@@ -122,7 +122,8 @@
     const SAVE_KEY = "honghua-single-html-mvp-save";
     const SAVE_VERSION = 1;
     const GAME_START_HOUR = 23;
-    const KILLER_EMERGE_ELAPSED = 180; // 02:00
+    const KILLER_EMERGE_ELAPSED = 180; // 由 23:00 起算 180 分鐘（即 02:00）
+    const MAX_LOG_ENTRIES = 60;
 
     const STORY = {
       intro:
@@ -212,7 +213,7 @@
 
     function pushLog(text) {
       S.log.push(text);
-      if (S.log.length > 60) S.log = S.log.slice(-60);
+      if (S.log.length > MAX_LOG_ENTRIES) S.log = S.log.slice(-MAX_LOG_ENTRIES);
     }
 
     function advance(minutes, reason) {
@@ -337,7 +338,11 @@
           opts.push(["返回 3F 面對紅花", () => { advance(20, "回到 3F"); goto("map3"); }]);
           break;
         default:
-          opts.push(["重新開始", () => { S = initialState(); render(); }]);
+          opts.push(["重新開始", () => {
+            S = initialState();
+            pushLog("♻ 已重新開始");
+            render();
+          }]);
           break;
       }
       return opts;
