@@ -300,6 +300,7 @@ def _normalize_floor_regions(
     normalized: list[tuple[int, int, int, int]] = []
     target_aspect = _MAP_BASE_W / _MAP_BASE_H
     for x1, y1, x2, y2 in ordered:
+        # Regions use inclusive bounds, so width/height keep the trailing pixel.
         region_w = x2 - x1 + 1
         region_h = y2 - y1 + 1
         if region_w <= 0 or region_h <= 0:
@@ -315,6 +316,8 @@ def _normalize_floor_regions(
         cx = (x1 + x2) / 2
         cy = (y1 + y2) / 2
         left = int(round(cx - crop_w / 2))
+        # Inclusive right/bottom edges use a half-pixel bias so rounding stays
+        # symmetric with the left/top edge after aspect expansion.
         right = int(round(cx + crop_w / 2 - 0.5))
         top = int(round(cy - crop_h / 2))
         bottom = int(round(cy + crop_h / 2 - 0.5))
