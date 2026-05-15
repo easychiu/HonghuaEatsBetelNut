@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>紅花吃檳榔：單檔 HTML MVP</title>
+  <title>紅花吃檳榔：單檔 HTML 完整內容版</title>
   <style>
     :root {
       --bg: #0e0a12;
@@ -93,7 +93,7 @@
 <body>
   <div class="app">
     <aside class="card sidebar">
-      <h1 class="title">紅花吃檳榔｜單檔 HTML MVP</h1>
+      <h1 class="title">紅花吃檳榔｜單檔 HTML 完整內容版</h1>
       <div class="kv"><span>時間</span><b id="clock"></b></div>
       <div class="kv"><span>危險狀態</span><b id="dangerState"></b></div>
       <div class="kv"><span>信任度</span><b id="trustText"></b></div>
@@ -107,6 +107,7 @@
         <button id="loadBtn">📂 載入進度</button>
       </div>
       <button id="resetBtn" style="margin-top:8px;">♻ 重新開始</button>
+      <button id="archiveBtn" style="margin-top:8px;">📚 全內容文字庫</button>
       <div class="log" id="log"></div>
     </aside>
 
@@ -122,8 +123,122 @@
     const SAVE_KEY = "honghua-single-html-mvp-save";
     const SAVE_VERSION = 1;
     const GAME_START_HOUR = 23;
-    const KILLER_EMERGE_ELAPSED = 180; // 由 23:00 起算 180 分鐘（即 02:00）
+    const KILLER_EMERGE_ELAPSED = 180; // 由 23:00 起算 180 分鐘（跨日到翌日 02:00）
     const MAX_LOG_ENTRIES = 60;
+    const DEFAULT_LOG_MESSAGE = "── 進入蔚藍學院 ──";
+    const ARCHIVE_PREVIEW_LIMIT = 12;
+    const DEFAULT_EVIDENCE = { hammer: false, clover: false, jeans: false };
+    const DEFAULT_CLUES = { honghua: false, amelia: false, starscream: false };
+    const DEFAULT_FLAGS = { basementOpen: false, trueSong: false };
+    const DEFAULT_ARCHIVE = { group: "story_texts.py", key: null };
+
+const TEXT_ARCHIVE = {
+  "story_texts.py": {
+    "INTRO": "===================================\n  紅花吃檳榔：蔚藍學院秘案  深夜調查版\n===================================\n\n17世紀英格蘭。\n\n蔚藍學院——曾是英倫最負盛名的貴族學院，\n如今大門緊閉，雜草叢生，廢棄整整兩年。\n\n兩年前，學院內發生了一場至今未破的謀殺案。\n受害者是校內受人愛戴的米糕店長。\n真兇至今逍遙法外，學院因此被迫關閉。\n\n「紅花綻放之處，是你尋找答案的起點。\n 但你能否離開，則是另一回事。」\n                              ——紅花\n\n廢棄圖書館深處，一盞燭火搖曳於幽暗之中。\n傳說中的紅花，就在那裡守候。",
+    "PROLOGUE": "你——英國皇家警察——踏入了蔚藍學院廢棄的圖書館。\n\n這是你的母校。也是你反覆做惡夢的地方。\n\n兩年前的那個傍晚，米糕店長倒在這裡。\n案件懸而未決，學院就此關閉。\n而你，曾是法國海軍，如今兼任英國皇家警察，\n今夜隻身來此，要終結這一切。\n\n你彎低身子穿過積滿灰塵的門廊，沿著旋梯一路上行。\n三樓管理室的門半掩著，燭光映照著牆上的上帝視角地圖。\n然後你看見了她。\n\n銀白色短髮，筆挺的水手服。\n她端坐於正中央的椅子上，\n嘴角含著一抹說不清是什麼顏色的紅。\n\n「英國皇家警察，」她緩緩開口，\n「真是個奇妙的名字——或者說，奇妙的稱號。」\n\n「你來這裡是為了什麼，我已經知道了。」\n她淡淡地說，「問題是……\n 你能找到答案嗎？」\n\n你掃視地圖——圖書館分成三層，每層中央外圍皆是展示書架，\n旁邊還細細標著各層房間：一樓是閱覽室與古籍收藏室，\n二樓是研究室、禁書檔案室與修復工坊，\n三樓則是館長室、私人研究室與通往閣樓的塔樓通道；\n一、二樓的所有通道都被紅筆標注：\n『三樓以外，背後隨時可能有人。』\n\n天亮之前，必須找到真相。",
+    "HALL": "你站在三樓管理室外的展示區。\n灰塵、蛛網與腐舊的書香充滿了每一個角落。\n牆上的上帝視角地圖仍亮著紅線，標示三層動線與危險區。{trust_remark}\n\n你掃視四周，注意到幾件不尋常的物品：\n一把長約{hammer_length}公分的生鏽鎚子、一片乾燥的四葉草，\n以及一件疊得整齊的牛仔褲——\n這些東西，不應該出現在廢棄的圖書館裡。\n\n你可先在本層調查，或回到地圖切換樓層。\n書架深處還有謎題，研究桌上有筆記，\n窗台上似乎藏著什麼，而密碼盒就靜靜地立在書架旁。\n\n請點擊左側場景圖中的互動區域來調查物證與密碼盒；\n若要切換場景，仍使用下方按鈕。\n目前可直接點擊：鎚子・四葉草・牛仔褲・密碼盒\n也可點擊書架上的書籍或紅花本人。{basement_hint}",
+    "MAP_FLOOR_1": "【圖書館上帝視角地圖｜一樓】\n\n地圖下方的標示列出本層區域：正門大廳（接待處）、中央書庫（挑高大廳）、\n閱覽室A、閱覽室B、會議室I、收藏室（古籍庫）、管理室、守衛室／側門與貨梯區。\n整層被標紅：『此層任何角落，背後隨時可能有人。』\n\n你要如何行動？",
+    "MAP_FLOOR_2": "【圖書館上帝視角地圖｜二樓】\n\n地圖下方的標示列出本層區域：二樓迴廊（環形走道）、中央挑空（俯視一樓）、\n研究室A、研究室B、會議室II、檔案室（禁書區）、修復工坊、隱蔽樓梯入口。\n整層同樣被標紅：『此層任何角落，背後隨時可能有人。』\n目前可從這裡前往研究桌與窗邊區域。",
+    "MAP_FLOOR_3": "【圖書館上帝視角地圖｜三樓】\n\n三樓是遊戲起點，紅花位於館長室深處。\n地圖下方的標示列出本層區域：三樓迴廊、大房型書房（館長室）、\n私人研究室、觀景閱覽室、封閉儲藏室、塔通道／閣樓樓梯。\n你可以先在館長室外調查，再決定是否直接與紅花對話。",
+    "INSPECT_HAMMER": "書架角落，一把鏽跡斑斑、長約{hammer_length}公分的鎚子橫臥於塵埃之中。\n\n{hammer_length}公分，沉甸甸——這是一件兇器嗎？\n\n鎚柄上有三道深刻的刻痕，像是刻意留下的記號。\n你在案卷中見過這個記號——\n案發現場的地面，留下過同樣的痕跡。\n\n鎚柄底端刻著羅馬數字「III」。\n\n【物證取得】第一碼是 3。\n【推斷】這把鎚子，極可能是米糕店長遇害的兇器。",
+    "INSPECT_CLOVER": "一片乾燥的四葉草，夾在書架縫隙中，\n邊緣已泛黃，但保存得出奇完好。\n\n四葉草的葉片中央，用細筆寫著一個「壹」字。\n\n你記得蔚藍學院有一位出了名幸運的轉學生——\n她叫艾莉卡，「幸運的艾莉卡」。\n這片四葉草是她的標誌性飾品。\n\n她曾在案發前夕造訪學院。\n她說……她只是「順路帶來好運」。\n但案發當晚，她已不知去向。\n\n【物證取得】第二碼是 1。\n【推斷】艾莉卡可能是案發現場的目擊者。",
+    "INSPECT_JEANS": "書架底層，一件疊得整整齊齊的牛仔褲。\n\n標籤上印著「YV」兩個字母——\n這是英倫近年流行的品牌，\n據說只有特定社交圈的人才會穿。\n\n褲腿內側縫著手寫的文字：\n「R.U. · 第四排 · 入場許可」\n\nR.U.——你腦海中浮現一個名字：\n天王星（Starscream）。退學生天王星，\n曾因家道中落憤恨離校，愛攀關係，\n卻也因此對某些人懷恨在心。\n\n而「第四排」，正是學院劇場的黑市座位……\n\n【物證取得】第三碼是 4。\n【推斷】天王星曾在案發前後秘密返回學院。",
+    "SCENE_BOOKSHELVES": "書架深處，光線幾乎不存在。\n\n你摸索前行，發現一排特殊的書架上，\n擺著四份封存的案件文件夾：\n\n   《失蹤案卷》  《退學檔案》  《死亡報告》  《停課公告》\n\n架下有一塊石板，刻著說明：\n\n「蔚藍學院的終結，並非始於最後那一聲哀鳴。\n 按事件發生的時間順序排列，\n 方可開啟封印。」\n\n石板旁有一個小鎖孔，排列正確才能打開。\n請點擊左側書架圖中的案卷區域開始解謎。",
+    "SCENE_DESK": "圖書館一角有張破舊的研究桌。\n\n桌面散亂地鋪著手繪的案情分析圖，\n以及一份份逐漸發黃的筆記與文件。\n一根快燃盡的蠟燭在紙堆旁顫抖著。\n\n桌角有一本合上的筆記本，\n封面上縫著水手服的繡章——這是紅花的。\n請點擊左側桌面圖中的筆記本查看內容。",
+    "READ_CASE_NOTES": "【紅花的案情紀錄 · 第七三頁】\n\n米糕的死絕非偶然。\n我看過那把鎚子，我看過現場的血跡。\n\n那個傍晚，我就在圖書館裡——\n我聽見了爭吵聲，聽見了倒地的聲音。\n但那道門在案發後自動上鎖，像是某種詛咒。\n\n我知道誰在那裡。\n但是沒有證據，沒有人會信我的話。\n\n我只能留在這裡，等一個真正懂得查案的人。\n等一個不只懂劍，也懂心的人。\n\n——紅花　謹記\n\n【人物線索】你了解了紅花所掌握的秘密。",
+    "SCENE_WINDOW": "大廳角落的窗戶，玻璃早已破碎，\n夜風從缺口灌入，搖晃著窗簾上的蛛網。\n\n窗台上的塵埃中，有一個橢圓形的輪廓——\n像是曾經放過一個相框。但相框已不在了。\n\n只剩下一縷乾燥的玫瑰花瓣，\n以及壓在花瓣下的一張折疊字條。\n請點擊左側窗台圖中的字條。",
+    "INSPECT_WINDOW_NOTE": "字條的字跡在燭光下若隱若現：\n\n「艾蜜莉亞，你知道他做了什麼。\n 你不得不消失。我明白。\n\n 但你留下的線索，\n 總有一天會讓真相浮現。\n\n 請——好好保重。\n\n                    ——你知道是誰的人」\n\n字跡……你認出了，這是紅花的筆跡。\n\n艾蜜莉亞——那個消失的學生聯誼會委員。\n她當時目睹了什麼，讓她必須逃離這裡？\n\n【人物線索】你了解了艾蜜莉亞消失的原因。",
+    "SCENE_BASEMENT": "鑰匙插入暗格，書架後方的牆壁緩緩滑動。\n\n你踏上狹窄的石階，\n潮濕與腐舊紙張的氣味撲面而來。\n\n燭光在你身後搖曳，\n前方是一片深不見底的黑暗。\n你繼續下行……\n\n數十級石階之後，\n你看到兩扇分岔的石門。\n\n左邊那扇半開著，門縫中透出隱約的燭光——\n那是倉庫，正是你要尋找線索的地方。\n\n右邊那扇緊閉，縫隙間滲出一股腐朽的氣息。\n那是儲藏室。不知道有什麼——或者說，有誰——在裡面。",
+    "SCENE_BASEMENT_STORAGE_ROOM": "你靠近右側那扇緊閉的石門。\n\n冷氣從門縫滲出，帶著發黴與某種說不清的腥味。\n\n你把耳朵貼近門板——\n裡面有極低沉的呼吸聲。\n緩慢、均勻，像是一個長時間躲在黑暗裡的人。\n\n門鎖從裡頭扣住，你打不開它。\n\n「那個人……已經在裡面躲了很久了。」\n你意識到——這裡才是兇手真正的藏身之處。\n你不應該在這裡停太久。",
+    "SCENE_BASEMENT_DEEP": "石室中央，有一個塵封已久的小桌。\n\n桌上放著一封未完成的信，\n以及一本翻開的日記——\n日記的頁面上，你辨認出了熟悉的字體：\n「天王星（Starscream）」的親筆。\n\n翻開那一頁：\n\n「我做了不可挽回的事。\n 那一天，我衝進去找米糕，\n 是要他還我父親的錢——\n 他說沒有，我們起了衝突……\n\n 那把鎚子就在旁邊，\n 我只是想嚇嚇他。\n 我不是故意的。\n 上帝作證，我不是。\n\n 但艾莉卡在窗外看到了一切。\n 她……她沒有說話。她只是跑了。\n 艾蜜莉亞也知道了。\n 她選擇消失，不是因為膽怯——\n 是因為她不知道該告訴誰。」\n\n【人物線索】你掌握了天王星的親筆供詞，\n以及艾莉卡目睹事件的真相。",
+    "CONFRONT_SECRET_PATH": "你走向紅花，手中握著那份《鎮魂歌譜》。\n\n她的眼神微微一凝——\n「你……找到那首曲子了？」\n\n然後她看見你帶著的物證，\n看見你調查的眼神，\n眼中閃過一絲從未有過的動搖。\n\n「你不只知道那些數字。\n 你還知道……那個晚上發生了什麼。」\n\n紅花靜靜地望著你，許久沒有說話。\n最後，她緩緩開口：\n「說吧。你知道什麼，就說什麼。」",
+    "CONFRONT_COLDTRUTH_PATH": "你走向紅花，展示了完整物證與供詞。\n\n紅花安靜地聽完，點了點頭。\n「你的推論成立，證據也完整。」\n\n她停頓片刻，視線卻沒有真正落在你身上：\n「但我還不確定，能不能把剩下的交給你。」\n\n「你破得了案，\n 卻還沒真正讓我相信你會善待這個真相。」",
+    "CONFRONT_TRUE_PATH": "你走向紅花，手中握著《鎮魂歌譜》。\n\n「你找到了，」她平靜地說，\n「密碼、歌譜——\n 你比大多數人走得更遠。」\n\n「那就說說你的推論吧。」\n她站起身，\n眼中有著你說不清楚的複雜情緒。",
+    "CONFRONT_REJECTED_PATH": "你拿出《鎮魂歌譜》與幾項物證。\n\n紅花看了一眼，神情冷了下來：\n「東西找得到，不代表你值得託付。」\n\n「你像是在解一個題目，\n 不是在面對一條人命。」\n\n她轉身走回書架陰影處：\n「今晚到此為止。你先學會『聽』，再來查案。」",
+    "CONFRONT_ALLIANCE_PATH": "你走向紅花，帶著尚未完整的物證。\n\n她看著你，罕見地先開口：\n「證據還不夠，但你查案的方式，我認可。」\n\n她從袖中取出一枚舊徽章，放到你手中：\n「這是蔚藍學院舊館守備徽章。帶著它，\n 明晚你可以直接進地下密室最深處。」\n\n「我們不是朋友，」她淡淡說，\n「但從現在起，我們是同一邊的人。」",
+    "CONFRONT_NORMAL_PATH": "你走向紅花，帶著你蒐集到的物證。\n\n「物證……你找到了一些，」她說，\n「但還不夠。」\n\n她嘆了口氣，放下手邊的書卷：\n「今晚就到這吧。\n 你不是最糟的那種調查員。\n 那把鎚子在書架角落，\n 如果你明晚再來，或許我可以多說幾句。」",
+    "CONFRONT_UNPREPARED_PATH": "你毫無準備地走向紅花。\n\n她抬起眼，眼神沒有溫度：\n「空手而來，你是警察，還是觀光客？」\n\n「你知道嗎，上一個這樣走進來的人，」\n她說，嘴角帶著一絲說不清的弧度，\n「現在就埋在學院的某個角落。」\n\n「不不不，我是開玩笑的。」她補充道，\n「……大概吧。」\n\n一陣沉默。",
+    "ENDING_SECRET": "你將所有物證一一陳列——\n那把刻著「III」的鎚子，艾莉卡的四葉草，\n天王星留下的牛仔褲，以及地下室裡的親筆供詞。\n\n「天王星，」你緩緩說，\n「他因家道中落懷恨，\n 那一天衝進來找米糕理論，\n 失手——或者說，失控了。\n 艾莉卡目睹了一切，嚇到了，逃了。\n 艾蜜莉亞知道了，選擇消失。\n 而你——」\n\n「你也在圖書館裡，」你說，\n「你聽見了一切，但你被鎖在裡面。\n 兩年了，你守在這裡，等著有人來查清楚。」\n\n紅花的眼眶緩緩泛紅。\n\n「你……真的都知道了。」她低聲說，\n「兩年了。兩年來沒有任何人，\n 願意走進這裡，認真去查這件事。」\n\n「天王星已經逃到別處了，」她說，\n「但你現在有足夠的證據了。\n 去吧，英國皇家警察。\n 把真相帶回倫敦。」\n\n窗外，天邊出現了第一縷晨光。\n圖書館的燭火在晨風中搖曳——\n不是熄滅，而是向你致意。\n\n【秘密結局 · 真相大白】\n蔚藍學院的秘案，終於有了答案。\n天王星是兇手。紅花，一直在等這一刻。",
+    "ENDING_TRUE": "你將蒐集到的物證一一陳列——\n鎚子、四葉草、牛仔褲，以及密碼盒裡的《鎮魂歌譜》。\n\n紅花靜靜聆聽，臉上看不出情緒。\n\n「不夠，」她最後說，\n「你知道案發的跡象，\n 但你還不知道完整的真相。\n 那個真正的秘密，\n 還藏在這圖書館的某處。」\n\n窗外傳來鳥鳴。天快亮了。\n\n「但你是我見過最認真的調查員了。」\n她微微點頭，「下次再來。我會在這裡。」\n\n【真結局 · 線索足夠】\n案件有了重要進展，但完整的真相尚未揭露。\n紅花依然守著圖書館，等待你的下一次造訪。",
+    "ENDING_TRUST_ALLIANCE": "你收下了那枚舊徽章。\n\n紅花背對著你，聲音很輕：\n「別讓我後悔。」\n\n你走出圖書館時，天邊剛泛白。\n這一夜你沒有破案，\n卻換來了比答案更難得的東西——\n紅花的信任。\n\n【信任結局 · 共犯不是罪犯】\n你與紅花建立了調查同盟。\n真相尚未揭曉，但你們將並肩追到最後。",
+    "ENDING_TRUST_REJECTED": "你站在原地，手中的《鎮魂歌譜》忽然變得沉重。\n\n紅花沒有再看你，只說了一句：\n「會查案，不等於懂人。」\n\n門在你身後緩緩關上。\n你帶走了證據，卻帶不走她的配合。\n\n【信任結局 · 被拒於門外】\n你拿到關鍵物件，卻失去了紅花的信任。\n這起案件，變得更難了。",
+    "ENDING_TRUST_COLDTRUTH": "證據鏈完整，供詞清楚，真相已然浮現。\n\n你報出天王星的名字時，\n紅花沒有驚訝，也沒有喜悅。\n\n「你做到了，」她說，\n「但到這裡就好。」\n\n她把最後一份檔案留在桌上，\n卻沒有把目光留給你。\n\n【信任結局 · 冷真相】\n你解開了命案，卻沒有解開紅花心中的門。\n真相是對的，但你們仍然陌生。",
+    "ENDING_NORMAL": "你以蒐集到的物證為依據，\n笨拙地說明著自己的推論。\n\n紅花靜靜地聽完，\n嘴角浮現一個難以形容的表情——\n不是滿意，也不是失望。\n\n「你努力過了，」她說，\n「今晚就到這裡吧。」\n\n她抬起眼，看向圖書館的角落——\n那裡有一把鏽跡斑斑的鎚子。\n「下次來，從那裡開始查。」\n\n你走出大門，回頭望去，\n黑暗中還有一點燭光，孤獨地燃著。\n\n【普通結局 · 物證不足】\n危機暫緩，但謎團仍在。\n紅花依舊守在廢棄的蔚藍學院圖書館，\n等待更完整的調查。",
+    "ENDING_BAD_UNPREPARED": "你毫無準備地走向紅花。\n\n一陣沉默，長到有些尷尬。\n\n「你知道嗎，」紅花緩緩開口，\n「蔚藍學院有個傳說——\n 每個空手走進這圖書館的人，\n 都會在某個書架後面找到自己的名字。」\n\n她停頓了一下。\n\n「我是說……刻在木頭上的那種名字。」\n\n你感覺到後背一陣發涼。\n\n「不過放心，」她補充道，\n「我最近沒有空間了。\n 你先回去，明天備好物證再來。」\n\n【壞結局 A · 準備不足】\n你被請出了圖書館。\n紅花依然守在那裡，優雅而神秘，\n傳說中的檳榔味，你沒能親身體驗到。",
+    "ENDING_STORAGE_AMBUSH": "黑暗中，你沒有意識到腳步聲正悄悄從背後逼近。\n\n下一秒，冰冷的呼吸落在你頸後，刀光一閃。\n\n你來不及回頭，世界已經傾斜。\n\n【壞結局 C · 背後偷襲】\n兇手一直藏在圖書館地下儲藏室裡，\n悄悄跟出來，趁你背對的那一刻出手。\n在三樓以外的任何地方，背後永遠比正前方更危險。",
+    "ENDING_BAD_CODEFAIL": "第三次輸入錯誤的瞬間——\n\n密碼盒劇烈震動。\n一股奇異的氣息從縫隙中湧出，\n帶著石灰、舊紙與……\n隱隱約約的，不知從何而來的檳榔味。\n\n你試圖後退，卻發現雙腿不聽使喚。\n\n黑暗中，你聽見紅花輕聲說：\n\n「猜不出密碼的人，\n 就留在這裡當書的護衛吧。」\n\n頓了頓，她補充：\n\n「放心，我會好好照顧你的。\n ……就像照顧這些書一樣。」\n\n【壞結局 B · 密碼失敗】\n你成為了圖書館的新住客。\n另外——傳說中的檳榔味，\n你終於親身體驗到了。",
+    "DANGER_2AM": "【凌晨兩點——】\n\n圖書館裡所有的燭火忽然同時搖曳，\n像是感應到了某種看不見的東西。\n\n你想起紅花說的話：\n『凌晨兩點之後，這裡就不再只屬於你。』\n\n地板深處傳來緩慢而規律的腳步聲——\n從地下室，一步一步往上走來。\n\n兇手……出來了。\n\n在大地圖上移動時，請務必小心。\n三樓目前最為安全。",
+    "KILLER_MAP_ENCOUNTER_WARNING": "【走廊盡頭的黑影】\n\n你剛踏入這一層，\n就感覺到空氣裡有什麼不對勁。\n\n走廊盡頭，一個身影背對著你緩緩移動。\n那不是紅花，也不是任何你認識的人。\n\n他……他轉過頭來了。",
+    "ENDING_KILLER_MAP": "你在大地圖上移動時，\n忽然意識到那道黑影距離你只剩幾步。\n\n你想回頭，想大喊，想逃——\n但已經太遲了。\n\n「終於……找到你了。」\n\n燭光一口氣全滅。\n黑暗如潮水湧入。\n\n【壞結局 D · 凌晨的獵殺】\n凌晨兩點後，兇手從地下室走出，在圖書館各層巡邏。\n下次記住：天亮之前，移動要謹慎。\n三樓管理室是你唯一的安全地帶。",
+    "SCENE_CORRIDOR_1F": "【一樓走廊】\n\n昏黃的廊道延伸在你眼前。\n地板木材已在歲月中微微翹起，\n每一步都發出輕微的吱嘎聲。\n\n走廊右側掛著幾幅泛黃的師生合照，\n有些相框歪斜，有些相框後面——\n似乎夾著什麼紙張。\n\n走廊盡頭半開著的門，\n透進來的風帶著腐朽的氣息。\n\n請點擊左側場景圖中的互動區域進行調查。",
+    "SCENE_CORRIDOR_2F": "【二樓走廊】\n\n二樓走廊比一樓更暗，\n燭台只剩一根還有火，微弱地搖曳著。\n\n公告欄上張貼著幾份發黃的通知，\n其中一份邊緣被人撕過——\n像是有人試圖帶走什麼，卻沒帶走完整。\n\n走廊深處有一道上鎖的鐵門，\n鐵門上的銘牌寫著：「案卷保管室」。\n\n請點擊左側場景圖中的互動區域進行調查。",
+    "SCENE_CORRIDOR_3F": "【三樓走廊】\n\n這裡是圖書館最高層，\n走廊比下方兩層都安靜，連風聲都幾乎聽不見。\n\n管理室的燭光從門縫中透出。\n走廊另一端有一個落灰的置物架，\n架上整齊地陳列著幾個封存的資料夾。\n\n你注意到其中一個資料夾貼著學校封條——\n封條上蓋著「機密存查」的印章，\n日期是兩年前。\n\n請點擊左側場景圖中的互動區域進行調查。",
+    "SCENE_ROOM_A": "【閱覽室A】\n\n這間靠一樓左側的閱覽室A仍保留著幾張長桌。\n桌面覆著灰，卻還能看出當年被反覆翻閱的痕跡。\n\n靠牆的閱讀桌抽屜似乎塞著什麼東西，\n一旁還倒扣著一個蒙灰的畫框。\n\n請點擊左側場景圖中的互動區域進行調查。",
+    "SCENE_ROOM_B": "【閱覽室B】\n\n閱覽室B比另一側更靠近窗邊。\n幾張單人椅被刻意推到角落，\n地板上還留著拖動重物的淺痕。\n\n窗台上放著一雙手套，\n手套的拇指和食指部分有輕微的污漬。\n\n請點擊左側場景圖中的互動區域進行調查。",
+    "SCENE_MEETING_ROOM": "【{meeting_room_name}】\n\n長型的會議桌上，文件散落一地。\n椅子七倒八歪，像是人們離開時很倉皇。\n\n白板上用紅筆寫著幾個字，\n雖然有人試圖擦去，\n但字跡依稀可辨：\n「緊急校務・案件封鎖・毋庸再議」。\n\n桌角疊著一疊公文，\n最上面那份的標題讓你停住了腳步。\n\n請點擊左側場景圖中的互動區域進行調查。",
+    "INSPECT_CORRIDOR_PHOTO": "你翻開相框背後夾著的紙張。\n\n是一張課程表，但空白處密密麻麻地寫著字——\n你辨認出那是艾蜜莉亞的筆跡。\n\n「他每週二都會在圖書館加班到很晚。\n 地點：B2走廊更衣間旁的密室。\n 米糕說那是他的辦公室，\n 但那裡從來沒有燈。\n 那裡到底放著什麼？」\n\n【人物線索】艾蜜莉亞留下的暗語，\n指向地下室的另一層秘密。",
+    "INSPECT_CORRIDOR_NOTICEBOARD": "你走近被人撕過的公告。\n\n殘留的部分寫著：\n「……因涉及在校期間不當行為，\n 退學生天王星（T.S.Uranus）即日起……\n 校方保留……訴訟……」\n\n剩下的內容已被撕去。\n但「T.S.Uranus」這個名字出現了兩次——\n第二次旁邊有人用鉛筆潦草地補了一行：\n「他回來了。案發當晚。」\n\n【線索確認】天王星案發當晚確實返回學院，\n已有目擊者留下的第一手紀錄。",
+    "INSPECT_CORRIDOR_3F_FILE": "你翻開那個標著「機密存查」的資料夾。\n\n裡面是一份校方內部備忘錄，日期是案發後三天：\n\n「本案依高層指示，暫不對外公開調查結果。\n 相關人員（T.S.U.）已勒令離校並軟禁。\n 目擊者（E.A.、A.L.）已轉移至安全地點。\n 圖書館管理員紅花不配合封口，\n 目前仍滯留館內，拒絕撤離。\n 建議維持圖書館關閉狀態。」\n\n【重大線索】校方曾組織性地掩蓋這件案子，\n而紅花選擇留下來，等待真正的調查者。",
+    "INSPECT_ROOM_A_DRAWER": "你打開書桌抽屜。\n\n裡面有一封信，信封上寫著「給找到這封信的人」。\n\n「如果你在看這封信，\n 代表你已經找到了這個房間。\n 我是米糕——圖書館館長，\n 那個被人說死了的人。\n\n 我知道那個人一直跟著我。\n 如果你找到這封信時，我已經不在了，\n 請去地下室的倉庫，打開左數第三個木箱。\n 裡面有他認罪的證據。\n\n ——米糕　謹啟」\n\n【重大線索】米糕生前預感危險，留下了指引。\n這封信讓天王星的犯案動機更加清晰。",
+    "INSPECT_ROOM_B_GLOVES": "你拾起窗台上的手套，靠近燭光仔細觀看。\n\n手套的污漬——是鏽跡，\n和金屬摩擦後留下的那種顏色。\n和那把鎚子上的鏽漬，幾乎一模一樣。\n\n手套內側的縫線縫著兩個字母：「T.S.」\n\n【物證取得】天王星的手套。\n【推斷】這雙手套佐證了天王星\n曾持有或使用過那把鎚子。",
+    "INSPECT_MEETING_DOCS": "你翻開桌角那疊公文最上面的一份。\n\n標題是：\n《蔚藍學院緊急董事會議紀錄・案後第一次》\n\n「……本次會議確認：\n 1. 事故定性為『意外』，不開放外部調查。\n 2. 相關嫌疑人由校方私下處置。\n 3. 圖書館紀錄移交三人小組保管。\n 4. 在校目擊學生由輔導組協助『遺忘』。」\n\n文件末尾有三個簽名，\n其中一個你認出了——\n那是蔚藍學院前院長的名字。\n\n【重大線索】這起案件從一開始就被組織性地掩蓋。\n紅花守在圖書館裡，與整個官僚體系對抗。",
+    "ENDING_HIDDEN": "你走出圖書館，肩膀沉得像灌了鉛。\n夜色把街道壓得很低，你連回頭的力氣都沒有。\n\n你只記得自己倒在某個安全的角落，\n眼皮一沉，便墜進了沒有盡頭的黑。\n\n——睡著了。\n\n再睜開眼時，你正坐在一間藥鋪的診室裡。\n燭光昏黃，空氣裡漂著草藥與樟腦的氣味。\n\n你對面的大夫翻著一本厚重的診訊冊，\n桌旁掛著一件黑色長袍，領口繡著字母——「Y. M.」。\n\n他抬起頭，帶著一抹神秘的微笑：\n「這帖苦艾酊可以退熱，要試試嗎？」\n\n那笑意停在嘴角，說不清是關心還是試探，\n你的背脊忽然一陣發涼。\n\n你匆匆走出診室，\n在藥鋪門口的磨光銅鏡前停下腳步。\n\n鏡中的人，不是什麼英國皇家警察。\n那張臉，是艾蜜莉亞（Amelia）。\n你就是艾蜜莉亞。\n\n真相像冷水一樣潑下來——\n根本沒有什麼英國皇家警察。\n那只是昨晚一段不愉快的記憶：\n法國的巡夜士兵在街頭攔下你，盤查身份，\n讓你緊張、惱火，卻又無從發作。\n\n那股情緒太重，重到壓進夢裡。\n你把那個追問你的人，變成了自己；\n在夢中反過來扮演追問真相的警察。\n你把角色繞進了自己的夢境。\n\n你推開藥鋪大門，陽光刺得你瞇起眼。\n門口等著的人是提莫（Timo），\n當初接應你的旅店掌柜，仍是那副親切模樣。\n旁邊站著你現在的鄰居珊珊（Shanshan），\n她朝你輕輕擺了擺手。\n\n也許，你該考慮去倫敦一趟了。\n帶著這個奇怪的夢，\n帶著那段不愉快的法國夜晚，\n帶著從未真正說清楚的故事——\n也許倫敦，才有你真正的答案。\n\n【隱藏結局 · 夢醒時分】\n你不是警察，你是艾蜜莉亞。\n那一夜的追問，只是一場夢的投影。",
+    "LONDON_HIDDEN_PROLOGUE": "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━\n          〔 隱藏選項已解鎖 〕\n━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━\n\n案件已告一段落。\n但有個念頭，始終沉在你心底某個角落。\n\n倫敦。\n那棟你從未踏足、卻在卷宗裡出現過三次的建築。\n\n你將它的地址記在心裡——\n泰晤士河畔，Harbour Lane 17號。\n\n◆ 選項A｜留在原地，讓這一切就此落幕\n◆ 選項B｜乘船前往倫敦——去看看那個地方",
+    "LONDON_HIDDEN_IDENTITY": "你盯著那份文書看了很久。\n\n上面的印章是假的。\n筆跡是你的，但那個人——在任何登記冊裡——並不存在。\n\n你沒有洗禮紀錄、沒有行會籍冊、\n沒有教區名冊、沒有任何官方認可的身份文書。\n你是一個被這個世界遺忘的人，\n或者說——從未被登錄的人。\n\n以什麼身份去倫敦？\n\n答案在三週前一個偶然的場合裡出現了。\n\n一封折疊的介紹信，\n從某個訪客的外套口袋裡悄悄滑落，\n壓著深紅色蠟封，印有巴黎皇家醫學學會的紋章：\n\n  ┌────────────────────────────────────┐\n  │  Au nom de l'Académie Royale       │\n  │  Dr. Yveline Marchand              │\n  │  Médecin · Étude des Fièvres       │\n  │  Académie Royale, Paris, 1671      │\n  │  Savante réputée                   │\n  └────────────────────────────────────┘\n\nYv醫生。\n以研究惡性熱病與體液失調聞名的法國名醫。\n一個真實存在、卻極少親自出門行醫的學者。\n\n你研究了她兩週。\n她的醫學論著、她的寫作口吻、她慣用的拉丁詞彙、\n她對某些問題習慣性的迂迴說法——\n\n你覺得，你現在比她更像她。",
+    "LONDON_HIDDEN_CH1_ARRIVE": "地址：倫敦，泰晤士河畔，Harbour Lane 17號。\n\n渡海的船在黎明前靠岸，\n你裹緊披風，踏上了滿是泥濘的碼頭石板路。\n\n從外面看，這棟三層石砌建築\n和附近任何一棟都沒有太大區別——\n灰褐色砂岩外牆，厚重的橡木門扉，\n門楣上方嵌著一塊低調的銅製牌匾：\n\n  ⚓ 海員行會堂\n     MARINERS' GUILD HALL\n     Founded Anno Domini MDCLII\n\n你知道這裡以前叫別的名字。\n蔚藍學院私藏書庫。\n十四年前院方關閉，書庫建築由行會購入，\n改成了這個——海員行會堂。\n\n但書，還在裡面。\n至少，那份卷宗上說，書還在裡面。",
+    "LONDON_HIDDEN_CH1_GATE": "門衛是個約莫六十歲的老人，\n戴著一頂壓得很低的黑色船長帽，\n表情像是對所有訪客都懷有輕微的懷疑。\n\n門衛：「有預約的文書嗎？」\n\n你用帶著法語腔的英語開口——\n那種刻意保留一點母語韻律的說話方式：\n\n你（以Yv醫生身份）：\n「有的。我是馬尚醫生，從巴黎來。\n 我透過巴黎皇家醫學學會，\n 致函貴行會的學術事務職員——\n 關於蔚藍學院舊藏的醫學文獻，\n 特別是世紀初有關惡性熱病的手稿。」\n\n門衛翻了翻厚厚的訪客登記冊，\n找了將近一分鐘。\n\n你在這一分鐘裡，保持了完美的靜止。\n\n門衛（抬頭）：「馬尚……」\n你（微笑）：「M-A-R-C-H-A-N-D。馬尚醫生。」\n門衛：「……三點鐘的預約。您早到了些。」\n你：「渡海的船比預期靠港得早。\n      法國人總是低估英吉利海峽的好天氣。」\n\n門衛笑了，罕見地，真誠地。\n\n門衛：「請進。茶水在二樓，\n        書庫在三樓，\n        請勿觸碰展示中的航海儀器。」\n\n你點頭，走進去。\n\n〔✓ 成功進入館內〕",
+    "LONDON_HIDDEN_CH2_ARRIVE": "三樓，還是書的氣味。\n\n蔚藍學院的舊書沒有搬走，\n只是換了排列方式——\n原本按學科分類的書架，\n現在夾雜著航海圖錄、潮汐曆表與船務紀錄。\n\n但某一區角落，書脊上的燙金字是：\n\n  MEDICINA · PHYSICA · DE FEBRIBUS\n\n你朝那個方向走去，\n假裝在找惡性熱病的醫學手稿，\n實際上，你在找另一樣東西。\n\n你知道它在這裡，因為——\n\n  ┌────────────────────────────────────┐\n  │  ⚠ 記憶碎片觸發                   │\n  │  你曾在某個你「不應該存在」的時間點 │\n  │  來過這個房間。                    │\n  │  那時這裡還叫書庫。                │\n  │  那時你還有另一個名字。            │\n  └────────────────────────────────────┘\n\n━━━━━━━━━━━━━━━━━━━━━━━━━━━━━\n  你要從哪裡開始調查？\n\n  ◆ 〔調查〕醫學書區的舊書脊標籤\n  ◆ 〔調查〕角落那張積了灰的閱覽桌\n  ◆ 〔調查〕書架後方隱約可見的窄門\n  ◆ 〔等待〕觀察其他來訪者\n━━━━━━━━━━━━━━━━━━━━━━━━━━━━━",
+    "LONDON_HIDDEN_CH2_SECRETROOM": "門沒有上鎖。\n只是被一排書和一張倒置的凳子擋住了。\n\n你把書移開，推門進去——\n\n裡面是一個小型的文書管理室，\n現在空著，落了灰，\n但桌上有一個上了漆的木箱。\n\n沒有鎖扣，沒有標籤。\n\n你打開它。\n\n裡面是：\n  ・一本破損的入學名冊，蔚藍學院，癸亥年（1683年）\n  ・一疊手寫的醫學筆記，字跡工整，法文\n  ・一幅炭筆素描——一群穿航海服飾的學生\n    站在這棟建築的正門前\n\n你翻到素描的背面。\n\n背面用英文寫著一行字：\n\n  「We were here. Even if the ledger says otherwise.」\n  （我們曾在這裡。即使名冊說並非如此。）\n\n你的手停住了。\n\n因為最後一個簽名——\n潦草，但你認得——\n\n那是你的筆跡。",
+    "LONDON_HIDDEN_CH3_ENCOUNTER": "你把木箱放回原位，\n推開另一側的窄門走出來——\n\n然後差點撞上一個正準備進來的人。\n\n對方約莫四十歲，\n穿著一件不合時宜的深藍色航海風外套，\n戴著一副金絲眼鏡，手裡抱著一疊皮面文件夾。\n\n他先說話了。\n\n神秘男子：「抱歉，我沒注意到——」\n（他停了一下，看著你，表情奇怪地凝固了）\n神秘男子：「……您是馬尚醫生？」\n\n你：「是的。」（標準的Yv醫生表情）\n\n神秘男子：「我是威廉・哈格里夫斯，\n           行會的歷史文書整理員。\n           我一直在等您——\n           不是為了熱病手稿。」\n\n（他壓低聲音）\n\n神秘男子：「是為了蔚藍學院的入學名冊。\n           有幾個名字，\n           我查遍了教區登記冊、行會籍冊，\n           都找不到這些人的後續紀錄。\n           就像他們……憑空消失了一樣。\n           或者說——從來就不存在。」\n\n他把皮面文件夾遞向你。\n\n最上面那頁，你看到了——\n\n你的名字。\n你這輩子用過的那個名字。\n列在「無後續紀錄，身份存疑」的欄目裡。\n\n━━━━━━━━━━━━━━━━━━━━━━━━━━━━━\n  你要怎麼回應？\n\n  ◆ 〔謹慎〕以Yv醫生身份繼續詢問\n  ◆ 〔冒險〕透露一點真相，試探他\n  ◆ 〔沉默〕什麼也不說，先觀察他的反應\n━━━━━━━━━━━━━━━━━━━━━━━━━━━━━",
+    "LONDON_HIDDEN_PREVIEW": "╔══════════════════════════════════════════╗\n║                                          ║\n║   泰晤士河的霧還沒散。                   ║\n║                                          ║\n║   你夾在兩個身份之間——                  ║\n║   一個借來的名字，                       ║\n║   和一個被刪除的自己。                   ║\n║                                          ║\n║   但那本名冊告訴你：                     ║\n║   你曾經存在過。                         ║\n║   在這棟建築裡，在那個夏天，             ║\n║   在某一段被人刻意抹去的歷史裡。         ║\n║                                          ║\n║   ——下一章：《名冊裡的夏天》——          ║\n║                                          ║\n╚══════════════════════════════════════════╝\n\n【隱藏結局分支 · 航向倫敦】\n倫敦，等待著你的下一步。"
+  },
+  "character_texts.py": {
+    "BOOKSHELF_CORRECT_ORDER": [
+      "失蹤案卷",
+      "退學檔案",
+      "死亡報告",
+      "停課公告"
+    ],
+    "TRUST_REMARKS": {
+      "不信任": "\n紅花的目光像刀，冷冷地釘在你身上。沒有歡迎，沒有客套。",
+      "觀望中": "\n她側過臉，用眼角餘光確認了你的位置——沒有說話，卻也沒有移開視線。",
+      "逐步信任": "\n「……隨便你，」她輕聲說，目光重新落回書頁，但翻頁的動作慢了許多。",
+      "高度信任": "\n「慢慢來，」她輕聲說，挪了挪燭台，讓光線照進了更多的角落。"
+    },
+    "TRUST_REACTIONS": {
+      "inspect_hammer": {
+        "不信任": "",
+        "觀望中": "\n\n（從書架那頭，你聽見翻頁的聲音停了。）",
+        "逐步信任": "\n\n「鎚柄上的刻痕……你注意到了？」\n她的聲音飄過來，比你預期的輕。",
+        "高度信任": "\n\n「那三道刻痕是計數用的，」她說，\n「每隔一年，有人就在那裡刻一道。」"
+      },
+      "inspect_clover": {
+        "不信任": "",
+        "觀望中": "\n\n（你感覺她微微坐直了身子。）",
+        "逐步信任": "\n\n「艾莉卡那個孩子……，」\n她輕聲說，沒有繼續。",
+        "高度信任": "\n\n「她說『順路帶來好運』，」紅花說，\n「但她逃跑時沒帶走這片葉子——好運已經用完了。」"
+      },
+      "inspect_jeans": {
+        "不信任": "",
+        "觀望中": "\n\n（遠處燭光輕輕搖曳。她好像在等你繼續。）",
+        "逐步信任": "\n\n「R.U.……，」她從書架那頭說，\n「他當年離校時，把怨氣也一起打包走了。」",
+        "高度信任": "\n\n「第四排，」她輕聲重複，\n「那是他和米糕第一次正面衝突的地方。\n 你找到正確的線索了。」"
+      },
+      "read_case_notes": {
+        "不信任": "\n\n【你感覺到她的目光穿過書架的縫隙——像在確認你是否值得信任。】",
+        "觀望中": "\n\n【你隱約聽見她從書架另一側輕聲嘆了口氣。】",
+        "逐步信任": "\n\n「那個門，」她從你身後輕聲說，\n「自動上鎖那種感覺——我做夢夢到過好幾次。」",
+        "高度信任": "\n\n「謝謝你讀完了。」\n她走近了一步，燭光映在她臉上，\n你第一次看見她臉上有了不是防備的表情。"
+      },
+      "inspect_window_note": {
+        "不信任": "\n\n【她沒有說話。遠處的燭光在風中搖了幾下，又穩住了。】",
+        "觀望中": "\n\n（你聽見她放下了什麼——是書嗎，還是什麼別的東西？）",
+        "逐步信任": "\n\n「艾蜜莉亞選擇沉默，」她輕聲說，\n「但她留下了這張字條。沉默有時候也是一種陳述。」",
+        "高度信任": "\n\n「那封信是我寫的，」她說，語氣平靜如水，\n「在她消失的那個晚上。我知道她不會回來了。\n 但我希望她知道——有人懂。」"
+      }
+    }
+  }
+};
 
     const STORY = {
       intro:
@@ -174,19 +289,57 @@
       }
     };
 
+    const ARCHIVE_LABELS = {
+      "story_texts.py": "主劇情文本（story_texts.py）",
+      "character_texts.py": "角色文本（character_texts.py）",
+    };
+
+    function archiveKeys(group) {
+      return Object.keys(TEXT_ARCHIVE[group] || {}).sort();
+    }
+
+    function ensureArchiveState() {
+      if (!S.archive || !TEXT_ARCHIVE[S.archive.group]) {
+        S.archive = { group: "story_texts.py", key: null };
+      }
+      if (S.archive.key && !(S.archive.key in (TEXT_ARCHIVE[S.archive.group] || {}))) {
+        S.archive.key = null;
+      }
+    }
+
+    function formatTemplateText(raw) {
+      if (typeof raw !== "string") {
+        return JSON.stringify(raw, null, 2);
+      }
+      return raw
+        .replaceAll("{hammer_length}", "30")
+        .replaceAll("{trust_remark}", "")
+        .replaceAll("{basement_hint}", "")
+        .replaceAll("{meeting_room_name}", "會議室");
+    }
+
+    function openArchive() {
+      ensureArchiveState();
+      goto("archive_index");
+    }
+
     const initialState = () => ({
       scene: "intro",
       elapsed: 0,
       trust: 0,
-      evidence: { hammer: false, clover: false, jeans: false },
-      clues: { honghua: false, amelia: false, starscream: false },
-      flags: { basementOpen: false, trueSong: false },
-      log: ["── 進入蔚藍學院 ──"]
+      evidence: { ...DEFAULT_EVIDENCE },
+      clues: { ...DEFAULT_CLUES },
+      flags: { ...DEFAULT_FLAGS },
+      archive: { ...DEFAULT_ARCHIVE },
+      log: [DEFAULT_LOG_MESSAGE]
     });
 
     let S = initialState();
 
-    function deepClone(obj) { return JSON.parse(JSON.stringify(obj)); }
+    function deepClone(obj) {
+      if (typeof structuredClone === "function") return structuredClone(obj);
+      return JSON.parse(JSON.stringify(obj));
+    }
 
     function nowClock() {
       const total = GAME_START_HOUR * 60 + S.elapsed;
@@ -237,12 +390,72 @@
       if (key === "hall") {
         return STORY.hall + "\n\n" + CHARACTER.trustRemarks[trustTier()];
       }
+      if (key === "archive_index") {
+        const storyCount = archiveKeys("story_texts.py").length;
+        const characterCount = archiveKeys("character_texts.py").length;
+        return [
+          "【全內容文字庫】",
+          "這裡已將 Python 版文本常數 HTML 化並內嵌到單一 index.html。",
+          `可瀏覽：主劇情 ${storyCount} 筆、角色文本 ${characterCount} 筆。`,
+          "請選擇要瀏覽的文本群組。",
+        ].join("\n\n");
+      }
+      if (key === "archive_group") {
+        ensureArchiveState();
+        const keys = archiveKeys(S.archive.group);
+        const sample = keys.slice(0, ARCHIVE_PREVIEW_LIMIT).join("、");
+        return [
+          `【${ARCHIVE_LABELS[S.archive.group] || S.archive.group}】`,
+          `共 ${keys.length} 筆常數。`,
+          sample ? `部分條目：${sample}` : "（無資料）",
+          "請從下方按鈕選擇要查看的條目。",
+        ].join("\n\n");
+      }
+      if (key === "archive_entry") {
+        ensureArchiveState();
+        const val = (TEXT_ARCHIVE[S.archive.group] || {})[S.archive.key];
+        return [
+          `【${S.archive.key || "未選擇條目"}】`,
+          "",
+          formatTemplateText(val ?? "（此條目不存在）"),
+        ].join("\n");
+      }
       return STORY[key] || "（場景資料不存在）";
     }
 
     function makeOptions() {
       const opts = [];
       switch (S.scene) {
+        case "archive_index":
+          opts.push([ARCHIVE_LABELS["story_texts.py"], () => {
+            S.archive.group = "story_texts.py";
+            S.archive.key = null;
+            goto("archive_group");
+          }]);
+          opts.push([ARCHIVE_LABELS["character_texts.py"], () => {
+            S.archive.group = "character_texts.py";
+            S.archive.key = null;
+            goto("archive_group");
+          }]);
+          opts.push(["返回遊戲", () => goto("map3")]);
+          break;
+        case "archive_group": {
+          ensureArchiveState();
+          for (const key of archiveKeys(S.archive.group)) {
+            opts.push([key, () => {
+              S.archive.key = key;
+              goto("archive_entry");
+            }]);
+          }
+          opts.push(["← 回到文字庫首頁", () => goto("archive_index")]);
+          opts.push(["返回遊戲", () => goto("map3")]);
+          break;
+        }
+        case "archive_entry":
+          opts.push(["← 回到條目列表", () => goto("archive_group")]);
+          opts.push(["← 回到文字庫首頁", () => goto("archive_index")]);
+          opts.push(["返回遊戲", () => goto("map3")]);
+          break;
         case "intro":
           opts.push(["開始調查", () => { advance(10, "抵達圖書館"); goto("prologue"); }]);
           break;
@@ -407,10 +620,17 @@
         clueNames.filter(([k]) => S.clues[k]).map(([, n]) => `<span class="chip">${n}</span>`).join("") || '<span class="chip">尚未取得</span>';
 
       const isEnding = S.scene.startsWith("ending_");
-      document.getElementById("sceneName").textContent = isEnding ? "ENDING" : S.scene.toUpperCase();
-      document.getElementById("sceneText").innerHTML = (isEnding ? `<span class="ending">${endingText()}</span>` : sceneText(S.scene));
-      document.getElementById("statusLine").textContent =
-        `MVP 範圍：核心劇情流程、對話分支、信任度、時間/危險旗標、結局判定（地圖熱區/音效/動畫為後續階段）`;
+      const inArchive = S.scene.startsWith("archive_");
+      document.getElementById("sceneName").textContent = isEnding ? "ENDING" : (inArchive ? "TEXT ARCHIVE" : S.scene.toUpperCase());
+      const sceneEl = document.getElementById("sceneText");
+      if (isEnding) {
+        sceneEl.innerHTML = `<span class="ending">${endingText()}</span>`;
+      } else {
+        sceneEl.textContent = sceneText(S.scene);
+      }
+      document.getElementById("statusLine").textContent = inArchive
+        ? "完整文本檔案庫：已將 story_texts.py / character_texts.py 內嵌到單一 HTML（可離線瀏覽）"
+        : "遊戲模式：可遊玩主流程；也可隨時切換到全內容文字庫閱讀所有文本";
 
       const optionsEl = document.getElementById("options");
       optionsEl.innerHTML = "";
@@ -431,6 +651,17 @@
       document.getElementById("log").innerHTML = S.log.map(x => `<div>${x}</div>`).join("");
     }
 
+    function normalizeLoadedState(state) {
+      const merged = deepClone(initialState());
+      Object.assign(merged, state || {});
+      merged.evidence = Object.assign({}, DEFAULT_EVIDENCE, state?.evidence || {});
+      merged.clues = Object.assign({}, DEFAULT_CLUES, state?.clues || {});
+      merged.flags = Object.assign({}, DEFAULT_FLAGS, state?.flags || {});
+      merged.archive = Object.assign({}, DEFAULT_ARCHIVE, state?.archive || {});
+      if (!Array.isArray(merged.log)) merged.log = [DEFAULT_LOG_MESSAGE];
+      return merged;
+    }
+
     function saveGame() {
       const data = { version: SAVE_VERSION, state: S };
       localStorage.setItem(SAVE_KEY, JSON.stringify(data));
@@ -447,21 +678,35 @@
       }
       try {
         const data = JSON.parse(raw);
-        if (!data || data.version !== SAVE_VERSION || !data.state) {
-          pushLog("⚠ 存檔版本不相容，已忽略");
+        if (!data || typeof data !== "object") {
+          pushLog("⚠ 存檔格式錯誤，已忽略");
           render();
           return;
         }
-        S = deepClone(data.state);
+        if (data.version !== SAVE_VERSION) {
+          pushLog(`⚠ 存檔版本不相容（存檔:${data.version}｜當前:${SAVE_VERSION}），已忽略`);
+          render();
+          return;
+        }
+        if (!data.state || typeof data.state !== "object") {
+          pushLog("⚠ 存檔缺少遊戲狀態資料，已忽略");
+          render();
+          return;
+        }
+        S = normalizeLoadedState(data.state);
         pushLog("📂 已載入存檔");
-      } catch {
-        pushLog("⚠ 存檔損毀，無法載入");
+      } catch (err) {
+        pushLog(`⚠ 存檔損毀，無法載入（${err?.message || "未知錯誤"}）`);
       }
       render();
     }
 
     document.getElementById("saveBtn").onclick = saveGame;
     document.getElementById("loadBtn").onclick = loadGame;
+    document.getElementById("archiveBtn").onclick = () => {
+      pushLog("📚 開啟全內容文字庫");
+      openArchive();
+    };
     document.getElementById("resetBtn").onclick = () => {
       S = initialState();
       pushLog("♻ 已重新開始");
