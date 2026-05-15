@@ -351,7 +351,7 @@ def output_scene_usage_text() -> None:
         filename = f"{key}.png"
         title = SCENE_TITLES.get(key, key)
         usage = SCENE_USAGE_TEXTS.get(key, "用途未註記")
-        print(f"- assets/scenes/{filename}｜{title}｜{usage}")
+        print(f"- assets/scenes/{filename} | {title} | {usage}")
 
 
 def generate(track: dict) -> bool:

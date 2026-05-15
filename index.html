@@ -531,9 +531,18 @@ const TEXT_ARCHIVE = {
       }
     }
 
+    function isCurrentBgmTarget(target) {
+      if (!bgm.src) return false;
+      try {
+        return new URL(bgm.src, window.location.href).pathname.endsWith(`/${target}`);
+      } catch (_) {
+        return bgm.src.includes(target);
+      }
+    }
+
     function syncBgmTrack() {
       const target = targetBgmForScene();
-      if (bgm.src && bgm.src.endsWith(target)) {
+      if (isCurrentBgmTarget(target)) {
         tryPlayBgm();
         return;
       }
