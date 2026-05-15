@@ -120,8 +120,13 @@ python generate_assets.py --bgm-only
 
 - 遊戲會優先讀取 `assets/scenes/*.png`
 - 若場景圖不存在，會先回退到 `assets/scenes/default.png`；若連預設圖都不存在，再使用程式內建的即時生成版本
-- 若有 `assets/character_emotions/honghua_readbook_{impatient|peaceful|friendly|trusted}.png`，`prologue` / `hall` / `bookshelves` / `desk` / `diary` / `window` 會依信任度優先使用對應情緒圖
-- 若缺少上述情緒圖，會回退至 `HonghuaReadBook.jpg`（紅花在圖書館看書）
+- 場景一（`prologue` / `hall`）支援日夜素材切換，資源可放在 `assets/scene1/`：
+  - 進場看書圖：`honghua_readbook_{day|dusk|night}.{png|jpg|jpeg}`
+  - 對話看向你（一般）：`honghua_look_{day|dusk|night}.{png|jpg|jpeg}`
+  - 對話看向你（依信任度）：`honghua_look_{day|dusk|night}_{impatient|peaceful|friendly|trusted}.{png|jpg|jpeg}`
+  - 也可用環境變數 `SCENE1_TIME_OF_DAY=day|dusk|night` 強制指定時段
+- `hall` 對話期間若缺少上述信任度圖，會回退到 `assets/character_emotions/honghua_readbook_{impatient|peaceful|friendly|trusted}.png`
+- 若缺少上述素材，會回退至 `HonghuaReadBook.jpg`（紅花在圖書館看書）
 - 若有 `HonghuaInENG.jpg`，`intro` / `confront` / `basement` / `basement_deep` 會優先使用該圖（紅花人物形象）
 - 專案已先行附帶開場、大廳、對峙、地下室、各調查節點與結局場景圖（包含 `assets/scenes/default.png`）
 - 維護者重新生成場景圖時，會一併輸出 `assets/scenes/default.png` 作為紅花主視覺預設場景
