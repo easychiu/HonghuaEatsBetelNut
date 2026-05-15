@@ -357,7 +357,7 @@ const TEXT_ARCHIVE = {
       ],
     };
 
-    let optionButtons = [];
+    let currentSceneOptionButtons = [];
 
     const ARCHIVE_LABELS = {
       "story_texts.py": "主劇情文本（story_texts.py）",
@@ -475,7 +475,7 @@ const TEXT_ARCHIVE = {
     }
 
     function clickOptionByMatch(match) {
-      const buttons = optionButtons;
+      const buttons = currentSceneOptionButtons;
       const normalize = (text) => (text || "").trim();
       const exact = buttons.find((b) => normalize(b.textContent) === match);
       if (exact) {
@@ -513,13 +513,14 @@ const TEXT_ARCHIVE = {
         hotspotBtn.className = "scene-hotspot";
         hotspotBtn.textContent = hotspot.label;
         hotspotBtn.title = hotspot.label;
+        hotspotBtn.setAttribute("aria-label", `互動：${hotspot.label}`);
         hotspotBtn.style.left = `${left}%`;
         hotspotBtn.style.top = `${top}%`;
         hotspotBtn.style.width = `${width}%`;
         hotspotBtn.style.height = `${height}%`;
         hotspotBtn.onclick = () => {
           if (!clickOptionByMatch(hotspot.match)) {
-            pushLog(`⚠ 互動區未找到對應行為：${hotspot.label}（期望匹配：${hotspot.match}）`);
+            pushLog(`⚠ 互動區「${hotspot.label}」暫時無法使用，請改用按鈕選項（期望匹配：${hotspot.match}）`);
             render();
           }
         };
@@ -767,7 +768,7 @@ const TEXT_ARCHIVE = {
       const imgEl = document.getElementById("sceneImg");
       const imgSrc = SCENE_IMAGES[S.scene] || "";
       imgEl.src = imgSrc;
-      imgEl.alt = SCENE_ALT_TEXTS[S.scene] || "場景圖";
+      imgEl.alt = SCENE_ALT_TEXTS[S.scene] || `${S.scene.toUpperCase()} 場景`;
       imgEl.style.display = imgSrc ? "block" : "none";
       const sceneEl = document.getElementById("sceneText");
       if (isEnding) {
@@ -794,7 +795,7 @@ const TEXT_ARCHIVE = {
         restart.onclick = () => { S = initialState(); render(); };
         optionsEl.appendChild(restart);
       }
-      optionButtons = [...optionsEl.querySelectorAll("button")];
+      currentSceneOptionButtons = [...optionsEl.querySelectorAll("button")];
       renderHotspots();
 
       document.getElementById("log").innerHTML = S.log.map(x => `<div>${x}</div>`).join("");
