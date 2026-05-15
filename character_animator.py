@@ -57,7 +57,7 @@ class _Live2DHandler(SimpleHTTPRequestHandler):
     def __init__(self, *args: object, **kwargs: object):
         super().__init__(*args, directory=str(self.root_dir), **kwargs)
 
-    def do_GET(self) -> None:  # noqa: N802
+    def do_GET(self) -> None:  # noqa: N802 - required by SimpleHTTPRequestHandler interface
         if self.path.startswith("/api/state"):
             body = self.state_store.snapshot_bytes()
             self.send_response(200)
