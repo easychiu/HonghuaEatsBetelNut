@@ -137,7 +137,8 @@ class CharacterAnimator:
         else:
             self._canvas.itemconfigure(self._item_id, image=self._photo)
         self._canvas.tag_raise(self._item_id)
-        self._canvas.tag_lower(self._item_id, "hotspot")
+        if self._canvas.find_withtag("hotspot"):
+            self._canvas.tag_lower(self._item_id, "hotspot")
 
     @staticmethod
     def _normalize_coordinate(coord: int, size: int) -> float:
