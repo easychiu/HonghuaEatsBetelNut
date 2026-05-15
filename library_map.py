@@ -37,6 +37,12 @@ _TOP_MAP_PATH = os.path.join(_DIR, "assets", "scenes", "TopMap.png")
 _TOP_MAP_SCAN_HEIGHT_RATIO = 0.62
 _TOP_MAP_BRIGHTNESS_THRESHOLD = 24
 _TOP_MAP_FLOOR_ROW_GROUP_RATIO = 0.12
+_TOP_MAP_MIN_COMPONENT_AREA_RATIO = 0.01
+_TOP_MAP_MIN_COMPONENT_AREA_ABS = 2500
+_TOP_MAP_MIN_COMPONENT_W_RATIO = 0.12
+_TOP_MAP_MIN_COMPONENT_H_RATIO = 0.20
+_TOP_MAP_MIN_COMPONENT_DIM_ABS = 90
+_TOP_MAP_MAX_CANDIDATES = 8
 _top_map_floor_regions_cache: dict[tuple[int, int], list[tuple[int, int, int, int]]] = {}
 
 
@@ -155,6 +161,10 @@ def _detect_top_map_floor_regions(img: Image.Image) -> list[tuple[int, int, int,
 
     gray = img.convert("L")
     w, h = gray.size
+    if w < (_TOP_MAP_MIN_COMPONENT_DIM_ABS * 2) or h < (_TOP_MAP_MIN_COMPONENT_DIM_ABS * 2):
+        regions = _fallback_floor_regions(w, h)
+        _top_map_floor_regions_cache[size_key] = regions
+        return regions
     y_limit = max(1, int(h * _TOP_MAP_SCAN_HEIGHT_RATIO))
     pix = gray.load()
     mask = [bytearray(w) for _ in range(y_limit)]
@@ -164,9 +174,9 @@ def _detect_top_map_floor_regions(img: Image.Image) -> list[tuple[int, int, int,
             row[x] = 1 if pix[x, y] >= _TOP_MAP_BRIGHTNESS_THRESHOLD else 0
 
     visited = [bytearray(w) for _ in range(y_limit)]
-    min_area = max(2500, int(w * y_limit * 0.01))
-    min_w = max(90, int(w * 0.12))
-    min_h = max(90, int(h * 0.20))
+    min_area = max(_TOP_MAP_MIN_COMPONENT_AREA_ABS, int(w * y_limit * _TOP_MAP_MIN_COMPONENT_AREA_RATIO))
+    min_w = max(_TOP_MAP_MIN_COMPONENT_DIM_ABS, int(w * _TOP_MAP_MIN_COMPONENT_W_RATIO))
+    min_h = max(_TOP_MAP_MIN_COMPONENT_DIM_ABS, int(h * _TOP_MAP_MIN_COMPONENT_H_RATIO))
     components: list[tuple[int, int, int, int, int]] = []
 
     for y in range(y_limit):
@@ -209,7 +219,7 @@ def _detect_top_map_floor_regions(img: Image.Image) -> list[tuple[int, int, int,
         return regions
 
     components.sort(key=lambda c: (-c[0], c[2], c[1]))
-    candidates = components[:8]
+    candidates = components[:_TOP_MAP_MAX_CANDIDATES]
     top_y = min(c[2] for c in candidates)
     row_cutoff = top_y + int(h * _TOP_MAP_FLOOR_ROW_GROUP_RATIO)
     row = [c for c in candidates if c[2] <= row_cutoff]
