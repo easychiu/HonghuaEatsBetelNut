@@ -453,6 +453,9 @@ class _NullAnimator:
 
     def load_image(self, _: object) -> None: ...
     def set_state(self, _: str) -> None: ...
+    def set_focus_point(self, _x: int, _y: int) -> None: ...
+    def clear_focus(self) -> None: ...
+    def set_lip_sync_intensity(self, _intensity: float) -> None: ...
     def start(self) -> None: ...
     def stop(self) -> None: ...
 
@@ -488,6 +491,12 @@ class HonghuaGame:
     KILLER_PATROL_INTERVAL_MS = 90_000   # ms between killer floor changes
     MIN_FLOOR = 1                        # lowest library floor accessible to player
     MAX_FLOOR = 3                        # highest library floor (safe zone)
+    # Chinese primary pause markers + common whitespace for typewriter lip-sync pacing.
+    LIP_SYNC_PAUSE_PUNCTUATION = "，。！？、 \n\t"
+    LIP_SYNC_INTENSITY_TYPING_START = 0.55
+    LIP_SYNC_INTENSITY_TYPING_CHAR = 0.65
+    LIP_SYNC_INTENSITY_TYPING_PAUSE = 0.35
+    LIP_SYNC_INTENSITY_OS = 0.70
 
     # ── init ───────────────────────────────────────────────────────────────────
     def __init__(self, root: tk.Tk) -> None:
@@ -635,9 +644,11 @@ class HonghuaGame:
             if base is not None:
                 self.animator.load_image(base)
                 self.animator.set_state(anim_state)
+                self.animator.clear_focus()
+                self.animator.set_lip_sync_intensity(0.0)
                 self.animator.start()
-                self._current_img = None
-                return
+                # Always continue to draw scene art in the game window; the
+                # real Live2D model is shown in the dedicated Live2D window.
 
         # Fall back to the static scene image.
         img = scene_image(key)
@@ -700,11 +711,17 @@ class HonghuaGame:
     def _on_image_motion(self, event: tk.Event) -> None:
         idx = self._image_action_at(event.x, event.y)
         if idx == self._hover_action:
+            if self._current_scene in _CHAR_ANIM_SCENES:
+                self.animator.set_focus_point(event.x, event.y)
             return
         self._hover_action = idx
         self._render_image_actions()
+        if self._current_scene in _CHAR_ANIM_SCENES:
+            self.animator.set_focus_point(event.x, event.y)
 
     def _on_image_leave(self, _event: tk.Event) -> None:
+        if self._current_scene in _CHAR_ANIM_SCENES:
+            self.animator.clear_focus()
         if self._hover_action is None:
             return
         self._hover_action = None
@@ -718,11 +735,14 @@ class HonghuaGame:
         self.story_text.delete("1.0", "end")
         self.story_text.configure(state="disabled")
         if typing:
+            if self._current_scene in _CHAR_ANIM_SCENES:
+                self.animator.set_lip_sync_intensity(self.LIP_SYNC_INTENSITY_TYPING_START)
             self._type_text(text, 0)
         else:
             self.story_text.configure(state="normal")
             self.story_text.insert("1.0", text)
             self.story_text.configure(state="disabled")
+            self.animator.set_lip_sync_intensity(0.0)
 
     def _type_text(self, text: str, idx: int) -> None:
         if idx >= len(text):
@@ -731,6 +751,7 @@ class HonghuaGame:
             self.story_text.delete("1.0", "end")
             self.story_text.insert("1.0", text)
             self.story_text.configure(state="disabled")
+            self.animator.set_lip_sync_intensity(0.0)
             self._type_job = None
             return
         self.story_text.configure(state="normal")
@@ -738,6 +759,14 @@ class HonghuaGame:
         self.story_text.insert("1.0", text[:idx])
         self.story_text.configure(state="disabled")
         self.story_text.see("end")
+        if self._current_scene in _CHAR_ANIM_SCENES:
+            prev_char = text[idx - 1] if idx > 0 else ""
+            intensity = (
+                self.LIP_SYNC_INTENSITY_TYPING_CHAR
+                if prev_char not in self.LIP_SYNC_PAUSE_PUNCTUATION
+                else self.LIP_SYNC_INTENSITY_TYPING_PAUSE
+            )
+            self.animator.set_lip_sync_intensity(intensity)
         self._type_job = self.root.after(16, self._type_text, text, idx + 1)
 
     def _clear_buttons(self) -> None:
@@ -924,6 +953,8 @@ class HonghuaGame:
         self.story_text.insert("end", f"\n\n【主角OS】{text}")
         self.story_text.see("end")
         self.story_text.configure(state="disabled")
+        if self._current_scene in _CHAR_ANIM_SCENES:
+            self.animator.set_lip_sync_intensity(self.LIP_SYNC_INTENSITY_OS)
 
     def _on_honghua_click(self) -> None:
         """Cycle through the protagonist's inner thoughts when clicking Honghua.

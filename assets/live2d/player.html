@@ -1,0 +1,138 @@
+<!doctype html>
+<html lang="zh-Hant">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>紅花 Live2D</title>
+    <style>
+      html, body { margin: 0; width: 100%; height: 100%; background: #0b0b0f; overflow: hidden; }
+      #app { width: 100%; height: 100%; }
+      #hint {
+        position: fixed; left: 10px; bottom: 10px; color: #d6b88d; font: 12px sans-serif;
+        background: rgba(0,0,0,.4); border: 1px solid rgba(214,184,141,.25); padding: 6px 8px; border-radius: 6px;
+      }
+    </style>
+  </head>
+  <body>
+    <div id="app"></div>
+    <div id="hint">Live2D 載入中...</div>
+    <script>
+      const MODEL_SETUP_PATH = "assets/live2d/honghua/model3.json";
+      const VENDOR_SETUP_PATHS = "assets/live2d/vendor/pixi.min.js 與 assets/live2d/vendor/cubism4.min.js";
+      const FOCUS_SMOOTH_FACTOR = 0.18;
+      const LIP_SYNC_SMOOTH_FACTOR = 0.30;
+      const LIP_SYNC_DECAY = 0.94;
+
+      async function loadScript(src) {
+        await new Promise((resolve, reject) => {
+          const s = document.createElement("script");
+          s.src = src;
+          s.onload = resolve;
+          s.onerror = () => reject(new Error(`載入失敗: ${src}`));
+          document.head.appendChild(s);
+        });
+      }
+
+      const params = new URLSearchParams(location.search);
+      const modelPath = params.get("model") || "honghua/model3.json";
+      const hint = document.getElementById("hint");
+      hint.textContent = `Live2D 載入中...（請先放置 ${MODEL_SETUP_PATH} 與 ${VENDOR_SETUP_PATHS}）`;
+      let app = null;
+
+      const state = { focusX: 0, focusY: 0, lipSync: 0, stateName: "idle" };
+      const smooth = { focusX: 0, focusY: 0, lipSync: 0 };
+      let model = null;
+      let expr = "";
+
+      const stateToExpression = {
+        impatient: "impatient",
+        peaceful: "peaceful",
+        friendly: "friendly",
+        trusted: "trusted",
+        talking: "talking",
+        excited: "excited",
+        idle: "idle",
+      };
+
+      async function pollState() {
+        try {
+          const res = await fetch("/api/state", { cache: "no-store" });
+          const data = await res.json();
+          state.focusX = Number(data.focus_x || 0);
+          state.focusY = Number(data.focus_y || 0);
+          state.lipSync = Number(data.lip_sync || 0);
+          state.stateName = String(data.state || "idle");
+        } catch (_) {}
+        setTimeout(pollState, 120);
+      }
+
+      function fitModel() {
+        if (!model) return;
+        const scale = Math.min(window.innerWidth / model.width, window.innerHeight / model.height) * 0.95;
+        model.scale.set(scale);
+        model.anchor.set(0.5, 0.5);
+        model.position.set(window.innerWidth / 2, window.innerHeight / 2 + 18);
+      }
+
+      function applyMouth(v) {
+        if (!model || !model.internalModel || !model.internalModel.coreModel) return;
+        try {
+          model.internalModel.coreModel.setParameterValueById("ParamMouthOpenY", Math.max(0, Math.min(1, v)));
+        } catch (_) {}
+      }
+
+      async function boot() {
+        try {
+          await loadScript("./vendor/pixi.min.js");
+          await loadScript("./vendor/cubism4.min.js");
+        } catch (e) {
+          hint.textContent = `缺少 Live2D 前端套件：${e}（需要 pixi.min.js 與 cubism4.min.js）`;
+          return;
+        }
+
+        app = new PIXI.Application();
+        await app.init({ resizeTo: window, backgroundAlpha: 0 });
+        document.getElementById("app").appendChild(app.canvas);
+
+        try {
+          model = await PIXI.live2d.Live2DModel.from(modelPath);
+          app.stage.addChild(model);
+          fitModel();
+          hint.textContent = "紅花 Live2D 已啟動（點擊角色可觸發隨機 motion）";
+          model.eventMode = "static";
+          model.on("pointertap", () => {
+            try { model.motion("tap_body"); return; } catch (_) {}
+            try { model.motion("idle"); return; } catch (_) {}
+          });
+        } catch (e) {
+          hint.textContent = `Live2D 載入失敗：${e}（請確認 ${modelPath} 與相依檔案）`;
+          return;
+        }
+
+        app.ticker.add(() => {
+          smooth.focusX += (state.focusX - smooth.focusX) * FOCUS_SMOOTH_FACTOR;
+          smooth.focusY += (state.focusY - smooth.focusY) * FOCUS_SMOOTH_FACTOR;
+          smooth.lipSync += (state.lipSync - smooth.lipSync) * LIP_SYNC_SMOOTH_FACTOR;
+          smooth.lipSync *= LIP_SYNC_DECAY;
+
+          if (model) {
+            const baseX = window.innerWidth / 2;
+            const baseY = window.innerHeight / 2 + 18;
+            model.position.set(baseX + smooth.focusX * 10, baseY + smooth.focusY * 8);
+            applyMouth(smooth.lipSync);
+          }
+
+          const wantedExpr = stateToExpression[state.stateName] || "idle";
+          if (model && wantedExpr !== expr) {
+            expr = wantedExpr;
+            try { model.expression(expr); } catch (_) {}
+          }
+        });
+      }
+
+      addEventListener("resize", fitModel);
+      pollState();
+      boot();
+    </script>
+  </body>
+</html>
