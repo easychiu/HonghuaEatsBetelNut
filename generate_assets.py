@@ -146,6 +146,7 @@ SCENE_TITLES = {
     "feather": "四葉草線索",
     "box": "牛仔褲線索",
     "bookshelves": "書架深處",
+    "puzzle_book": "古籍謎題",
     "desk": "研究桌",
     "diary": "紅花筆記",
     "window": "窗邊",
@@ -159,6 +160,31 @@ SCENE_TITLES = {
     "normal_end": "普通結局",
     "bad_a": "壞結局",
     "bad_b": "密碼失敗",
+}
+
+SCENE_USAGE_TEXTS = {
+    "default": "場景預設圖：當專屬場景圖缺失時使用。",
+    "intro": "開場外景：遊戲起始畫面。",
+    "prologue": "序章對話：初次進入圖書館與紅花相遇。",
+    "hall": "三樓館長室外：主流程中樞與密碼盒互動場景。",
+    "book": "收藏室物證：鎚子線索檢視畫面。",
+    "feather": "檔案室物證：四葉草線索檢視畫面。",
+    "box": "三樓物證：牛仔褲線索檢視畫面。",
+    "bookshelves": "書架深處：案件時間線解謎場景。",
+    "puzzle_book": "古籍謎題：保留給進階書本互動或拼圖場景使用。",
+    "desk": "研究桌：調查紅花筆記前的場景畫面。",
+    "diary": "筆記內容：閱讀紅花案情紀錄時使用。",
+    "window": "窗邊：調查失蹤線索前的場景畫面。",
+    "window_info": "窗台字條：艾蜜莉亞相關線索文本畫面。",
+    "desk_info": "案情分析：研究桌上的補充資訊畫面。",
+    "basement": "地下密室入口：進入地下區域時使用。",
+    "basement_deep": "地下深處：天王星供詞與關鍵真相場景。",
+    "confront": "對峙場景：面對紅花時使用。",
+    "true_end": "真結局畫面。",
+    "secret_end": "秘密結局畫面。",
+    "normal_end": "普通／信任路線結局畫面。",
+    "bad_a": "壞結局畫面。",
+    "bad_b": "密碼錯誤三次後的失敗結局畫面。",
 }
 
 
@@ -318,6 +344,16 @@ def generate_scene_images(force: bool = False) -> bool:
     return success
 
 
+def output_scene_usage_text() -> None:
+    print("=== 場景檔案用途文字（可直接對照上傳） ===")
+    ordered_keys = list(dict.fromkeys(["default", *INFO_SCENES.keys(), *PROC_SCENES.keys()]))
+    for key in ordered_keys:
+        filename = f"{key}.png"
+        title = SCENE_TITLES.get(key, key)
+        usage = SCENE_USAGE_TEXTS.get(key, "用途未註記")
+        print(f"- assets/scenes/{filename} | {title} | {usage}")
+
+
 def generate(track: dict) -> bool:
     name  = track["name"]
     path  = track["path"]
@@ -415,14 +451,21 @@ def parse_args() -> argparse.Namespace:
     parser.add_argument("--scenes-only", action="store_true", help="只生成場景圖")
     parser.add_argument("--bgm-only", action="store_true", help="只生成 BGM")
     parser.add_argument("--force-scenes", action="store_true", help="覆寫既有場景圖")
+    parser.add_argument("--scene-usage-text", action="store_true", help="只輸出場景檔案用途文字（不生成素材）")
     args = parser.parse_args()
     if args.scenes_only and args.bgm_only:
         parser.error("--scenes-only 與 --bgm-only 不能同時使用")
+    if args.scene_usage_text and (args.scenes_only or args.bgm_only or args.force_scenes):
+        parser.error("--scene-usage-text 不可與其他旗標同時使用")
     return args
 
 
 def main() -> None:
     args = parse_args()
+    if args.scene_usage_text:
+        output_scene_usage_text()
+        return
+
     print("=== 紅花吃檳榔 — 素材生成工具 ===")
     print(f"輸出目錄：{ASSETS}\n")
 
