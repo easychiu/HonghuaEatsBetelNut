@@ -775,12 +775,13 @@ const TEXT_ARCHIVE = {
       imgEl.src = imgSrc;
       imgEl.alt = SCENE_ALT_TEXTS[S.scene] || `${S.scene.toUpperCase()} 場景`;
       imgEl.style.display = imgSrc ? "block" : "none";
-      imgEl.style.objectPosition = "50% 50%";
-      imgEl.style.transform = "scale(1)";
       const mapViewport = MAP_SCENE_VIEWPORTS[S.scene];
       if (mapViewport) {
         imgEl.style.objectPosition = mapViewport.objectPosition;
         imgEl.style.transform = `scale(${mapViewport.scale})`;
+      } else {
+        imgEl.style.objectPosition = "50% 50%";
+        imgEl.style.transform = "scale(1)";
       }
       const sceneEl = document.getElementById("sceneText");
       if (isEnding) {
