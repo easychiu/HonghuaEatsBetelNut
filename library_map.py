@@ -35,6 +35,7 @@ _MAP_CANVAS_H = 1076
 _DIR = os.path.dirname(os.path.abspath(__file__))
 _TOP_MAP_PATH = os.path.join(_DIR, "assets", "scenes", "TopMap.png")
 _TOP_MAP_SCAN_HEIGHT_RATIO = 0.62
+# Grayscale cutoff used to separate dark background from brighter floor-plan strokes.
 _TOP_MAP_BRIGHTNESS_THRESHOLD = 24
 _TOP_MAP_FLOOR_ROW_GROUP_RATIO = 0.12
 _TOP_MAP_MIN_COMPONENT_AREA_RATIO = 0.01
@@ -243,7 +244,7 @@ def _top_map_floor_image(floor: int, iw: int, ih: int) -> Optional[MapImage]:
     except Exception:
         return None
     regions = _detect_top_map_floor_regions(img)
-    idx = max(0, min(2, floor - 1))
+    idx = min(len(regions) - 1, max(0, floor - 1))
     x1, y1, x2, y2 = regions[idx]
     crop = img.crop((x1, y1, x2 + 1, y2 + 1))
     if crop.size != (iw, ih):
