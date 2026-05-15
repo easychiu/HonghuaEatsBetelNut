@@ -361,6 +361,24 @@ const TEXT_ARCHIVE = {
       "story_texts.py": "主劇情文本（story_texts.py）",
       "character_texts.py": "角色文本（character_texts.py）",
     };
+    const SCENE_ALT_TEXTS = {
+      intro: "學院外觀",
+      prologue: "三樓展示區與紅花",
+      map3: "圖書館三樓地圖",
+      map2: "圖書館二樓地圖",
+      map1: "圖書館一樓地圖",
+      hall: "館長室外展示區",
+      desk: "研究桌與筆記",
+      window: "破損窗台與字條",
+      bookshelves: "書架深處案卷區",
+      basement: "地下區域岔路",
+      basementDeep: "地下倉庫供詞區",
+      ending_secret: "秘密結局場景",
+      ending_true: "真結局場景",
+      ending_trust: "信任結局場景",
+      ending_normal: "普通結局場景",
+      ending_bad: "壞結局場景",
+    };
 
     function archiveKeys(group) {
       return Object.keys(TEXT_ARCHIVE[group] || {}).sort();
@@ -456,17 +474,31 @@ const TEXT_ARCHIVE = {
 
     function clickOptionByMatch(match) {
       const buttons = [...document.querySelectorAll("#options button")];
-      const btn = buttons.find((b) => b.textContent.includes(match));
-      if (!btn) return false;
-      btn.click();
-      return true;
+      const normalize = (text) => (text || "").trim();
+      const exact = buttons.find((b) => normalize(b.textContent) === match);
+      if (exact) {
+        exact.click();
+        return true;
+      }
+      const starts = buttons.filter((b) => normalize(b.textContent).startsWith(match));
+      if (starts.length === 1) {
+        starts[0].click();
+        return true;
+      }
+      const includes = buttons.filter((b) => normalize(b.textContent).includes(match));
+      if (includes.length === 1) {
+        includes[0].click();
+        return true;
+      }
+      return false;
     }
 
     function renderHotspots() {
       const wrap = document.getElementById("sceneHotspots");
       const imgEl = document.getElementById("sceneImg");
       wrap.innerHTML = "";
-      if (!imgEl.src || imgEl.style.display === "none") {
+      const imgSrc = SCENE_IMAGES[S.scene] || "";
+      if (!imgSrc) {
         wrap.style.display = "none";
         return;
       }
@@ -479,22 +511,22 @@ const TEXT_ARCHIVE = {
       defs.forEach((hotspot) => {
         if (hotspot.match === "進入地下密室" && !S.flags.basementOpen) return;
         const [left, top, width, height] = hotspot.rect;
-        const btn = document.createElement("button");
-        btn.type = "button";
-        btn.className = "scene-hotspot";
-        btn.textContent = hotspot.label;
-        btn.title = hotspot.label;
-        btn.style.left = `${left}%`;
-        btn.style.top = `${top}%`;
-        btn.style.width = `${width}%`;
-        btn.style.height = `${height}%`;
-        btn.onclick = () => {
+        const hotspotBtn = document.createElement("button");
+        hotspotBtn.type = "button";
+        hotspotBtn.className = "scene-hotspot";
+        hotspotBtn.textContent = hotspot.label;
+        hotspotBtn.title = hotspot.label;
+        hotspotBtn.style.left = `${left}%`;
+        hotspotBtn.style.top = `${top}%`;
+        hotspotBtn.style.width = `${width}%`;
+        hotspotBtn.style.height = `${height}%`;
+        hotspotBtn.onclick = () => {
           if (!clickOptionByMatch(hotspot.match)) {
             pushLog(`⚠ 互動區未找到對應行為：${hotspot.label}`);
             render();
           }
         };
-        wrap.appendChild(btn);
+        wrap.appendChild(hotspotBtn);
       });
     }
 
@@ -738,6 +770,7 @@ const TEXT_ARCHIVE = {
       const imgEl = document.getElementById("sceneImg");
       const imgSrc = SCENE_IMAGES[S.scene] || "";
       imgEl.src = imgSrc;
+      imgEl.alt = SCENE_ALT_TEXTS[S.scene] || "場景圖";
       imgEl.style.display = imgSrc ? "block" : "none";
       const sceneEl = document.getElementById("sceneText");
       if (isEnding) {
