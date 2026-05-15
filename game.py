@@ -45,6 +45,7 @@ HONGHUA_READ_BOOK_JPG = os.path.join(_DIR, "HonghuaReadBook.jpg")
 HONGHUA_IN_ENG_JPG = os.path.join(_DIR, "HonghuaInENG.jpg")
 ASSETS    = os.path.join(_DIR, "assets")
 SCENES    = os.path.join(ASSETS, "scenes")
+OUTSIDE_SCENE_PNG = os.path.join(SCENES, "outside.png")
 CHARACTER_EMOTIONS = os.path.join(ASSETS, "character_emotions")
 SCENE1_ASSETS = os.path.join(ASSETS, "scene1")
 BGM_MAIN  = os.path.join(ASSETS, "bgm_main.mp3")
@@ -61,7 +62,6 @@ TRUST_EMOTION_ASSETS: dict[str, str] = {
 # ── character animation: scene → animator state ────────────────────────────────
 # Only scenes that show a character image (via SCENE_SOURCE_OVERRIDES) are listed.
 _CHAR_ANIM_SCENES: dict[str, str] = {
-    "intro":         "talking",
     "prologue":      "talking",   # Honghua is actively speaking in the prologue
     "hall":          "idle",
     "bookshelves":   "idle",
@@ -105,7 +105,7 @@ def _first_existing_path(paths: list[str]) -> str:
     return ""
 
 SCENE_SOURCE_OVERRIDES: dict[str, str] = {
-    "intro": HONGHUA_IN_ENG_JPG,
+    "intro": OUTSIDE_SCENE_PNG,
     "prologue": HONGHUA_READ_BOOK_JPG,
     "hall": HONGHUA_READ_BOOK_JPG,
     "bookshelves": HONGHUA_READ_BOOK_JPG,
@@ -139,8 +139,8 @@ SCENE_TITLES: dict[str, str] = {
     "corridor_1f":   "一樓走廊",
     "corridor_2f":   "二樓走廊",
     "corridor_3f":   "三樓走廊",
-    "room_a":        "房間A・教師休息室",
-    "room_b":        "房間B・舊社辦",
+    "room_a":        "閱覽室A",
+    "room_b":        "閱覽室B",
     "meeting_room":  "會議室",
     # ── time-danger ─────────────────────────────────────────────────────────
     "killer_map":    "大地圖遭遇",
@@ -885,6 +885,9 @@ class HonghuaGame:
             f"現在 {time_str}{danger_flag} | 道具:{items} | 物證:{clue_count}/{self.REQUIRED_CLUES} | "
             f"密碼:{tries} | 線索:{lore_n}/{self.REQUIRED_LORE} | 信任:{self.trust}({trust_label})"
         )
+
+    def _meeting_room_name(self) -> str:
+        return "會議室II" if self._map_floor == 2 else "會議室I"
 
     # ── interactive OS helpers ─────────────────────────────────────────────────
 
@@ -1840,7 +1843,7 @@ class HonghuaGame:
         self._show_image("room_a")
         self._set_story(ST.SCENE_ROOM_A)
         self._set_options([
-            ("離開房間，返回一樓地圖", self.scene_map_floor1),
+            ("離開閱覽室A，返回一樓地圖", self.scene_map_floor1),
         ])
         self._set_image_actions([
             {
@@ -1864,7 +1867,7 @@ class HonghuaGame:
         )
         self._set_story(text)
         self._set_options([
-            ("繼續調查房間", self.scene_room_a),
+            ("繼續調查閱覽室A", self.scene_room_a),
             ("返回一樓地圖", self.scene_map_floor1),
         ])
 
@@ -1875,7 +1878,7 @@ class HonghuaGame:
         self._show_image("room_b")
         self._set_story(ST.SCENE_ROOM_B)
         self._set_options([
-            ("離開房間，返回一樓地圖", self.scene_map_floor1),
+            ("離開閱覽室B，返回一樓地圖", self.scene_map_floor1),
         ])
         self._set_image_actions([
             {
@@ -1899,7 +1902,7 @@ class HonghuaGame:
         )
         self._set_story(text)
         self._set_options([
-            ("繼續調查房間", self.scene_room_b),
+            ("繼續調查閱覽室B", self.scene_room_b),
             ("返回一樓地圖", self.scene_map_floor1),
         ])
 
@@ -1908,10 +1911,11 @@ class HonghuaGame:
         self._advance_time(8)
         self._refresh_status()
         self._show_image("meeting_room")
-        self._set_story(ST.SCENE_MEETING_ROOM)
+        meeting_room_name = self._meeting_room_name()
+        self._set_story(ST.SCENE_MEETING_ROOM.format(meeting_room_name=meeting_room_name))
         self._set_options([
-            ("離開會議室，返回一樓地圖", self.scene_map_floor1),
-            ("離開會議室，返回二樓地圖", self.scene_map_floor2),
+            (f"離開{meeting_room_name}，返回一樓地圖", self.scene_map_floor1),
+            (f"離開{meeting_room_name}，返回二樓地圖", self.scene_map_floor2),
         ])
         self._set_image_actions([
             {
