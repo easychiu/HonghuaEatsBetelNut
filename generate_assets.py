@@ -346,7 +346,7 @@ def generate_scene_images(force: bool = False) -> bool:
 
 def output_scene_usage_text() -> None:
     print("=== 場景檔案用途文字（可直接對照上傳） ===")
-    ordered_keys = ["default", *INFO_SCENES.keys(), *PROC_SCENES.keys()]
+    ordered_keys = list(dict.fromkeys(["default", *INFO_SCENES.keys(), *PROC_SCENES.keys()]))
     for key in ordered_keys:
         filename = f"{key}.png"
         title = SCENE_TITLES.get(key, key)

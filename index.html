@@ -534,7 +534,9 @@ const TEXT_ARCHIVE = {
     function isCurrentBgmTarget(target) {
       if (!bgm.src) return false;
       try {
-        return new URL(bgm.src, window.location.href).pathname.endsWith(`/${target}`);
+        const pathname = new URL(bgm.src, window.location.href).pathname;
+        const basename = target.split("/").pop();
+        return pathname.endsWith(`/${target}`) || (basename ? pathname.endsWith(`/${basename}`) : false);
       } catch (_) {
         return bgm.src.includes(target);
       }
