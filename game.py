@@ -426,7 +426,7 @@ class HonghuaGame:
         lines = text.splitlines()
         if len(lines) <= DIALOG_MAX_LINES:
             return text
-        return "\n".join(lines[-DIALOG_MAX_LINES:])
+        return "...\n" + "\n".join(lines[-(DIALOG_MAX_LINES - 1):])
 
     def _draw_story_overlay(self) -> None:
         self.img_canvas.delete("dialog_overlay")
