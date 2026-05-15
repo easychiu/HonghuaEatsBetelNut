@@ -126,6 +126,7 @@
       </div>
       <button id="resetBtn" style="margin-top:8px;">♻ 重新開始</button>
       <button id="archiveBtn" style="margin-top:8px;">📚 全內容文字庫</button>
+      <button id="audioBtn" style="margin-top:8px;">🔈 音樂：關</button>
       <div class="log" id="log"></div>
     </aside>
 
@@ -144,8 +145,8 @@
   <script>
     const SAVE_KEY = "honghua-single-html-mvp-save";
     const SAVE_VERSION = 1;
-    const GAME_START_HOUR = 23;
-    const KILLER_EMERGE_ELAPSED = 180; // 由 23:00 起算 180 分鐘（跨日到翌日 02:00）
+    const GAME_START_HOUR = 15;
+    const KILLER_EMERGE_ELAPSED = 660; // 由 15:00 起算 660 分鐘（跨日到翌日 02:00）
     const MAX_LOG_ENTRIES = 60;
     const DEFAULT_LOG_MESSAGE = "── 進入蔚藍學院 ──";
     const ARCHIVE_PREVIEW_LIMIT = 12;
@@ -157,6 +158,8 @@
     // Scene 1 (prologue / hall) uses assets/scene1/ images that switch by time-of-day and trust.
     const SCENE1_ASSETS = "assets/scene1/";
     const SCENE1_SCENES = new Set(["prologue", "hall"]);
+    const BGM_MAIN = "assets/bgm_main.mp3";
+    const BGM_END = "assets/bgm_end.mp3";
 
     const SCENE_IMAGES = {
       intro:          "assets/scenes/outside.png",
@@ -500,9 +503,74 @@ const TEXT_ARCHIVE = {
     function scene1TimeOfDay() {
       const total = (GAME_START_HOUR * 60 + S.elapsed) % (24 * 60);
       const hour = Math.floor(total / 60);
-      if (hour >= 6 && hour < 16) return "day";
-      if (hour >= 16 && hour < 17) return "dusk";
+      if (hour >= 6 && hour < 17) return "day";
+      if (hour >= 17 && hour < 18) return "dusk";
       return "night";
+    }
+
+    const bgm = new Audio(BGM_MAIN);
+    bgm.loop = true;
+    bgm.volume = 0.45;
+    let audioEnabled = false;
+    let audioGestureBound = false;
+
+    function targetBgmForScene() {
+      return S.scene.startsWith("ending_") ? BGM_END : BGM_MAIN;
+    }
+
+    function updateAudioButton() {
+      const btn = document.getElementById("audioBtn");
+      btn.textContent = audioEnabled ? "🔊 音樂：開" : "🔈 音樂：關";
+    }
+
+    function tryPlayBgm() {
+      if (!audioEnabled) return;
+      const playPromise = bgm.play();
+      if (playPromise && typeof playPromise.catch === "function") {
+        playPromise.catch(() => {});
+      }
+    }
+
+    function syncBgmTrack() {
+      const target = targetBgmForScene();
+      if (bgm.src && bgm.src.endsWith(target)) {
+        tryPlayBgm();
+        return;
+      }
+      const wasPaused = bgm.paused;
+      bgm.src = target;
+      bgm.loop = true;
+      if (!wasPaused || audioEnabled) {
+        bgm.currentTime = 0;
+        tryPlayBgm();
+      }
+    }
+
+    function bindAudioGesture() {
+      if (audioGestureBound) return;
+      audioGestureBound = true;
+      const resume = () => {
+        if (audioEnabled) tryPlayBgm();
+        window.removeEventListener("pointerdown", resume);
+        window.removeEventListener("keydown", resume);
+      };
+      window.addEventListener("pointerdown", resume, { once: true });
+      window.addEventListener("keydown", resume, { once: true });
+    }
+
+    function toggleAudio() {
+      audioEnabled = !audioEnabled;
+      if (audioEnabled) {
+        syncBgmTrack();
+        bindAudioGesture();
+        tryPlayBgm();
+        pushLog("🔊 背景音樂已開啟");
+      } else {
+        bgm.pause();
+        pushLog("🔈 背景音樂已關閉");
+      }
+      updateAudioButton();
+      render();
     }
 
     function scene1TrustState() {
@@ -950,6 +1018,8 @@ const TEXT_ARCHIVE = {
       }
       currentSceneOptionButtons = [...optionsEl.querySelectorAll("button")];
       renderHotspots();
+      syncBgmTrack();
+      updateAudioButton();
 
       document.getElementById("log").innerHTML = S.log.map(x => `<div>${x}</div>`).join("");
     }
@@ -1010,6 +1080,7 @@ const TEXT_ARCHIVE = {
       pushLog("📚 開啟全內容文字庫");
       openArchive();
     };
+    document.getElementById("audioBtn").onclick = toggleAudio;
     document.getElementById("resetBtn").onclick = () => {
       S = initialState();
       pushLog("♻ 已重新開始");

@@ -60,15 +60,16 @@ python game.py                     # 啟動遊戲
 - 核心劇情流程與場景狀態機切換
 - 對話選項與主要分支
 - 信任度、物證/人物線索進度
-- 遊戲時間推進與 2AM 後危險旗標
+- 遊戲時間推進（起始 15:00；17:00 黃昏；18:00 夜晚）與 2AM 後危險旗標
 - 結局分支判定（壞結局 / 普通 / 信任 / 真 / 秘密）
 - 內建「全內容文字庫」：`story_texts.py` / `character_texts.py` 常數文字已內嵌，可離線完整瀏覽
+- 內建背景音樂播放（可手動開關，並於結局切換結局曲）
 
 ### 後續階段（仍待補齊）
 
 - 更多場景熱區精修（目前已支援主流程地圖與館長室外物證區點擊）
 - 完整伏擊機制
-- 音效與完整 UI 動畫
+- 更多互動音效與完整 UI 動畫
 - 與 Python 版所有場景細節逐項對齊
 
 ## 素材說明
@@ -103,6 +104,12 @@ python generate_assets.py --scenes-only --force-scenes
 ```bash
 export MUREKA_API_KEY='你的 Mureka API Key'
 python generate_assets.py --bgm-only
+```
+
+輸出「場景檔案用途文字」（方便對照要上傳的圖片檔）：
+
+```bash
+python generate_assets.py --scene-usage-text
 ```
 
 `generate_assets.py` 會依 `info.jpg` 的整體哥德式暗色風格生成場景圖，並可透過 Mureka.ai API 重做配樂；但這些素材目前都已先行附帶在專案中。
