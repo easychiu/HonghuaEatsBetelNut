@@ -491,7 +491,7 @@ class HonghuaGame:
     KILLER_PATROL_INTERVAL_MS = 90_000   # ms between killer floor changes
     MIN_FLOOR = 1                        # lowest library floor accessible to player
     MAX_FLOOR = 3                        # highest library floor (safe zone)
-    TYPEWRITER_PAUSE_CHARS = "，。！？、 \n\t"
+    LIP_SYNC_PAUSE_CHARS = "，。！？、 \n\t"
 
     # ── init ───────────────────────────────────────────────────────────────────
     def __init__(self, root: tk.Tk) -> None:
@@ -756,7 +756,7 @@ class HonghuaGame:
         self.story_text.see("end")
         if self._current_scene in _CHAR_ANIM_SCENES:
             prev_char = text[idx - 1] if idx > 0 else ""
-            intensity = 0.65 if prev_char not in self.TYPEWRITER_PAUSE_CHARS else 0.35
+            intensity = 0.65 if prev_char not in self.LIP_SYNC_PAUSE_CHARS else 0.35
             self.animator.set_lip_sync_intensity(intensity)
         self._type_job = self.root.after(16, self._type_text, text, idx + 1)
 

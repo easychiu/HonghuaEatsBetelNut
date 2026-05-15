@@ -155,10 +155,10 @@ class CharacterAnimator:
     FOCUS_HEAD_Y2_FRAC  = 0.45  # head/face strip affected by parallax
 
     # Typing-driven lip-sync activity
-    LIP_SYNC_DECAY = 0.88
-    LIP_SYNC_THRESHOLD = 0.12
-    DEFAULT_SPEAKING_ACTIVITY = 0.45
-    FOCUS_HL_SHIFT_SCALE = 0.8
+    LIP_SYNC_DECAY = 0.88  # per-frame exponential fade for temporary lip-sync boost
+    LIP_SYNC_THRESHOLD = 0.12  # minimum lip-sync intensity required to draw mouth motion
+    DEFAULT_SPEAKING_ACTIVITY = 0.45  # baseline mouth activity when state is speaking
+    FOCUS_HL_SHIFT_SCALE = 0.8  # highlight parallax amount relative to eye-strip movement
 
     def __init__(self, canvas: object, width: int, height: int) -> None:
         self._canvas   = canvas
@@ -202,7 +202,7 @@ class CharacterAnimator:
 
     def set_focus_point(self, x: int, y: int) -> None:
         """Set cursor focus point in canvas coordinates for parallax tracking."""
-        if self._w <= 1 or self._h <= 1:
+        if self._w < 2 or self._h < 2:
             return
         nx = (x / (self._w - 1)) * 2.0 - 1.0
         ny = (y / (self._h - 1)) * 2.0 - 1.0
@@ -387,16 +387,16 @@ class CharacterAnimator:
         dy: int,
     ) -> object:
         """Shift a rectangular region with edge padding to avoid transparent gaps."""
-        rw = max(0, x2 - x1)
-        rh = max(0, y2 - y1)
-        if rw <= 0 or rh <= 0 or (dx == 0 and dy == 0):
+        region_width = max(0, x2 - x1)
+        region_height = max(0, y2 - y1)
+        if region_width <= 0 or region_height <= 0 or (dx == 0 and dy == 0):
             return img
         region = img.crop((x1, y1, x2, y2))
-        shifted = Image.new("RGBA", (rw, rh), (0, 0, 0, 0))
+        shifted = Image.new("RGBA", (region_width, region_height), (0, 0, 0, 0))
         src_x1 = max(0, dx)
         src_y1 = max(0, dy)
-        src_x2 = min(rw, rw + dx)
-        src_y2 = min(rh, rh + dy)
+        src_x2 = min(region_width, region_width + dx)
+        src_y2 = min(region_height, region_height + dy)
         dst_x = max(0, -dx)
         dst_y = max(0, -dy)
         if src_x2 > src_x1 and src_y2 > src_y1:
@@ -404,21 +404,25 @@ class CharacterAnimator:
 
         # Fill top/bottom edges
         if dy > 0:
-            top = region.crop((0, 0, rw, 1)).resize((rw, dy), _NEAREST)
+            top = region.crop((0, 0, region_width, 1)).resize((region_width, dy), _NEAREST)
             shifted.paste(top, (0, 0))
         elif dy < 0:
             dy_abs = -dy
-            bot = region.crop((0, rh - 1, rw, rh)).resize((rw, dy_abs), _NEAREST)
-            shifted.paste(bot, (0, rh - dy_abs))
+            bot = region.crop(
+                (0, region_height - 1, region_width, region_height)
+            ).resize((region_width, dy_abs), _NEAREST)
+            shifted.paste(bot, (0, region_height - dy_abs))
 
         # Fill left/right edges
         if dx > 0:
-            left = region.crop((0, 0, 1, rh)).resize((dx, rh), _NEAREST)
+            left = region.crop((0, 0, 1, region_height)).resize((dx, region_height), _NEAREST)
             shifted.paste(left, (0, 0))
         elif dx < 0:
             dx_abs = -dx
-            right = region.crop((rw - 1, 0, rw, rh)).resize((dx_abs, rh), _NEAREST)
-            shifted.paste(right, (rw - dx_abs, 0))
+            right = region.crop(
+                (region_width - 1, 0, region_width, region_height)
+            ).resize((dx_abs, region_height), _NEAREST)
+            shifted.paste(right, (region_width - dx_abs, 0))
 
         result = img.copy()
         result.paste(shifted, (x1, y1))
