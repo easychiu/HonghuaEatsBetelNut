@@ -34,6 +34,9 @@ _MAP_CANVAS_W = 1462
 _MAP_CANVAS_H = 1076
 _DIR = os.path.dirname(os.path.abspath(__file__))
 _TOP_MAP_PATH = os.path.join(_DIR, "assets", "scenes", "TopMap.png")
+_TOP_MAP_SCAN_HEIGHT_RATIO = 0.62
+_TOP_MAP_BRIGHTNESS_THRESHOLD = 24
+_TOP_MAP_FLOOR_ROW_GROUP_RATIO = 0.12
 _top_map_floor_regions_cache: dict[tuple[int, int], list[tuple[int, int, int, int]]] = {}
 
 
@@ -152,14 +155,13 @@ def _detect_top_map_floor_regions(img: Image.Image) -> list[tuple[int, int, int,
 
     gray = img.convert("L")
     w, h = gray.size
-    y_limit = max(1, int(h * 0.62))
-    threshold = 24
+    y_limit = max(1, int(h * _TOP_MAP_SCAN_HEIGHT_RATIO))
     pix = gray.load()
     mask = [bytearray(w) for _ in range(y_limit)]
     for y in range(y_limit):
         row = mask[y]
         for x in range(w):
-            row[x] = 1 if pix[x, y] >= threshold else 0
+            row[x] = 1 if pix[x, y] >= _TOP_MAP_BRIGHTNESS_THRESHOLD else 0
 
     visited = [bytearray(w) for _ in range(y_limit)]
     min_area = max(2500, int(w * y_limit * 0.01))
@@ -209,7 +211,7 @@ def _detect_top_map_floor_regions(img: Image.Image) -> list[tuple[int, int, int,
     components.sort(key=lambda c: (-c[0], c[2], c[1]))
     candidates = components[:8]
     top_y = min(c[2] for c in candidates)
-    row_cutoff = top_y + int(h * 0.12)
+    row_cutoff = top_y + int(h * _TOP_MAP_FLOOR_ROW_GROUP_RATIO)
     row = [c for c in candidates if c[2] <= row_cutoff]
     if len(row) < 3:
         row = candidates
