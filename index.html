@@ -154,9 +154,12 @@
     const DEFAULT_FLAGS = { basementOpen: false, trueSong: false };
     const DEFAULT_ARCHIVE = { group: "story_texts.py", key: null };
 
+    // Scene 1 (prologue / hall) uses assets/scene1/ images that switch by time-of-day and trust.
+    const SCENE1_ASSETS = "assets/scene1/";
+    const SCENE1_SCENES = new Set(["prologue", "hall"]);
+
     const SCENE_IMAGES = {
       intro:          "assets/scenes/outside.png",
-      prologue:       "assets/scenes/prologue.png",
       map3:           "assets/scenes/TopMap.png",
       map2:           "assets/scenes/TopMap.png",
       map1:           "assets/scenes/TopMap.png",
@@ -289,7 +292,7 @@ const TEXT_ARCHIVE = {
 廢棄圖書館深處，銀髮少女紅花正等著你。
 「你能找到答案嗎？」`,
       prologue:
-`你踏入三樓管理室外展示區，牆上是三層上帝視角地圖。
+`你踏入三樓管理室內，燭光在黑暗中搖曳。
 紅花望向你，語氣平靜：
 「三樓以外，背後隨時可能有人。」`,
       map3:
@@ -303,7 +306,7 @@ const TEXT_ARCHIVE = {
 `【1F 地圖】
 書架深處有關鍵謎題與地下密室入口。`,
       hall:
-`你站在館長室外展示區，空氣中瀰漫灰塵與潮濕紙張味。
+`你在三樓管理室內調查，空氣中瀰漫灰塵與潮濕紙張味。
 鎚子、四葉草、牛仔褲三件物證線索都指向同一夜。`,
       bookshelves:
 `書架深處有四份案卷。
@@ -365,11 +368,11 @@ const TEXT_ARCHIVE = {
     };
     const SCENE_ALT_TEXTS = {
       intro: "學院外觀",
-      prologue: "三樓展示區與紅花",
+      prologue: "三樓管理室內",
       map3: "圖書館三樓地圖",
       map2: "圖書館二樓地圖",
       map1: "圖書館一樓地圖",
-      hall: "館長室外展示區",
+      hall: "三樓管理室內",
       desk: "研究桌與筆記",
       window: "破損窗台與字條",
       bookshelves: "書架深處案卷區",
@@ -385,6 +388,15 @@ const TEXT_ARCHIVE = {
       map3: { objectPosition: "50% 18%", scale: 1.8 },
       map2: { objectPosition: "50% 50%", scale: 1.8 },
       map1: { objectPosition: "50% 82%", scale: 1.8 },
+    };
+
+    const SCENE_DISPLAY_NAMES = {
+      intro:    "學院外觀",
+      prologue: "三樓管理室內",
+      hall:     "三樓管理室內",
+      map3:     "3F 地圖",
+      map2:     "2F 地圖",
+      map1:     "1F 地圖",
     };
 
     function archiveKeys(group) {
@@ -447,6 +459,43 @@ const TEXT_ARCHIVE = {
       if (S.trust >= 60) return "high";
       if (S.trust >= 25) return "mid";
       return "low";
+    }
+
+    // ── Scene 1 dynamic image helpers (mirrors Python _scene1_time_of_day / _trust_anim_state) ──
+
+    function scene1TimeOfDay() {
+      const total = (GAME_START_HOUR * 60 + S.elapsed) % (24 * 60);
+      const hour = Math.floor(total / 60);
+      if (hour >= 6 && hour < 16) return "day";
+      if (hour >= 16 && hour < 17) return "dusk";
+      return "night";
+    }
+
+    function scene1TrustState() {
+      if (S.trust >= 75) return "trusted";
+      if (S.trust >= 50) return "friendly";
+      if (S.trust >= 25) return "peaceful";
+      return "impatient";
+    }
+
+    // Returns ordered candidate paths for scene1 (prologue / hall).
+    // Mirrors Python _scene1_look_asset(trust_state) priority order.
+    function scene1ImageCandidates() {
+      const tod = scene1TimeOfDay();
+      const trust = scene1TrustState();
+      return [
+        `${SCENE1_ASSETS}honghua_look_${tod}_${trust}.png`,
+        `${SCENE1_ASSETS}honghua_look_${tod}.png`,
+        `${SCENE1_ASSETS}honghua_look_day.png`,
+        "assets/scenes/prologue.png",   // static fallback
+      ];
+    }
+
+    // Load the first available image from a candidate list into `imgEl`, using onerror fallback.
+    function tryImageFallbacks(imgEl, candidates, idx) {
+      if (idx >= candidates.length) return;
+      imgEl.onerror = () => tryImageFallbacks(imgEl, candidates, idx + 1);
+      imgEl.src = candidates[idx];
     }
 
     function evidenceCount() {
@@ -768,13 +817,20 @@ const TEXT_ARCHIVE = {
 
       const isEnding = S.scene.startsWith("ending_");
       const inArchive = S.scene.startsWith("archive_");
-      document.getElementById("sceneName").textContent = isEnding ? "ENDING" : (inArchive ? "TEXT ARCHIVE" : S.scene.toUpperCase());
+      document.getElementById("sceneName").textContent =
+        isEnding ? "ENDING" : (inArchive ? "TEXT ARCHIVE" : (SCENE_DISPLAY_NAMES[S.scene] || S.scene.toUpperCase()));
 
       const imgEl = document.getElementById("sceneImg");
-      const imgSrc = SCENE_IMAGES[S.scene] || "";
-      imgEl.src = imgSrc;
+      if (SCENE1_SCENES.has(S.scene)) {
+        imgEl.style.display = "block";
+        tryImageFallbacks(imgEl, scene1ImageCandidates(), 0);
+      } else {
+        imgEl.onerror = null;
+        const imgSrc = SCENE_IMAGES[S.scene] || "";
+        imgEl.src = imgSrc;
+        imgEl.style.display = imgSrc ? "block" : "none";
+      }
       imgEl.alt = SCENE_ALT_TEXTS[S.scene] || `${S.scene.toUpperCase()} 場景`;
-      imgEl.style.display = imgSrc ? "block" : "none";
       const mapViewport = MAP_SCENE_VIEWPORTS[S.scene];
       if (mapViewport) {
         imgEl.style.objectPosition = mapViewport.objectPosition;
