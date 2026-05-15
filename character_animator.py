@@ -82,9 +82,10 @@ class CharacterAnimator:
     BREATH_AMP   = 0.005   # ±0.5 % height change per breath
     BREATH_CYCLE = 4.0     # seconds per full breath cycle
 
-    # Gentle float (vertical sine drift)
-    FLOAT_AMP   = 2.0     # ±2 px max drift
-    FLOAT_CYCLE = 6.0     # seconds per float cycle
+    # Gentle float — applied only to the head+hair region (not the whole image)
+    HEAD_Y2_FRAC   = 0.42   # head float zone: top 42 % of image (hair + face)
+    HEAD_FLOAT_AMP = 0.8    # ±0.8 px max head drift (old whole-image amp was 2.0 px)
+    FLOAT_CYCLE    = 6.0    # seconds per float cycle
 
     # Blink timing (in animation frames at FPS)
     BLINK_INTERVAL_MIN = 3 * FPS   # ≈ 3 s
@@ -249,24 +250,43 @@ class CharacterAnimator:
 
         w, h = self._w, self._h
 
-        # 1. Breathing (subtle vertical zoom) ──────────────────────────────────
+        # 1. Breathing — full image, anchored at the bottom ───────────────────
+        # Scale is always ≥ 1.0: on exhale the image returns to its baseline
+        # height; on inhale it grows upward.  The bottom edge (feet) stays
+        # fixed; only the head/shoulders rise and fall by ≤ BREATH_AMP * h px.
         bphase = 2 * math.pi * t / (self.FPS * self.BREATH_CYCLE)
-        scale  = 1.0 + self.BREATH_AMP * breath_mult * math.sin(bphase)
+        # (1+sin)/2 maps sine's [-1,1] to [0,1], keeping scale always ≥ 1.0.
+        scale  = 1.0 + self.BREATH_AMP * breath_mult * (1.0 + math.sin(bphase)) * 0.5
         new_h  = int(h * scale)
         scaled = self._base.resize((w, new_h), _BILINEAR)
-        crop_y = (new_h - h) // 2
-        img    = scaled.crop((0, crop_y, w, crop_y + h))
+        # Anchor at bottom: discard excess rows from the top.
+        img    = scaled.crop((0, new_h - h, w, new_h))
 
-        # 2. Gentle float (vertical sine drift) ────────────────────────────────
-        fphase = 2 * math.pi * t / (self.FPS * self.FLOAT_CYCLE)
-        dy     = int(self.FLOAT_AMP * float_mult * math.sin(fphase))
-        if dy != 0:
-            canvas_img = Image.new("RGBA", (w, h), (0, 0, 0, 0))
+        # 2. Head float — gentle drift confined to the head+hair region ────────
+        # Moving only the upper HEAD_Y2_FRAC prevents the feet/body from
+        # shifting and eliminates the "whole image shaking" appearance.
+        fphase  = 2 * math.pi * t / (self.FPS * self.FLOAT_CYCLE)
+        dy      = int(self.HEAD_FLOAT_AMP * float_mult * math.sin(fphase))
+        head_y2 = int(h * self.HEAD_Y2_FRAC)
+        if dy != 0 and head_y2 > 0:
+            head_strip = img.crop((0, 0, w, head_y2))
+            new_head   = Image.new("RGBA", (w, head_y2), (0, 0, 0, 0))
             if dy > 0:
-                canvas_img.paste(img.crop((0, 0, w, h - dy)), (0, dy))
+                visible = head_y2 - dy
+                if visible > 0:
+                    new_head.paste(head_strip.crop((0, 0, w, visible)), (0, dy))
+                # Fill top gap by repeating the topmost row.
+                top_row = head_strip.crop((0, 0, w, 1)).resize((w, dy), _NEAREST)
+                new_head.paste(top_row, (0, 0))
             else:
-                canvas_img.paste(img.crop((0, -dy, w, h)), (0, 0))
-            img = canvas_img
+                dy_abs  = -dy
+                visible = head_y2 - dy_abs
+                if visible > 0:
+                    new_head.paste(head_strip.crop((0, dy_abs, w, head_y2)), (0, 0))
+                # Fill bottom gap by repeating the bottom-most row.
+                bot_row = head_strip.crop((0, head_y2 - 1, w, head_y2)).resize((w, dy_abs), _NEAREST)
+                new_head.paste(bot_row, (0, visible))
+            img.paste(new_head, (0, 0))
 
         # 3. Hair sway (horizontal shift on top region, 3-band gradient) ───────
         sphase = 2 * math.pi * t / (self.FPS * self.HAIR_SWAY_CYCLE)
