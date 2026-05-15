@@ -27,6 +27,8 @@ MODEL_REL_PATH = "honghua/model3.json"
 MODEL_PATH = LIVE2D_DIR / MODEL_REL_PATH
 CANVAS_WIDTH = 460.0
 CANVAS_HEIGHT = 490.0
+WEBVIEW_WIDTH = 520
+WEBVIEW_HEIGHT = 640
 
 
 class _StateStore:
@@ -57,7 +59,7 @@ class _Live2DHandler(SimpleHTTPRequestHandler):
     def __init__(self, *args: object, **kwargs: object):
         super().__init__(*args, directory=str(self.root_dir), **kwargs)
 
-    def do_GET(self) -> None:  # noqa: N802 - method name required by BaseHTTPRequestHandler interface
+    def do_GET(self) -> None:
         if self.path.startswith("/api/state"):
             body = self.state_store.snapshot_bytes()
             self.send_response(200)
@@ -151,7 +153,12 @@ class CharacterAnimator:
         query = urlencode({"model": MODEL_REL_PATH})
         url = f"http://127.0.0.1:{port}/player.html?{query}"
         try:
-            _webview.create_window("紅花 Live2D", url=url, width=520, height=640)
+            _webview.create_window(
+                "紅花 Live2D",
+                url=url,
+                width=WEBVIEW_WIDTH,
+                height=WEBVIEW_HEIGHT,
+            )
             _webview.start()
         except Exception:
             return
