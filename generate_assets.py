@@ -24,11 +24,18 @@ MUREKA_URL = "https://api.mureka.ai"
 _DIR   = os.path.dirname(os.path.abspath(__file__))
 ASSETS = os.path.join(_DIR, "assets")
 SCENES = os.path.join(ASSETS, "scenes")
+CHARACTER_EMOTIONS = os.path.join(ASSETS, "character_emotions")
 INFO_JPG = os.path.join(_DIR, "info.jpg")
 HONGHUA_READ_BOOK_JPG = os.path.join(_DIR, "HonghuaReadBook.jpg")
 HONGHUA_IN_ENG_JPG = os.path.join(_DIR, "HonghuaInENG.jpg")
 IMAGE_WIDTH, IMAGE_HEIGHT = 460, 490
 DEFAULT_SCENE_PNG = os.path.join(SCENES, "default.png")
+TRUST_EMOTION_FILTERS = {
+    "impatient": {"brightness": 0.92, "contrast": 1.08, "tint": (32, 0, 0, 26)},
+    "peaceful": {"brightness": 0.98, "contrast": 1.02, "tint": (0, 18, 26, 16)},
+    "friendly": {"brightness": 1.04, "contrast": 1.04, "tint": (18, 8, 0, 14)},
+    "trusted": {"brightness": 1.08, "contrast": 1.07, "tint": (28, 18, 0, 12)},
+}
 
 TRACKS = [
     {
@@ -250,6 +257,45 @@ def build_scene_image(key: str):
     return _default_scene_image(key)
 
 
+
+
+def _build_trust_emotion_image(base_img, state: str):
+    cfg = TRUST_EMOTION_FILTERS[state]
+    img = base_img.copy().resize((IMAGE_WIDTH, IMAGE_HEIGHT), Image.LANCZOS)
+    img = ImageEnhance.Brightness(img).enhance(cfg["brightness"])
+    img = ImageEnhance.Contrast(img).enhance(cfg["contrast"])
+    tint = cfg["tint"]
+    if any(tint):
+        img = Image.alpha_composite(img.convert("RGBA"), Image.new("RGBA", img.size, tint))
+    return img.convert("RGB")
+
+
+def generate_character_emotion_images(force: bool = False) -> bool:
+    if Image is None:
+        print("缺少 Pillow，無法生成紅花情緒圖。請先安裝：pip install Pillow", file=sys.stderr)
+        return False
+    if not os.path.exists(HONGHUA_READ_BOOK_JPG):
+        print("缺少 HonghuaReadBook.jpg，無法生成紅花情緒圖。", file=sys.stderr)
+        return False
+
+    os.makedirs(CHARACTER_EMOTIONS, exist_ok=True)
+    base_img = Image.open(HONGHUA_READ_BOOK_JPG).convert("RGBA")
+    success = True
+    for state in TRUST_EMOTION_FILTERS:
+        path = os.path.join(CHARACTER_EMOTIONS, f"honghua_readbook_{state}.png")
+        if os.path.exists(path) and not force:
+            print(f"[emotion:{state}] 已存在，跳過。")
+            continue
+        try:
+            out = _build_trust_emotion_image(base_img, state)
+            out.save(path, "PNG")
+            print(f"[emotion:{state}] 已輸出：{path}")
+        except Exception as e:
+            print(f"[emotion:{state}] 生成失敗：{e}", file=sys.stderr)
+            success = False
+    return success
+
+
 def generate_scene_images(force: bool = False) -> bool:
     if Image is None:
         print("缺少 Pillow，無法生成場景圖。請先安裝：pip install Pillow", file=sys.stderr)
@@ -385,6 +431,8 @@ def main() -> None:
 
     if not args.bgm_only:
         scene_success = generate_scene_images(force=args.force_scenes)
+        if scene_success:
+            scene_success = generate_character_emotion_images(force=args.force_scenes)
 
     if not args.scenes_only:
         bgm_success = all(generate(t) for t in TRACKS)
@@ -395,7 +443,7 @@ def main() -> None:
         return
 
     if not scene_success:
-        print("場景圖生成失敗，請確認 Pillow 與來源圖片是否存在。", file=sys.stderr)
+        print("場景圖或紅花情緒圖生成失敗，請確認 Pillow 與來源圖片是否存在。", file=sys.stderr)
     if not bgm_success:
         print("部分配樂生成失敗，請檢查 requests、API Key 與網路連線。", file=sys.stderr)
     sys.exit(1)

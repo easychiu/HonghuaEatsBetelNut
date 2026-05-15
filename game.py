@@ -46,9 +46,16 @@ HONGHUA_READ_BOOK_JPG = os.path.join(_DIR, "HonghuaReadBook.jpg")
 HONGHUA_IN_ENG_JPG = os.path.join(_DIR, "HonghuaInENG.jpg")
 ASSETS    = os.path.join(_DIR, "assets")
 SCENES    = os.path.join(ASSETS, "scenes")
+CHARACTER_EMOTIONS = os.path.join(ASSETS, "character_emotions")
 BGM_MAIN  = os.path.join(ASSETS, "bgm_main.mp3")
 BGM_END   = os.path.join(ASSETS, "bgm_end.mp3")
 DEFAULT_SCENE_PNG = os.path.join(SCENES, "default.png")
+TRUST_EMOTION_ASSETS: dict[str, str] = {
+    "impatient": os.path.join(CHARACTER_EMOTIONS, "honghua_readbook_impatient.png"),
+    "peaceful": os.path.join(CHARACTER_EMOTIONS, "honghua_readbook_peaceful.png"),
+    "friendly": os.path.join(CHARACTER_EMOTIONS, "honghua_readbook_friendly.png"),
+    "trusted": os.path.join(CHARACTER_EMOTIONS, "honghua_readbook_trusted.png"),
+}
 
 # ── character animation: scene → animator state ────────────────────────────────
 # Only scenes that show a character image (via SCENE_SOURCE_OVERRIDES) are listed.
@@ -617,12 +624,13 @@ class HonghuaGame:
         # Use the character animator for scenes that show a character image.
         anim_state = _CHAR_ANIM_SCENES.get(key)
         src_path   = SCENE_SOURCE_OVERRIDES.get(key)
+        if key in _CHAR_ANIM_TRUST_SCENES:
+            trust_state = self._trust_anim_state()
+            anim_state = trust_state
+            trust_path = TRUST_EMOTION_ASSETS.get(trust_state, "")
+            if trust_path and os.path.exists(trust_path):
+                src_path = trust_path
         if anim_state and src_path and _PIL and os.path.exists(src_path):
-            # For scenes where Honghua is present and interacting with the
-            # player, override the static state with a trust-based one so her
-            # expression reflects how she currently feels about the player.
-            if key in _CHAR_ANIM_TRUST_SCENES:
-                anim_state = self._trust_anim_state()
             base = _get_char_pil(src_path)
             if base is not None:
                 self.animator.load_image(base)
