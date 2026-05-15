@@ -563,6 +563,14 @@ class HonghuaGame:
             bg=C["title_bg"],
             fg=C["title_fg"],
         ).pack(side="left", padx=16, pady=10)
+        self.time_var = tk.StringVar(value="")
+        tk.Label(
+            title_bar,
+            textvariable=self.time_var,
+            font=_f(12, True),
+            bg=C["title_bg"],
+            fg=C["title_fg"],
+        ).pack(side="right", padx=16, pady=10)
 
         # main content row
         content = tk.Frame(self.root, bg=C["bg"])
@@ -821,6 +829,7 @@ class HonghuaGame:
         lore_n = len(self.lore)
         tries  = self.code_tries_left
         self.status_var.set(self._format_status_text(items, len(self.clues), tries, lore_n))
+        self.time_var.set(self._format_time())
 
     def _reset_state(self) -> None:
         if self._ambush_job:
