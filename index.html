@@ -57,6 +57,8 @@
       font-size: 15px;
     }
     .scene-name { margin: 14px 0 8px; color: #b59cde; letter-spacing: 2px; font-size: 13px; }
+    .scene-img-wrap { width: 100%; margin-bottom: 10px; border-radius: 8px; overflow: hidden; background: #0e0a12; display: flex; align-items: center; justify-content: center; }
+    #sceneImg { width: 100%; max-height: 380px; object-fit: cover; display: block; border-radius: 8px; }
     .btns { display: grid; gap: 8px; margin-top: 12px; }
     button {
       width: 100%;
@@ -112,6 +114,7 @@
     </aside>
 
     <main class="card main">
+      <div class="scene-img-wrap"><img id="sceneImg" src="" alt="場景圖" /></div>
       <div class="scene-name" id="sceneName"></div>
       <div class="scene" id="sceneText"></div>
       <div class="status" id="statusLine"></div>
@@ -131,6 +134,25 @@
     const DEFAULT_CLUES = { honghua: false, amelia: false, starscream: false };
     const DEFAULT_FLAGS = { basementOpen: false, trueSong: false };
     const DEFAULT_ARCHIVE = { group: "story_texts.py", key: null };
+
+    const SCENE_IMAGES = {
+      intro:          "assets/scenes/outside.png",
+      prologue:       "assets/scenes/prologue.png",
+      map3:           "assets/scenes/TopMap.png",
+      map2:           "assets/scenes/TopMap.png",
+      map1:           "assets/scenes/TopMap.png",
+      hall:           "assets/scenes/hall.png",
+      desk:           "assets/scenes/desk.png",
+      window:         "assets/scenes/window.png",
+      bookshelves:    "assets/scenes/bookshelves.png",
+      basement:       "assets/scenes/basement.png",
+      basementDeep:   "assets/scenes/basement_deep.png",
+      ending_secret:  "assets/scenes/secret_end.png",
+      ending_true:    "assets/scenes/true_end.png",
+      ending_trust:   "assets/scenes/normal_end.png",
+      ending_normal:  "assets/scenes/normal_end.png",
+      ending_bad:     "assets/scenes/bad_a.png",
+    };
 
 const TEXT_ARCHIVE = {
   "story_texts.py": {
@@ -622,6 +644,11 @@ const TEXT_ARCHIVE = {
       const isEnding = S.scene.startsWith("ending_");
       const inArchive = S.scene.startsWith("archive_");
       document.getElementById("sceneName").textContent = isEnding ? "ENDING" : (inArchive ? "TEXT ARCHIVE" : S.scene.toUpperCase());
+
+      const imgEl = document.getElementById("sceneImg");
+      const imgSrc = SCENE_IMAGES[S.scene] || "";
+      imgEl.src = imgSrc;
+      imgEl.style.display = imgSrc ? "block" : "none";
       const sceneEl = document.getElementById("sceneText");
       if (isEnding) {
         sceneEl.innerHTML = `<span class="ending">${endingText()}</span>`;
