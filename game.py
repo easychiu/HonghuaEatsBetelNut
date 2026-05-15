@@ -491,7 +491,8 @@ class HonghuaGame:
     KILLER_PATROL_INTERVAL_MS = 90_000   # ms between killer floor changes
     MIN_FLOOR = 1                        # lowest library floor accessible to player
     MAX_FLOOR = 3                        # highest library floor (safe zone)
-    LIP_SYNC_PAUSE_PUNCTUATION = "，。！？、 \n\t"  # punctuation/whitespace treated as speech pauses
+    # Chinese punctuation/whitespace that usually indicate a spoken pause.
+    LIP_SYNC_PAUSE_PUNCTUATION = "，。！？、 \n\t"
     LIP_SYNC_INTENSITY_TYPING_START = 0.55
     LIP_SYNC_INTENSITY_TYPING_CHAR = 0.65
     LIP_SYNC_INTENSITY_TYPING_PAUSE = 0.35
@@ -646,6 +647,8 @@ class HonghuaGame:
                 self.animator.clear_focus()
                 self.animator.set_lip_sync_intensity(0.0)
                 self.animator.start()
+                # Always continue to draw scene art in the game window; the
+                # real Live2D model is shown in the dedicated Live2D window.
 
         # Fall back to the static scene image.
         img = scene_image(key)

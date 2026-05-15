@@ -25,6 +25,8 @@ LIVE2D_DIR = _DIR / "assets" / "live2d"
 PLAYER_HTML = LIVE2D_DIR / "player.html"
 MODEL_REL_PATH = "honghua/model3.json"
 MODEL_PATH = LIVE2D_DIR / MODEL_REL_PATH
+CANVAS_WIDTH = 460.0
+CANVAS_HEIGHT = 490.0
 
 
 class _StateStore:
@@ -51,7 +53,7 @@ class _Live2DHandler(SimpleHTTPRequestHandler):
     state_store: _StateStore
     root_dir: Path
 
-    def __init__(self, *args, **kwargs):
+    def __init__(self, *args: object, **kwargs: object):
         super().__init__(*args, directory=str(self.root_dir), **kwargs)
 
     def do_GET(self) -> None:  # noqa: N802
@@ -94,8 +96,8 @@ class CharacterAnimator:
 
     def set_focus_point(self, x: int, y: int) -> None:
         # The caller sends canvas coordinates; normalize against canonical size.
-        nx = max(-1.0, min(1.0, (x / 459.0) * 2.0 - 1.0))
-        ny = max(-1.0, min(1.0, (y / 489.0) * 2.0 - 1.0))
+        nx = max(-1.0, min(1.0, (x / (CANVAS_WIDTH - 1.0)) * 2.0 - 1.0))
+        ny = max(-1.0, min(1.0, (y / (CANVAS_HEIGHT - 1.0)) * 2.0 - 1.0))
         self._state_store.set("focus_x", nx)
         self._state_store.set("focus_y", ny)
 
@@ -144,7 +146,7 @@ class CharacterAnimator:
     def _run_webview(self) -> None:
         if self._server is None or _webview is None:
             return
-        port = self._server.server_address[1]
+        _, port = self._server.server_address
         query = urlencode({"model": MODEL_REL_PATH})
         url = f"http://127.0.0.1:{port}/player.html?{query}"
         try:

@@ -57,6 +57,9 @@ python game.py                     # 啟動遊戲
 - 真正 Live2D 角色模型需自行放到：
   - `assets/live2d/honghua/model3.json`
   - 以及該模型依賴的 `.moc3` / `textures` / `motions` / `expressions` 檔案
+- 另需放置 Live2D Web 前端套件到：
+  - `assets/live2d/vendor/pixi.min.js`
+  - `assets/live2d/vendor/cubism4.min.js`
 - 安裝 `requirements.txt` 後，遊戲會自動啟動 Live2D 視窗（pywebview）
 - 若缺少 `assets/live2d/honghua/model3.json`，遊戲仍可執行，但不會開啟 Live2D 視窗
 - 一般使用者只需要執行 `python game.py`，**不需要**自行生成任何圖像或音樂。

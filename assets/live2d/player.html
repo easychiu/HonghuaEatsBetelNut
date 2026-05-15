@@ -15,17 +15,26 @@
   </head>
   <body>
     <div id="app"></div>
-    <div id="hint">Live2D 載入中…（請先放置 assets/live2d/honghua/model3.json）</div>
-    <script src="https://cdn.jsdelivr.net/npm/pixi.js@8.2.6/dist/pixi.min.js"></script>
-    <script src="https://cdn.jsdelivr.net/npm/pixi-live2d-display@0.5.0/dist/cubism4.min.js"></script>
+    <div id="hint">Live2D 載入中…（請先放置 model 與 vendor JS）</div>
     <script>
+      const FOCUS_SMOOTH_FACTOR = 0.18;
+      const LIP_SYNC_SMOOTH_FACTOR = 0.30;
+      const LIP_SYNC_DECAY = 0.94;
+
+      async function loadScript(src) {
+        await new Promise((resolve, reject) => {
+          const s = document.createElement("script");
+          s.src = src;
+          s.onload = resolve;
+          s.onerror = () => reject(new Error(`載入失敗: ${src}`));
+          document.head.appendChild(s);
+        });
+      }
+
       const params = new URLSearchParams(location.search);
       const modelPath = params.get("model") || "honghua/model3.json";
       const hint = document.getElementById("hint");
-
-      const app = new PIXI.Application();
-      document.getElementById("app").appendChild(app.canvas);
-      app.init({ resizeTo: window, backgroundAlpha: 0 });
+      let app = null;
 
       const state = { focusX: 0, focusY: 0, lipSync: 0, stateName: "idle" };
       const smooth = { focusX: 0, focusY: 0, lipSync: 0 };
@@ -71,6 +80,18 @@
 
       async function boot() {
         try {
+          await loadScript("./vendor/pixi.min.js");
+          await loadScript("./vendor/cubism4.min.js");
+        } catch (e) {
+          hint.textContent = `缺少 Live2D 前端套件：${e}（請放置 assets/live2d/vendor/pixi.min.js 與 cubism4.min.js）`;
+          return;
+        }
+
+        app = new PIXI.Application();
+        await app.init({ resizeTo: window, backgroundAlpha: 0 });
+        document.getElementById("app").appendChild(app.canvas);
+
+        try {
           model = await PIXI.live2d.Live2DModel.from(modelPath);
           app.stage.addChild(model);
           fitModel();
@@ -86,10 +107,10 @@
         }
 
         app.ticker.add(() => {
-          smooth.focusX += (state.focusX - smooth.focusX) * 0.18;
-          smooth.focusY += (state.focusY - smooth.focusY) * 0.18;
-          smooth.lipSync += (state.lipSync - smooth.lipSync) * 0.30;
-          smooth.lipSync *= 0.94;
+          smooth.focusX += (state.focusX - smooth.focusX) * FOCUS_SMOOTH_FACTOR;
+          smooth.focusY += (state.focusY - smooth.focusY) * FOCUS_SMOOTH_FACTOR;
+          smooth.lipSync += (state.lipSync - smooth.lipSync) * LIP_SYNC_SMOOTH_FACTOR;
+          smooth.lipSync *= LIP_SYNC_DECAY;
 
           if (model) {
             const baseX = window.innerWidth / 2;
