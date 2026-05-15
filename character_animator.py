@@ -51,6 +51,7 @@ class _StateStore:
 
 class _Live2DHandler(SimpleHTTPRequestHandler):
     state_store: _StateStore
+    # Populated via dynamic subclass creation in CharacterAnimator._start_http_server.
     root_dir: Path
 
     def __init__(self, *args: object, **kwargs: object):

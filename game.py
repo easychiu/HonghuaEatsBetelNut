@@ -491,7 +491,7 @@ class HonghuaGame:
     KILLER_PATROL_INTERVAL_MS = 90_000   # ms between killer floor changes
     MIN_FLOOR = 1                        # lowest library floor accessible to player
     MAX_FLOOR = 3                        # highest library floor (safe zone)
-    # Chinese punctuation/whitespace that usually indicate a spoken pause.
+    # Chinese punctuation + common whitespace that usually indicate a spoken pause.
     LIP_SYNC_PAUSE_PUNCTUATION = "，。！？、 \n\t"
     LIP_SYNC_INTENSITY_TYPING_START = 0.55
     LIP_SYNC_INTENSITY_TYPING_CHAR = 0.65
