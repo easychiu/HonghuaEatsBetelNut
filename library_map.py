@@ -315,9 +315,9 @@ def _normalize_floor_regions(
         cx = (x1 + x2) / 2
         cy = (y1 + y2) / 2
         left = int(round(cx - crop_w / 2))
-        right = left + int(round(crop_w)) - 1
+        right = int(round(cx + crop_w / 2)) - 1
         top = int(round(cy - crop_h / 2))
-        bottom = top + int(round(crop_h)) - 1
+        bottom = int(round(cy + crop_h / 2)) - 1
 
         if left < 0:
             right = min(w - 1, right - left)
