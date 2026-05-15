@@ -48,8 +48,9 @@ python game.py                     # 啟動遊戲
 
 ## 素材說明
 
-- 專案已附帶可直接使用的場景圖與配樂：
+- 專案已附帶可直接使用的場景圖、紅花信任度情緒圖與配樂：
   - `assets/scenes/*.png`
+  - `assets/character_emotions/honghua_readbook_{impatient|peaceful|friendly|trusted}.png`
   - `assets/bgm_main.mp3`
   - `assets/bgm_end.mp3`
 - 一般使用者只需要執行 `python game.py`，**不需要**自行生成任何圖像或音樂。
@@ -64,7 +65,7 @@ python game.py                     # 啟動遊戲
 pip install Pillow requests
 ```
 
-重新生成場景圖：
+重新生成場景圖（會同時重做紅花信任度情緒圖）：
 
 ```bash
 python generate_assets.py --scenes-only --force-scenes
@@ -118,7 +119,8 @@ python generate_assets.py --bgm-only
 
 - 遊戲會優先讀取 `assets/scenes/*.png`
 - 若場景圖不存在，會先回退到 `assets/scenes/default.png`；若連預設圖都不存在，再使用程式內建的即時生成版本
-- 若有 `HonghuaReadBook.jpg`，`prologue` / `hall` / `bookshelves` / `desk` / `diary` / `window` 會優先使用該圖（紅花在圖書館看書）
+- 若有 `assets/character_emotions/honghua_readbook_{impatient|peaceful|friendly|trusted}.png`，`prologue` / `hall` / `bookshelves` / `desk` / `diary` / `window` 會依信任度優先使用對應情緒圖
+- 若缺少上述情緒圖，會回退至 `HonghuaReadBook.jpg`（紅花在圖書館看書）
 - 若有 `HonghuaInENG.jpg`，`intro` / `confront` / `basement` / `basement_deep` 會優先使用該圖（紅花人物形象）
 - 專案已先行附帶開場、大廳、對峙、地下室、各調查節點與結局場景圖（包含 `assets/scenes/default.png`）
 - 維護者重新生成場景圖時，會一併輸出 `assets/scenes/default.png` 作為紅花主視覺預設場景
