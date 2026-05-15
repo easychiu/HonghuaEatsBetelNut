@@ -323,7 +323,6 @@ class HonghuaGame:
         self.root.title(self.WINDOW_TITLE)
         self.root.geometry(f"{WIN_W}x{WIN_H}")
         self.root.minsize(WIN_W, WIN_H)
-        self.root.resizable(False, False)
         self.root.configure(bg=C["bg"])
 
         self.inventory: set[str] = set()
