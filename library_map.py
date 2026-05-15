@@ -42,6 +42,13 @@ class MapSceneGame(Protocol):
     def scene_hall(self) -> None: ...
     def scene_basement(self) -> None: ...
     def scene_confront(self) -> None: ...
+    # ── new explorable nodes ─────────────────────────────────────────────────
+    def scene_corridor_1f(self) -> None: ...
+    def scene_corridor_2f(self) -> None: ...
+    def scene_corridor_3f(self) -> None: ...
+    def scene_room_a(self) -> None: ...
+    def scene_room_b(self) -> None: ...
+    def scene_meeting_room(self) -> None: ...
 
 
 def _pixel_library_map(floor: int, iw: int, ih: int) -> Optional[MapImage]:
@@ -125,6 +132,10 @@ def show_library_map_scene(game: MapSceneGame, floor: int) -> None:
     if game._map_floor == 1:
         opts.extend([
             ("前往書架深處（一樓）", game.scene_bookshelves),
+            ("探索一樓走廊", game.scene_corridor_1f),
+            ("前往房間A", game.scene_room_a),
+            ("前往房間B", game.scene_room_b),
+            ("前往會議室", game.scene_meeting_room),
         ])
         if has_key:
             opts.append(("打開地下密室", game.scene_basement))
@@ -132,27 +143,55 @@ def show_library_map_scene(game: MapSceneGame, floor: int) -> None:
         opts.extend([
             ("前往二樓研究桌區", game.scene_desk),
             ("前往二樓窗邊區", game.scene_window),
+            ("探索二樓走廊", game.scene_corridor_2f),
+            ("前往二樓會議室", game.scene_meeting_room),
         ])
     else:
         opts.extend([
             ("前往三樓管理室外調查", game.scene_hall),
             ("直接進管理室找紅花", game.scene_confront),
+            ("探索三樓走廊", game.scene_corridor_3f),
         ])
     game._set_options(opts)
 
-    # Floor-switch tabs at the bottom edge of the canvas
+    # ── floor-switch tabs at the bottom edge of the canvas ────────────────────
     actions: list[dict[str, object]] = [
         {"label": "一樓", "area": (20, 420, 130, 478), "command": game.scene_map_floor1},
         {"label": "二樓", "area": (170, 420, 280, 478), "command": game.scene_map_floor2},
         {"label": "三樓", "area": (320, 420, 430, 478), "command": game.scene_map_floor3},
     ]
 
+    # Top corridor strip — shared click target for corridor scenes
+    _CORRIDOR_AREA = (130, 93, 295, 122)
+
     if game._map_floor == 1:
-        actions.append({
-            "label": "書架深處",
-            "area": (36, 288, 126, 358),
-            "command": game.scene_bookshelves,
-        })
+        actions.extend([
+            {
+                "label": "書架深處",
+                "area": (36, 288, 126, 358),
+                "command": game.scene_bookshelves,
+            },
+            {
+                "label": "一樓走廊",
+                "area": _CORRIDOR_AREA,
+                "command": game.scene_corridor_1f,
+            },
+            {
+                "label": "房間A",
+                "area": (36, 36, 126, 106),
+                "command": game.scene_room_a,
+            },
+            {
+                "label": "房間B",
+                "area": (334, 36, 424, 106),
+                "command": game.scene_room_b,
+            },
+            {
+                "label": "會議室",
+                "area": (334, 288, 424, 454),
+                "command": game.scene_meeting_room,
+            },
+        ])
         if has_key:
             actions.append({
                 "label": "地下密室",
@@ -171,6 +210,16 @@ def show_library_map_scene(game: MapSceneGame, floor: int) -> None:
                 "area": (334, 36, 424, 106),
                 "command": game.scene_window,
             },
+            {
+                "label": "二樓走廊",
+                "area": _CORRIDOR_AREA,
+                "command": game.scene_corridor_2f,
+            },
+            {
+                "label": "二樓會議室",
+                "area": (334, 288, 424, 454),
+                "command": game.scene_meeting_room,
+            },
         ])
     else:  # 3F
         actions.extend([
@@ -183,6 +232,11 @@ def show_library_map_scene(game: MapSceneGame, floor: int) -> None:
                 "label": "進管理室（紅花）",
                 "area": (168, 84, 292, 150),
                 "command": game.scene_confront,
+            },
+            {
+                "label": "三樓走廊",
+                "area": _CORRIDOR_AREA,
+                "command": game.scene_corridor_3f,
             },
         ])
 

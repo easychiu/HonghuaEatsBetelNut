@@ -119,6 +119,15 @@ SCENE_TITLES: dict[str, str] = {
     "confront": "面對紅花",
     **LM.MAP_SCENE_TITLES,
     "basement_storage": "地下儲藏室",
+    # ── new explorable nodes ────────────────────────────────────────────────
+    "corridor_1f":   "一樓走廊",
+    "corridor_2f":   "二樓走廊",
+    "corridor_3f":   "三樓走廊",
+    "room_a":        "房間A・教師休息室",
+    "room_b":        "房間B・舊社辦",
+    "meeting_room":  "會議室",
+    # ── time-danger ─────────────────────────────────────────────────────────
+    "killer_map":    "大地圖遭遇",
     "true_end": "真結局",
     "secret_end": "秘密結局",
     "normal_end": "普通結局",
@@ -354,6 +363,36 @@ def _build(key: str) -> Optional[object]:
              (IW // 4, IH // 3, 105, (225, 45, 0, 100)),
              (3 * IW // 4, 2 * IH // 3, 82, (205, 28, 8, 88))],
         ),
+        "corridor_1f": (
+            (4, 4, 3),
+            [(IW // 2, IH // 2, 200, (110, 75, 30, 65)),
+             (IW - 80, IH // 2, 90, (90, 55, 18, 50))],
+        ),
+        "corridor_2f": (
+            (3, 3, 4),
+            [(80, IH // 2, 140, (80, 55, 20, 70)),
+             (IW // 2, IH - 100, 170, (60, 40, 15, 55))],
+        ),
+        "corridor_3f": (
+            (5, 5, 4),
+            [(IW // 2, 100, 190, (140, 100, 50, 70)),
+             (IW // 2, IH // 2, 80, (180, 140, 70, 60))],
+        ),
+        "room_a": (
+            (6, 5, 4),
+            [(IW // 2, IH // 2, 190, (120, 80, 35, 75)),
+             (IW // 2, IH // 2, 60, (170, 120, 55, 60))],
+        ),
+        "room_b": (
+            (4, 5, 5),
+            [(60, IH // 3, 120, (90, 65, 30, 65)),
+             (IW // 2, 2 * IH // 3, 160, (70, 50, 20, 55))],
+        ),
+        "meeting_room": (
+            (5, 4, 3),
+            [(IW // 2, IH // 3, 200, (100, 65, 25, 70)),
+             (IW // 2, 2 * IH // 3, 70, (140, 90, 35, 55))],
+        ),
     }
     if key in PROC:
         base_rgb, lights = PROC[key]
@@ -434,6 +473,12 @@ class HonghuaGame:
     WINDOW_TITLE     = "紅花吃檳榔：蔚藍學院秘案 - 深夜調查版"
     STORAGE_AMBUSH_CHANCE = 0.20          # generalised 1F/2F backstab chance
     STORAGE_AMBUSH_CHANCE_HIGH = 0.65    # near the killer's hideout (basement storage room)
+    # ── time & killer system ─────────────────────────────────────────────────
+    GAME_START_HOUR    = 23              # game clock starts at 23:00
+    KILLER_EMERGE_ELAPSED = 180          # minutes of game-time before 2AM (23:00 + 3h)
+    KILLER_MAP_AMBUSH_CHANCE = 0.30      # per floor-map visit after 2AM
+    KILLER_MAP_AMBUSH_CHANCE_3F = 0.05   # 3F is much safer (away from killer's basement lair)
+    KILLER_PATROL_INTERVAL_MS = 90_000   # ms between killer floor changes
 
     # ── init ───────────────────────────────────────────────────────────────────
     def __init__(self, root: tk.Tk) -> None:
@@ -459,6 +504,11 @@ class HonghuaGame:
         self._honghua_click_count: int = 0
         self._map_floor: int = 3
         self._ambush_job: Optional[str] = None
+        # ── time & killer state ─────────────────────────────────────────────
+        self._game_elapsed: int = 0          # minutes elapsed since game start (23:00)
+        self._killer_emerged: bool = False
+        self._killer_floor: int = 1          # current floor killer is patrolling (1-3)
+        self._killer_patrol_job: Optional[str] = None
 
         self.music = MusicPlayer()
 
@@ -716,6 +766,9 @@ class HonghuaGame:
         if self._ambush_job:
             self.root.after_cancel(self._ambush_job)
             self._ambush_job = None
+        if self._killer_patrol_job:
+            self.root.after_cancel(self._killer_patrol_job)
+            self._killer_patrol_job = None
         self.inventory.clear()
         self.clues.clear()
         self.lore.clear()
@@ -724,6 +777,10 @@ class HonghuaGame:
         self.code_tries_left = self.MAX_CODE_TRIES
         self._honghua_click_count = 0
         self._map_floor = 3
+        self._game_elapsed = 0
+        self._killer_emerged = False
+        self._killer_floor = 1
+        self._killer_patrol_job = None
         self._refresh_status()
 
     def _schedule_ambush_check(self, chance: Optional[float] = None) -> None:
@@ -766,6 +823,57 @@ class HonghuaGame:
             return "peaceful"
         return "impatient"
 
+    # ── time & killer mechanics ────────────────────────────────────────────────
+
+    def _format_time(self) -> str:
+        """Return current in-game time as HH:MM (24-hour)."""
+        total = (self.GAME_START_HOUR * 60 + self._game_elapsed) % (24 * 60)
+        return f"{total // 60:02d}:{total % 60:02d}"
+
+    def _advance_time(self, minutes: int = 5) -> None:
+        """Advance the in-game clock and trigger 2AM killer emergence if threshold reached."""
+        self._game_elapsed += minutes
+        self._refresh_status()
+        if not self._killer_emerged and self._game_elapsed >= self.KILLER_EMERGE_ELAPSED:
+            self._trigger_killer_emergence()
+
+    def _trigger_killer_emergence(self) -> None:
+        """Mark killer as emerged, show warning, and start patrol loop."""
+        self._killer_emerged = True
+        self._killer_floor = random.randint(1, 3)
+        # Start patrol tick loop.
+        self._killer_patrol_job = self.root.after(
+            self.KILLER_PATROL_INTERVAL_MS, self._killer_patrol_tick
+        )
+        messagebox.showwarning("凌晨兩點警告", ST.DANGER_2AM)
+
+    def _killer_patrol_tick(self) -> None:
+        """Periodically move killer to a random floor."""
+        if not self._killer_emerged:
+            return
+        self._killer_floor = random.randint(1, 3)
+        self._killer_patrol_job = self.root.after(
+            self.KILLER_PATROL_INTERVAL_MS, self._killer_patrol_tick
+        )
+
+    def _check_map_killer(self, floor: int) -> bool:
+        """Return True (and go to bad ending D) if killer encounters player on this floor.
+
+        Only active after 2AM.  3F has a much lower encounter rate since the
+        killer's territory is the basement / lower floors.
+        """
+        if not self._killer_emerged:
+            return False
+        chance = (
+            self.KILLER_MAP_AMBUSH_CHANCE_3F
+            if floor == 3
+            else self.KILLER_MAP_AMBUSH_CHANCE
+        )
+        if self._killer_floor == floor and random.random() < chance:
+            self.ending_killer_map()
+            return True
+        return False
+
     def _gain_trust(self, event: str, points: int) -> None:
         if event in self._trust_events:
             return
@@ -783,8 +891,10 @@ class HonghuaGame:
         lore_n: int,
     ) -> str:
         trust_label = self._trust_level()
+        time_str = self._format_time()
+        danger_flag = "  ⚠兇手出沒中" if self._killer_emerged else ""
         return (
-            f"道具:{items} | 物證:{clue_count}/{self.REQUIRED_CLUES} | "
+            f"現在 {time_str}{danger_flag} | 道具:{items} | 物證:{clue_count}/{self.REQUIRED_CLUES} | "
             f"密碼:{tries} | 線索:{lore_n}/{self.REQUIRED_LORE} | 信任:{self.trust}({trust_label})"
         )
 
@@ -950,19 +1060,26 @@ class HonghuaGame:
         self._set_image_actions(hall_actions)
 
     def scene_map_floor1(self) -> None:
-        self.scene_library_map(1)
+        self._advance_time(2)
+        if not self._check_map_killer(1):
+            self.scene_library_map(1)
 
     def scene_map_floor2(self) -> None:
-        self.scene_library_map(2)
+        self._advance_time(2)
+        if not self._check_map_killer(2):
+            self.scene_library_map(2)
 
     def scene_map_floor3(self) -> None:
-        self.scene_library_map(3)
+        self._advance_time(2)
+        if not self._check_map_killer(3):
+            self.scene_library_map(3)
 
     def scene_library_map(self, floor: int) -> None:
         LM.show_library_map_scene(self, floor)
 
     # ── hammer ────────────────────────────────────────────────────────────────
     def inspect_hammer(self) -> None:
+        self._advance_time(5)
         self._gain_trust("inspect_hammer", 1)
         self.clues["鎚子"] = 3
         self._refresh_status()
@@ -979,6 +1096,7 @@ class HonghuaGame:
 
     # ── four-leaf clover ──────────────────────────────────────────────────────
     def inspect_clover(self) -> None:
+        self._advance_time(5)
         self._gain_trust("inspect_clover", 1)
         self.clues["四葉草"] = 1
         self._refresh_status()
@@ -995,6 +1113,7 @@ class HonghuaGame:
 
     # ── YV jeans ──────────────────────────────────────────────────────────────
     def inspect_jeans(self) -> None:
+        self._advance_time(5)
         self._gain_trust("inspect_jeans", 1)
         self.clues["牛仔褲"] = 4
         self._refresh_status()
@@ -1010,6 +1129,7 @@ class HonghuaGame:
 
     # ── bookshelves area ──────────────────────────────────────────────────────
     def scene_bookshelves(self) -> None:
+        self._advance_time(8)
         self._refresh_status()
         self._show_image("bookshelves")
         self._set_story(ST.SCENE_BOOKSHELVES)
@@ -1129,6 +1249,7 @@ class HonghuaGame:
                 messagebox.showwarning("尚未完成", "請依序點完四份案卷。", parent=dialog)
                 return
             if selected_order == self.BOOKSHELF_CORRECT_ORDER:
+                self._advance_time(15)
                 self.inventory.add("地下室鑰匙")
                 self._refresh_status()
                 messagebox.showinfo(
@@ -1178,6 +1299,7 @@ class HonghuaGame:
 
     # ── desk ──────────────────────────────────────────────────────────────────
     def scene_desk(self) -> None:
+        self._advance_time(8)
         self._refresh_status()
         self._show_image("desk")
         self._set_story(ST.SCENE_DESK)
@@ -1190,6 +1312,7 @@ class HonghuaGame:
         self._schedule_ambush_check()  # 2F – backstab risk
 
     def read_case_notes(self) -> None:
+        self._advance_time(5)
         self._gain_trust("read_case_notes", 2)
         self.lore.add("紅花案情筆記")
         self._refresh_status()
@@ -1203,6 +1326,7 @@ class HonghuaGame:
 
     # ── window ────────────────────────────────────────────────────────────────
     def scene_window(self) -> None:
+        self._advance_time(8)
         self._refresh_status()
         self._show_image("window")
         self._set_story(ST.SCENE_WINDOW)
@@ -1215,6 +1339,7 @@ class HonghuaGame:
         self._schedule_ambush_check()  # 2F – backstab risk
 
     def inspect_window_note(self) -> None:
+        self._advance_time(5)
         self._gain_trust("inspect_window_note", 2)
         self.lore.add("艾蜜莉亞線索")
         self._refresh_status()
@@ -1275,6 +1400,7 @@ class HonghuaGame:
         def submit() -> None:
             code = entry.get().strip()
             if code == self.CODE_ANSWER:
+                self._advance_time(10)
                 self._gain_trust("unlock_code", 1)
                 self.inventory.add("鎮魂歌譜")
                 self._refresh_status()
@@ -1320,6 +1446,7 @@ class HonghuaGame:
             messagebox.showinfo("門緊閉", "地下密室的門紋絲不動，需要某種鑰匙。")
             self.scene_map_floor1()
             return
+        self._advance_time(10)
         self._refresh_status()
         self._show_image("basement")
         self._set_story(ST.SCENE_BASEMENT)
@@ -1331,6 +1458,7 @@ class HonghuaGame:
         self._schedule_ambush_check()  # underground – backstab risk
 
     def scene_basement_deep(self) -> None:
+        self._advance_time(8)
         self._gain_trust("scene_basement_deep", 2)
         self.lore.add("天王星供詞")
         self._refresh_status()
@@ -1479,6 +1607,32 @@ class HonghuaGame:
             ("離開", self.root.destroy),
         ])
 
+    def ending_killer_map(self) -> None:
+        """Bad ending D — killer encounters player on the floor map after 2AM."""
+        self._show_image("bad_a")
+        self._set_story(ST.ENDING_KILLER_MAP)
+        self._set_options([
+            ("重新開始", self.show_intro),
+            ("離開", self.root.destroy),
+        ])
+
+    def inspect_meeting_docs(self) -> None:
+        already_found = "董事會封鎖紀錄" in self.lore
+        if not already_found:
+            self._advance_time(5)
+            self.lore.add("董事會封鎖紀錄")
+            self._gain_trust("meeting_docs", 2)
+            self._refresh_status()
+        self._show_image("meeting_room")
+        text = ST.INSPECT_MEETING_DOCS if not already_found else (
+            "（你已記下董事會議紀錄：\n案件被校方組織性地掩蓋。）"
+        )
+        self._set_story(text)
+        self._set_options([
+            ("繼續調查會議室", self.scene_meeting_room),
+            ("返回地圖", self.scene_map_floor1),
+        ])
+
     def ending_hidden(self) -> None:
         """Hidden ending — dream revelation."""
         self.music.switch(BGM_END)
@@ -1488,6 +1642,203 @@ class HonghuaGame:
             ("再玩一次", self.show_intro),
             ("離開", self.root.destroy),
         ])
+
+    # ══════════════════════════════════════════════════════════════════════════
+    #  New explorable nodes — corridors / rooms / meeting rooms
+    # ══════════════════════════════════════════════════════════════════════════
+
+    # ── 1F corridor ───────────────────────────────────────────────────────────
+    def scene_corridor_1f(self) -> None:
+        self._advance_time(8)
+        self._refresh_status()
+        self._show_image("corridor_1f")
+        self._set_story(ST.SCENE_CORRIDOR_1F)
+        self._set_options([
+            ("離開走廊，返回一樓地圖", self.scene_map_floor1),
+        ])
+        self._set_image_actions([
+            {
+                "label": "相框背後的紙張",
+                "area": (60, 60, 280, 360),
+                "command": self.inspect_corridor_photo,
+            },
+        ])
+        self._schedule_ambush_check()  # 1F – backstab risk
+
+    def inspect_corridor_photo(self) -> None:
+        already_found = "艾蜜莉亞走廊字條" in self.lore
+        if not already_found:
+            self._advance_time(5)
+            self.lore.add("艾蜜莉亞走廊字條")
+            self._gain_trust("corridor_photo", 1)
+            self._refresh_status()
+        self._show_image("corridor_1f")
+        text = ST.INSPECT_CORRIDOR_PHOTO if not already_found else (
+            "（你已記下相框背後艾蜜莉亞的字條。）"
+        )
+        self._set_story(text)
+        self._set_options([
+            ("繼續調查走廊", self.scene_corridor_1f),
+            ("返回一樓地圖", self.scene_map_floor1),
+        ])
+
+    # ── 2F corridor ───────────────────────────────────────────────────────────
+    def scene_corridor_2f(self) -> None:
+        self._advance_time(8)
+        self._refresh_status()
+        self._show_image("corridor_2f")
+        self._set_story(ST.SCENE_CORRIDOR_2F)
+        self._set_options([
+            ("離開走廊，返回二樓地圖", self.scene_map_floor2),
+        ])
+        self._set_image_actions([
+            {
+                "label": "被撕過的公告欄",
+                "area": (100, 80, 380, 340),
+                "command": self.inspect_corridor_noticeboard,
+            },
+        ])
+        self._schedule_ambush_check()  # 2F – backstab risk
+
+    def inspect_corridor_noticeboard(self) -> None:
+        already_found = "公告欄天王星紀錄" in self.lore
+        if not already_found:
+            self._advance_time(5)
+            self.lore.add("公告欄天王星紀錄")
+            self._gain_trust("corridor_noticeboard", 1)
+            self._refresh_status()
+        self._show_image("corridor_2f")
+        text = ST.INSPECT_CORRIDOR_NOTICEBOARD if not already_found else (
+            "（你已記下公告欄上天王星返校的目擊紀錄。）"
+        )
+        self._set_story(text)
+        self._set_options([
+            ("繼續調查走廊", self.scene_corridor_2f),
+            ("返回二樓地圖", self.scene_map_floor2),
+        ])
+
+    # ── 3F corridor ───────────────────────────────────────────────────────────
+    def scene_corridor_3f(self) -> None:
+        self._advance_time(8)
+        self._refresh_status()
+        self._show_image("corridor_3f")
+        self._set_story(ST.SCENE_CORRIDOR_3F)
+        self._set_options([
+            ("離開走廊，返回三樓地圖", self.scene_map_floor3),
+        ])
+        self._set_image_actions([
+            {
+                "label": "機密存查資料夾",
+                "area": (80, 100, 360, 380),
+                "command": self.inspect_corridor_3f_file,
+            },
+        ])
+        # 3F is the safe zone — no ambush check
+
+    def inspect_corridor_3f_file(self) -> None:
+        already_found = "校方封鎖備忘錄" in self.lore
+        if not already_found:
+            self._advance_time(5)
+            self.lore.add("校方封鎖備忘錄")
+            self._gain_trust("corridor_3f_file", 2)
+            self._refresh_status()
+        self._show_image("corridor_3f")
+        text = ST.INSPECT_CORRIDOR_3F_FILE if not already_found else (
+            "（你已記下校方封鎖案件的備忘錄內容。）"
+        )
+        self._set_story(text)
+        self._set_options([
+            ("繼續調查走廊", self.scene_corridor_3f),
+            ("返回三樓地圖", self.scene_map_floor3),
+        ])
+
+    # ── Room A ────────────────────────────────────────────────────────────────
+    def scene_room_a(self) -> None:
+        self._advance_time(8)
+        self._refresh_status()
+        self._show_image("room_a")
+        self._set_story(ST.SCENE_ROOM_A)
+        self._set_options([
+            ("離開房間，返回一樓地圖", self.scene_map_floor1),
+        ])
+        self._set_image_actions([
+            {
+                "label": "書桌抽屜",
+                "area": (80, 200, 360, 420),
+                "command": self.inspect_room_a_drawer,
+            },
+        ])
+        self._schedule_ambush_check()  # 1F – backstab risk
+
+    def inspect_room_a_drawer(self) -> None:
+        already_found = "米糕的遺信" in self.lore
+        if not already_found:
+            self._advance_time(5)
+            self.lore.add("米糕的遺信")
+            self._gain_trust("room_a_drawer", 1)
+            self._refresh_status()
+        self._show_image("room_a")
+        text = ST.INSPECT_ROOM_A_DRAWER if not already_found else (
+            "（你已記下米糕留下的遺信，\n指引前往地下室倉庫的第三個木箱。）"
+        )
+        self._set_story(text)
+        self._set_options([
+            ("繼續調查房間", self.scene_room_a),
+            ("返回一樓地圖", self.scene_map_floor1),
+        ])
+
+    # ── Room B ────────────────────────────────────────────────────────────────
+    def scene_room_b(self) -> None:
+        self._advance_time(8)
+        self._refresh_status()
+        self._show_image("room_b")
+        self._set_story(ST.SCENE_ROOM_B)
+        self._set_options([
+            ("離開房間，返回一樓地圖", self.scene_map_floor1),
+        ])
+        self._set_image_actions([
+            {
+                "label": "窗台上的手套",
+                "area": (120, 60, 380, 260),
+                "command": self.inspect_room_b_gloves,
+            },
+        ])
+        self._schedule_ambush_check()  # 1F – backstab risk
+
+    def inspect_room_b_gloves(self) -> None:
+        already_found = "天王星手套" in self.lore
+        if not already_found:
+            self._advance_time(5)
+            self.lore.add("天王星手套")
+            self._gain_trust("room_b_gloves", 1)
+            self._refresh_status()
+        self._show_image("room_b")
+        text = ST.INSPECT_ROOM_B_GLOVES if not already_found else (
+            "（你已記下手套上「T.S.」的縫線與鏽跡，\n與鎚子相符。）"
+        )
+        self._set_story(text)
+        self._set_options([
+            ("繼續調查房間", self.scene_room_b),
+            ("返回一樓地圖", self.scene_map_floor1),
+        ])
+
+    # ── Meeting room ──────────────────────────────────────────────────────────
+    def scene_meeting_room(self) -> None:
+        self._advance_time(8)
+        self._refresh_status()
+        self._show_image("meeting_room")
+        self._set_story(ST.SCENE_MEETING_ROOM)
+        self._set_options([
+            ("離開會議室，返回地圖", self.scene_map_floor1),
+        ])
+        self._set_image_actions([
+            {
+                "label": "桌上公文",
+                "area": (60, 160, 400, 420),
+                "command": self.inspect_meeting_docs,
+            },
+        ])
+        self._schedule_ambush_check()  # ambush risk wherever killer may roam
 
 
 # ══════════════════════════════════════════════════════════════════════════════
