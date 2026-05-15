@@ -297,38 +297,28 @@ def _normalize_floor_regions(
     if not (centers[0] < centers[1] < centers[2]):
         return ordered
 
-    mid12 = (centers[0] + centers[1]) // 2
-    mid23 = (centers[1] + centers[2]) // 2
-    # Reflect left/right bounds from adjacent midpoints so edge floors keep
-    # similar horizontal coverage to the center floor instead of tight bboxes.
-    left = max(0, min(ordered[0][0], 2 * centers[0] - mid12))
-    right = min(w - 1, max(ordered[2][2], 2 * centers[2] - mid23))
     top = max(0, min(r[1] for r in ordered))
     bottom = min(h - 1, max(r[3] for r in ordered))
-    # Keep original detected regions when normalization cannot form valid bounds.
-    if right <= left or bottom <= top:
+    if bottom <= top:
         return ordered
 
-    gutter = max(_TOP_MAP_MIN_COLUMN_GUTTER_PX, int(w * _TOP_MAP_COLUMN_GUTTER_RATIO))
-    # Keep at least one pixel width per region and avoid boundary overlaps.
-    min_b1 = left + _TOP_MAP_MIN_REGION_PX
-    max_b1 = right - _TOP_MAP_BOUNDARY_RESERVE_PX
-    preferred_b1 = mid12 - gutter
-    b1 = max(min_b1, min(max_b1, preferred_b1))
-
-    min_b2 = b1 + _TOP_MAP_MIN_REGION_PX
-    max_b2 = right - _TOP_MAP_MIN_REGION_PX
-    preferred_b2 = mid23 - gutter
-    b2 = max(min_b2, min(max_b2, preferred_b2))
-    # Guard against extreme geometry where clamping still collapses last column.
-    if b2 >= right:
+    # Keep all floors on a shared frame width, but center that frame on each
+    # detected floor so edge floors do not drift sideways after stretching.
+    half_width = max(
+        max(cx - x1, x2 - cx)
+        for (x1, _y1, x2, _y2), cx in zip(ordered, centers)
+    )
+    if half_width < _TOP_MAP_MIN_REGION_PX:
         return ordered
 
-    return [
-        (left, top, b1, bottom),
-        (b1 + 1, top, b2, bottom),
-        (b2 + 1, top, right, bottom),
-    ]
+    normalized: list[tuple[int, int, int, int]] = []
+    for cx in centers:
+        left = max(0, cx - half_width)
+        right = min(w - 1, cx + half_width)
+        if right <= left:
+            return ordered
+        normalized.append((left, top, right, bottom))
+    return normalized
 
 
 def _top_map_floor_image(floor: int, iw: int, ih: int) -> Optional[MapImage]:
