@@ -53,7 +53,7 @@ class CharacterAnimator:
     def load_image(self, pil_image: object) -> None:
         if not _PIL:
             return
-        if not hasattr(pil_image, "copy") or not hasattr(pil_image, "convert"):
+        if not isinstance(pil_image, Image.Image):
             self._base_image = None
             return
         try:
