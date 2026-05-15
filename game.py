@@ -530,6 +530,9 @@ class HonghuaGame:
         self._image_actions: list[dict[str, object]] = []
         self._hover_action: Optional[int] = None
         self._honghua_click_count: int = 0
+        self._candle_click_count: int = 0
+        self._hall_visit_count: int = 0
+        self._window_look_job: Optional[str] = None
         self._map_floor: int = 3
         self._ambush_job: Optional[str] = None
         # ── time & killer state ─────────────────────────────────────────────
@@ -634,6 +637,10 @@ class HonghuaGame:
         if self._ambush_job:
             self.root.after_cancel(self._ambush_job)
             self._ambush_job = None
+        # Cancel any scheduled window-look animation.
+        if self._window_look_job:
+            self.root.after_cancel(self._window_look_job)
+            self._window_look_job = None
         self._current_scene = key
         self.animator.stop()
         self.img_canvas.delete("all")
@@ -822,6 +829,9 @@ class HonghuaGame:
         if self._killer_patrol_job:
             self.root.after_cancel(self._killer_patrol_job)
             self._killer_patrol_job = None
+        if self._window_look_job:
+            self.root.after_cancel(self._window_look_job)
+            self._window_look_job = None
         self.inventory.clear()
         self.clues.clear()
         self.lore.clear()
@@ -829,6 +839,8 @@ class HonghuaGame:
         self._trust_events.clear()
         self.code_tries_left = self.MAX_CODE_TRIES
         self._honghua_click_count = 0
+        self._candle_click_count = 0
+        self._hall_visit_count = 0
         self._map_floor = 3
         self._game_elapsed = 0
         self._killer_emerged = False
@@ -935,7 +947,48 @@ class HonghuaGame:
         self.animator.set_state(anim_state)
         self.animator.clear_focus()
 
-    # ── time & killer mechanics ────────────────────────────────────────────────
+    def _scene1_window_asset(self) -> str:
+        """Return the image path for Honghua looking out the window (day/dusk only)."""
+        tod = self._scene1_time_of_day()
+        return _first_existing_path([
+            os.path.join(SCENE1_ASSETS, f"honghua_window_{tod}.png"),
+            os.path.join(SCENE1_ASSETS, f"honghua_window_{tod}.jpg"),
+            os.path.join(SCENE1_ASSETS, f"honghua_window_{tod}.jpeg"),
+            os.path.join(SCENE1_ASSETS, "honghua_window_day.png"),
+            os.path.join(SCENE1_ASSETS, "honghua_window_day.jpg"),
+            os.path.join(SCENE1_ASSETS, "honghua_window_day.jpeg"),
+        ])
+
+    def _apply_scene1_window_pose(self) -> None:
+        """Switch the animator to the window-looking image (return visits, day/dusk)."""
+        if self._current_scene != "hall" or not _PIL:
+            return
+        src_path = self._scene1_window_asset()
+        if not src_path:
+            return
+        base = _get_char_pil(src_path)
+        if base is None:
+            return
+        self.animator.load_image(base)
+        self.animator.set_state("idle")
+        self.animator.clear_focus()
+
+    def _on_candle_click(self) -> None:
+        """Cycle through the protagonist's inner thoughts when clicking the candle.
+
+        The lines differ between night and day/dusk to reflect the different
+        atmosphere.  Each set loops after 3 clicks.
+        """
+        tod = self._scene1_time_of_day()
+        if tod == "night":
+            lines = CT.CANDLE_OS_LINES_NIGHT
+        else:
+            lines = CT.CANDLE_OS_LINES_DAY
+        line = lines[self._candle_click_count % len(lines)]
+        self._candle_click_count += 1
+        self._append_os(line)
+
+
 
     def _format_time(self) -> str:
         """Return current in-game time as HH:MM (24-hour)."""
@@ -1107,7 +1160,16 @@ class HonghuaGame:
     # ── main hall (hub) ───────────────────────────────────────────────────────
     def scene_hall(self) -> None:
         self._refresh_status()
+        self._hall_visit_count += 1
+        is_return_visit = self._hall_visit_count > 1
         self._show_image("hall")
+
+        # On return visits during day/dusk, occasionally show Honghua glancing
+        # out the window before settling into her reading pose.  Night has no
+        # window-looking (dark outside, no reason to look).
+        if is_return_visit and self._scene1_time_of_day() != "night" and random.random() < 0.5:
+            self._window_look_job = self.root.after(2500, self._apply_scene1_window_pose)
+
         has_key = "地下室鑰匙" in self.inventory
         basement_hint = "\n（口袋中有一把通往地下密室的鑰匙……）" if has_key else ""
 
@@ -1137,6 +1199,8 @@ class HonghuaGame:
         # in an image editor and read pixel coordinates from its status bar.
         # More-specific (smaller) areas are listed BEFORE the larger Honghua
         # area so they take priority when both overlap at the same pixel.
+        # NOTE: The candle area (right side) should be recalibrated once the
+        # actual scene1 image assets are placed in assets/scene1/.
         hall_actions: list[dict[str, object]] = [
             # ── existing investigation items ─────────────────────────────────
             {"label": "鎚子",  "area": (24, 316, 126, 470), "command": self.inspect_hammer},
@@ -1161,6 +1225,15 @@ class HonghuaGame:
                 "area": (14, 158, 160, 258),
                 "command": self._on_book_clue_click,
                 "hint": "點擊：封面泛黃的年報",
+            },
+            # ── right-side candle ─────────────────────────────────────────────
+            # Coordinates assume the candle occupies the upper-right corner of
+            # the scene image.  Adjust after placing actual scene1 assets.
+            {
+                "label": "蠟燭",
+                "area": (360, 20, 450, 130),
+                "command": self._on_candle_click,
+                "hint": "點擊：蠟燭",
             },
             # ── Honghua (centre of image; listed last so books take priority
             #    where areas overlap) ──────────────────────────────────────────
