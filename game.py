@@ -47,9 +47,11 @@ HONGHUA_IN_ENG_JPG = os.path.join(_DIR, "HonghuaInENG.jpg")
 ASSETS    = os.path.join(_DIR, "assets")
 SCENES    = os.path.join(ASSETS, "scenes")
 CHARACTER_EMOTIONS = os.path.join(ASSETS, "character_emotions")
+SCENE1_ASSETS = os.path.join(ASSETS, "scene1")
 BGM_MAIN  = os.path.join(ASSETS, "bgm_main.mp3")
 BGM_END   = os.path.join(ASSETS, "bgm_end.mp3")
 DEFAULT_SCENE_PNG = os.path.join(SCENES, "default.png")
+SCENE1_TIME_OF_DAY_OVERRIDE = os.getenv("SCENE1_TIME_OF_DAY", "").strip().lower()
 TRUST_EMOTION_ASSETS: dict[str, str] = {
     "impatient": os.path.join(CHARACTER_EMOTIONS, "honghua_readbook_impatient.png"),
     "peaceful": os.path.join(CHARACTER_EMOTIONS, "honghua_readbook_peaceful.png"),
@@ -77,6 +79,7 @@ _CHAR_ANIM_SCENES: dict[str, str] = {
 _CHAR_ANIM_TRUST_SCENES: frozenset[str] = frozenset({
     "prologue", "hall", "bookshelves", "desk", "diary", "window", "confront",
 })
+_SCENE1_CHAR_SCENES: frozenset[str] = frozenset({"prologue", "hall"})
 
 _char_pil_cache: dict[str, object] = {}
 
@@ -94,6 +97,13 @@ def _get_char_pil(path: str) -> Optional[object]:
         except Exception:
             return None
     return _char_pil_cache.get(path)
+
+
+def _first_existing_path(paths: list[str]) -> str:
+    for path in paths:
+        if path and os.path.exists(path):
+            return path
+    return ""
 
 SCENE_SOURCE_OVERRIDES: dict[str, str] = {
     "intro": HONGHUA_IN_ENG_JPG,
@@ -633,7 +643,9 @@ class HonghuaGame:
         # Use the character animator for scenes that show a character image.
         anim_state = _CHAR_ANIM_SCENES.get(key)
         src_path   = SCENE_SOURCE_OVERRIDES.get(key)
-        if key in _CHAR_ANIM_TRUST_SCENES:
+        if key in _SCENE1_CHAR_SCENES:
+            src_path = self._scene1_readbook_asset() or src_path
+        elif key in _CHAR_ANIM_TRUST_SCENES:
             trust_state = self._trust_anim_state()
             anim_state = trust_state
             trust_path = TRUST_EMOTION_ASSETS.get(trust_state, "")
@@ -647,8 +659,8 @@ class HonghuaGame:
                 self.animator.clear_focus()
                 self.animator.set_lip_sync_intensity(0.0)
                 self.animator.start()
-                # Always continue to draw scene art in the game window; the
-                # real Live2D model is shown in the dedicated Live2D window.
+                # Continue to draw scene art in the game window; the animator
+                # overlays subtle motion on top of the static character image.
 
         # Fall back to the static scene image.
         img = scene_image(key)
@@ -735,6 +747,8 @@ class HonghuaGame:
         self.story_text.delete("1.0", "end")
         self.story_text.configure(state="disabled")
         if typing:
+            if self._current_scene in _SCENE1_CHAR_SCENES:
+                self._apply_scene1_dialogue_pose()
             if self._current_scene in _CHAR_ANIM_SCENES:
                 self.animator.set_lip_sync_intensity(self.LIP_SYNC_INTENSITY_TYPING_START)
             self._type_text(text, 0)
@@ -861,6 +875,65 @@ class HonghuaGame:
         if self.trust >= self.TRUST_THRESHOLD_OBSERVE:
             return "peaceful"
         return "impatient"
+
+    def _scene1_time_of_day(self) -> str:
+        if SCENE1_TIME_OF_DAY_OVERRIDE in {"day", "dusk", "night"}:
+            return SCENE1_TIME_OF_DAY_OVERRIDE
+        total = (self.GAME_START_HOUR * 60 + self._game_elapsed) % (24 * 60)
+        hour = total // 60
+        if 6 <= hour < 17:
+            return "day"
+        if 17 <= hour < 19:
+            return "dusk"
+        return "night"
+
+    def _scene1_readbook_asset(self) -> str:
+        tod = self._scene1_time_of_day()
+        return _first_existing_path([
+            os.path.join(SCENE1_ASSETS, f"honghua_readbook_{tod}.png"),
+            os.path.join(SCENE1_ASSETS, f"honghua_readbook_{tod}.jpg"),
+            os.path.join(SCENE1_ASSETS, f"honghua_readbook_{tod}.jpeg"),
+            os.path.join(SCENE1_ASSETS, "honghua_readbook_day.png"),
+            os.path.join(SCENE1_ASSETS, "honghua_readbook_day.jpg"),
+            os.path.join(SCENE1_ASSETS, "honghua_readbook_day.jpeg"),
+            HONGHUA_READ_BOOK_JPG,
+        ])
+
+    def _scene1_look_asset(self, trust_state: Optional[str] = None) -> str:
+        tod = self._scene1_time_of_day()
+        paths: list[str] = []
+        if trust_state:
+            paths.extend([
+                os.path.join(SCENE1_ASSETS, f"honghua_look_{tod}_{trust_state}.png"),
+                os.path.join(SCENE1_ASSETS, f"honghua_look_{tod}_{trust_state}.jpg"),
+                os.path.join(SCENE1_ASSETS, f"honghua_look_{tod}_{trust_state}.jpeg"),
+            ])
+        paths.extend([
+            os.path.join(SCENE1_ASSETS, f"honghua_look_{tod}.png"),
+            os.path.join(SCENE1_ASSETS, f"honghua_look_{tod}.jpg"),
+            os.path.join(SCENE1_ASSETS, f"honghua_look_{tod}.jpeg"),
+            os.path.join(SCENE1_ASSETS, "honghua_look_day.png"),
+            os.path.join(SCENE1_ASSETS, "honghua_look_day.jpg"),
+            os.path.join(SCENE1_ASSETS, "honghua_look_day.jpeg"),
+        ])
+        return _first_existing_path(paths)
+
+    def _apply_scene1_dialogue_pose(self) -> None:
+        if not _PIL:
+            return
+        trust_state = self._trust_anim_state() if self._current_scene == "hall" else None
+        anim_state = trust_state or _CHAR_ANIM_SCENES.get(self._current_scene, "idle")
+        src_path = self._scene1_look_asset(trust_state)
+        if not src_path and trust_state:
+            src_path = TRUST_EMOTION_ASSETS.get(trust_state, "")
+        if not src_path:
+            return
+        base = _get_char_pil(src_path)
+        if base is None:
+            return
+        self.animator.load_image(base)
+        self.animator.set_state(anim_state)
+        self.animator.clear_focus()
 
     # ── time & killer mechanics ────────────────────────────────────────────────
 

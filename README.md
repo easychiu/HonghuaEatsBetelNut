@@ -7,7 +7,7 @@
 - 哥德式管弦樂 BGM（已隨專案附帶）
 - 豐富的多分支劇情與人物線索系統
 - 新增「紅花信任度」好感度系統
-- 改為「真正 Live2D」渲染流程（Web Cubism runtime + pywebview）
+- 純圖片角色演出（內建微動態與嘴型同步效果）
 - 兩種謎題類型與 8 種結局
 - 新增圖書館三層「上帝視角」2D 像素風地圖與樓層切換
 
@@ -54,14 +54,6 @@ python game.py                     # 啟動遊戲
   - `assets/character_emotions/honghua_readbook_{impatient|peaceful|friendly|trusted}.png`
   - `assets/bgm_main.mp3`
   - `assets/bgm_end.mp3`
-- 真正 Live2D 角色模型需自行放到：
-  - `assets/live2d/honghua/model3.json`
-  - 以及該模型依賴的 `.moc3` / `textures` / `motions` / `expressions` 檔案
-- 另需放置 Live2D Web 前端套件到：
-  - `assets/live2d/vendor/pixi.min.js`
-  - `assets/live2d/vendor/cubism4.min.js`
-- 安裝 `requirements.txt` 後，遊戲會自動啟動 Live2D 視窗（pywebview）
-- 若缺少 `assets/live2d/honghua/model3.json`，遊戲仍可執行，但不會開啟 Live2D 視窗
 - 一般使用者只需要執行 `python game.py`，**不需要**自行生成任何圖像或音樂。
 
 ## 維護者選用：重新生成素材
@@ -128,8 +120,13 @@ python generate_assets.py --bgm-only
 
 - 遊戲會優先讀取 `assets/scenes/*.png`
 - 若場景圖不存在，會先回退到 `assets/scenes/default.png`；若連預設圖都不存在，再使用程式內建的即時生成版本
-- 若有 `assets/character_emotions/honghua_readbook_{impatient|peaceful|friendly|trusted}.png`，`prologue` / `hall` / `bookshelves` / `desk` / `diary` / `window` 會依信任度優先使用對應情緒圖
-- 若缺少上述情緒圖，會回退至 `HonghuaReadBook.jpg`（紅花在圖書館看書）
+- 場景一（`prologue` / `hall`）支援日夜素材切換，資源可放在 `assets/scene1/`：
+  - 進場看書圖：`honghua_readbook_{day|dusk|night}.{png|jpg|jpeg}`
+  - 對話看向你（一般）：`honghua_look_{day|dusk|night}.{png|jpg|jpeg}`
+  - 對話看向你（依信任度）：`honghua_look_{day|dusk|night}_{impatient|peaceful|friendly|trusted}.{png|jpg|jpeg}`
+  - 也可用環境變數 `SCENE1_TIME_OF_DAY=day|dusk|night` 強制指定時段
+- `hall` 對話期間若缺少上述信任度圖，會回退到 `assets/character_emotions/honghua_readbook_{impatient|peaceful|friendly|trusted}.png`
+- 若缺少上述素材，會回退至 `HonghuaReadBook.jpg`（紅花在圖書館看書）
 - 若有 `HonghuaInENG.jpg`，`intro` / `confront` / `basement` / `basement_deep` 會優先使用該圖（紅花人物形象）
 - 專案已先行附帶開場、大廳、對峙、地下室、各調查節點與結局場景圖（包含 `assets/scenes/default.png`）
 - 維護者重新生成場景圖時，會一併輸出 `assets/scenes/default.png` 作為紅花主視覺預設場景
@@ -146,7 +143,7 @@ python generate_assets.py --bgm-only
 ### 操作方式
 
 - 物證與場景內互動改為點擊左側場景圖上的互動區域
-- 紅花 Live2D 視窗支援滑鼠跟隨與打字口型（由遊戲狀態即時驅動）
+- 紅花角色圖支援滑鼠跟隨與打字口型（由遊戲狀態即時驅動）
 - 離開目前畫面或切換到其他場景時，仍使用右下方按鈕
 
 ### 紅花信任度
