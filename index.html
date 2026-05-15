@@ -1,0 +1,469 @@
+<!DOCTYPE html>
+<html lang="zh-Hant">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>紅花吃檳榔：單檔 HTML MVP</title>
+  <style>
+    :root {
+      --bg: #0e0a12;
+      --panel: #171121;
+      --panel-2: #221a2f;
+      --text: #d9d0c6;
+      --muted: #9b8ead;
+      --line: #3e3054;
+      --accent: #9f84d6;
+      --ok: #90c191;
+      --danger: #d77777;
+    }
+    * { box-sizing: border-box; }
+    body {
+      margin: 0;
+      color: var(--text);
+      background: radial-gradient(1200px 600px at 10% -20%, #2a1f3b, transparent), var(--bg);
+      font-family: "Noto Serif TC", "PingFang TC", "Microsoft JhengHei", serif;
+      min-height: 100vh;
+    }
+    .app {
+      max-width: 1200px;
+      margin: 0 auto;
+      padding: 18px;
+      display: grid;
+      grid-template-columns: 300px 1fr;
+      gap: 14px;
+    }
+    .card {
+      border: 1px solid var(--line);
+      background: linear-gradient(180deg, var(--panel), #120d19);
+      border-radius: 10px;
+      box-shadow: 0 8px 30px rgba(0, 0, 0, 0.35);
+    }
+    .sidebar { padding: 14px; position: sticky; top: 12px; height: fit-content; }
+    .title { margin: 0 0 10px; letter-spacing: 1px; font-size: 16px; color: #c9b8ea; }
+    .kv { display: flex; justify-content: space-between; font-size: 13px; margin: 4px 0; color: var(--muted); }
+    .bar { height: 8px; border-radius: 8px; overflow: hidden; background: #281f37; margin-bottom: 7px; }
+    .fill { height: 100%; background: linear-gradient(90deg, #7d62b8, #bfa7ef); }
+    .chips { display: flex; flex-wrap: wrap; gap: 6px; margin-top: 6px; }
+    .chip { border: 1px solid var(--line); padding: 3px 8px; border-radius: 999px; font-size: 12px; color: #ccbfe3; }
+    .main { padding: 14px; }
+    .scene {
+      border: 1px solid var(--line);
+      border-radius: 10px;
+      min-height: 220px;
+      padding: 14px;
+      background: linear-gradient(140deg, rgba(164, 128, 218, 0.18), rgba(23, 17, 33, 0.25));
+      white-space: pre-wrap;
+      line-height: 1.7;
+      font-size: 15px;
+    }
+    .scene-name { margin: 14px 0 8px; color: #b59cde; letter-spacing: 2px; font-size: 13px; }
+    .btns { display: grid; gap: 8px; margin-top: 12px; }
+    button {
+      width: 100%;
+      text-align: left;
+      border: 1px solid var(--line);
+      border-radius: 8px;
+      background: linear-gradient(180deg, var(--panel-2), #1c1528);
+      color: var(--text);
+      padding: 10px 12px;
+      cursor: pointer;
+      font-size: 14px;
+    }
+    button:hover { border-color: #7b5eb2; }
+    button:disabled { cursor: not-allowed; color: #756982; border-color: #30253f; }
+    .row { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; }
+    .status { margin-top: 10px; font-size: 13px; color: var(--muted); }
+    .log {
+      border-top: 1px dashed var(--line);
+      margin-top: 12px;
+      padding-top: 8px;
+      max-height: 160px;
+      overflow: auto;
+      font-size: 12px;
+      color: #a999c8;
+    }
+    .ending { color: var(--ok); }
+    .danger { color: var(--danger); }
+    @media (max-width: 920px) {
+      .app { grid-template-columns: 1fr; }
+      .sidebar { position: static; }
+    }
+  </style>
+</head>
+<body>
+  <div class="app">
+    <aside class="card sidebar">
+      <h1 class="title">紅花吃檳榔｜單檔 HTML MVP</h1>
+      <div class="kv"><span>時間</span><b id="clock"></b></div>
+      <div class="kv"><span>危險狀態</span><b id="dangerState"></b></div>
+      <div class="kv"><span>信任度</span><b id="trustText"></b></div>
+      <div class="bar"><div id="trustBar" class="fill"></div></div>
+      <div class="kv"><span>物證進度</span><b id="evidenceText"></b></div>
+      <div class="chips" id="evidenceChips"></div>
+      <div class="kv"><span>人物線索</span><b id="clueText"></b></div>
+      <div class="chips" id="clueChips"></div>
+      <div class="row" style="margin-top:10px;">
+        <button id="saveBtn">💾 儲存進度</button>
+        <button id="loadBtn">📂 載入進度</button>
+      </div>
+      <button id="resetBtn" style="margin-top:8px;">♻ 重新開始</button>
+      <div class="log" id="log"></div>
+    </aside>
+
+    <main class="card main">
+      <div class="scene-name" id="sceneName"></div>
+      <div class="scene" id="sceneText"></div>
+      <div class="status" id="statusLine"></div>
+      <div class="btns" id="options"></div>
+    </main>
+  </div>
+
+  <script>
+    const SAVE_KEY = "honghua-single-html-mvp-save";
+    const SAVE_VERSION = 1;
+    const GAME_START_HOUR = 23;
+    const KILLER_EMERGE_ELAPSED = 180; // 02:00
+
+    const STORY = {
+      intro:
+`17世紀英格蘭，蔚藍學院已荒廢兩年。
+你是英國皇家警察，也是這所學院的舊校友。
+
+廢棄圖書館深處，銀髮少女紅花正等著你。
+「你能找到答案嗎？」`,
+      prologue:
+`你踏入三樓管理室外展示區，牆上是三層上帝視角地圖。
+紅花望向你，語氣平靜：
+「三樓以外，背後隨時可能有人。」`,
+      map3:
+`【3F 地圖】
+你可先調查本層，再切換到 1F/2F 搜證。
+（MVP 版本：先用按鈕導覽，熱區點擊後續補上）`,
+      map2:
+`【2F 地圖】
+研究桌與窗邊有重要人物線索。`,
+      map1:
+`【1F 地圖】
+書架深處有關鍵謎題與地下密室入口。`,
+      hall:
+`你站在館長室外展示區，空氣中瀰漫灰塵與潮濕紙張味。
+鎚子、四葉草、牛仔褲三件物證線索都指向同一夜。`,
+      bookshelves:
+`書架深處有四份案卷。
+你依序整理「失蹤案卷→退學檔案→死亡報告→停課公告」後，暗格開啟。`,
+      desk:
+`你翻開紅花筆記。
+她曾聽見案發當晚爭吵與倒地聲，但一直等不到能查清真相的人。`,
+      window:
+`窗台字條提到艾蜜莉亞被迫消失，且留下能指向真相的線索。`,
+      basement:
+`你抵達地下區域，左側倉庫有供詞，右側儲藏室門鎖從內扣住。`,
+      basementDeep:
+`你找到天王星親筆供詞：衝突中失手，艾莉卡目睹全程，艾蜜莉亞因此消失。`,
+      confront:
+`你回到紅花面前。
+她看著你手中的證據，靜靜等你給出結論。`
+    };
+
+    const CHARACTER = {
+      trustRemarks: {
+        low: "紅花的目光像刀，冷冷地釘在你身上。",
+        mid: "她沒有移開視線，似乎願意再聽你多說一點。",
+        high: "「慢慢來。」她把燭台往前推了些，讓光照進更多角落。"
+      }
+    };
+
+    const initialState = () => ({
+      scene: "intro",
+      elapsed: 0,
+      trust: 0,
+      evidence: { hammer: false, clover: false, jeans: false },
+      clues: { honghua: false, amelia: false, starscream: false },
+      flags: { basementOpen: false, trueSong: false },
+      log: ["── 進入蔚藍學院 ──"]
+    });
+
+    let S = initialState();
+
+    function deepClone(obj) { return JSON.parse(JSON.stringify(obj)); }
+
+    function nowClock() {
+      const total = GAME_START_HOUR * 60 + S.elapsed;
+      const h = Math.floor((total % (24 * 60)) / 60);
+      const m = total % 60;
+      return `${String(h).padStart(2, "0")}:${String(m).padStart(2, "0")}`;
+    }
+
+    function dangerOn() { return S.elapsed >= KILLER_EMERGE_ELAPSED; }
+
+    function trustTier() {
+      if (S.trust >= 60) return "high";
+      if (S.trust >= 25) return "mid";
+      return "low";
+    }
+
+    function evidenceCount() {
+      return Object.values(S.evidence).filter(Boolean).length;
+    }
+
+    function clueCount() {
+      return Object.values(S.clues).filter(Boolean).length;
+    }
+
+    function pushLog(text) {
+      S.log.push(text);
+      if (S.log.length > 60) S.log = S.log.slice(-60);
+    }
+
+    function advance(minutes, reason) {
+      S.elapsed += minutes;
+      if (reason) pushLog(`⏱ +${minutes} 分鐘：${reason}`);
+    }
+
+    function addTrust(v, reason) {
+      const next = Math.max(0, Math.min(100, S.trust + v));
+      const diff = next - S.trust;
+      S.trust = next;
+      if (diff !== 0 && reason) pushLog(`💫 信任度 ${diff > 0 ? "+" : ""}${diff}：${reason}`);
+    }
+
+    function goto(scene) {
+      S.scene = scene;
+      render();
+    }
+
+    function sceneText(key) {
+      if (key === "hall") {
+        return STORY.hall + "\n\n" + CHARACTER.trustRemarks[trustTier()];
+      }
+      return STORY[key] || "（場景資料不存在）";
+    }
+
+    function makeOptions() {
+      const opts = [];
+      switch (S.scene) {
+        case "intro":
+          opts.push(["開始調查", () => { advance(10, "抵達圖書館"); goto("prologue"); }]);
+          break;
+        case "prologue":
+          opts.push(["進入 3F 地圖", () => { advance(5, "檢視地圖"); goto("map3"); }]);
+          break;
+        case "map3":
+          opts.push(["調查館長室外展示區", () => { advance(10, "巡查 3F 展示區"); goto("hall"); }]);
+          opts.push(["前往 2F", () => { advance(10, "下樓到 2F"); goto("map2"); }]);
+          opts.push(["前往 1F", () => { advance(15, "下樓到 1F"); goto("map1"); }]);
+          opts.push(["直接面對紅花（結算）", () => endingCheck()]);
+          break;
+        case "map2":
+          opts.push(["研究桌", () => { advance(12, "閱讀案情筆記"); goto("desk"); }]);
+          opts.push(["窗邊", () => { advance(12, "查看窗台字條"); goto("window"); }]);
+          opts.push(["返回 3F", () => { advance(10, "回到 3F"); goto("map3"); }]);
+          opts.push(["前往 1F", () => { advance(10, "前往 1F"); goto("map1"); }]);
+          break;
+        case "map1":
+          opts.push(["書架深處（解謎）", () => { advance(15, "排列案卷"); goto("bookshelves"); }]);
+          opts.push(["返回 3F", () => { advance(15, "返回 3F"); goto("map3"); }]);
+          opts.push(["前往 2F", () => { advance(10, "前往 2F"); goto("map2"); }]);
+          if (S.flags.basementOpen) {
+            opts.push(["進入地下密室", () => { advance(10, "下到地下密室"); goto("basement"); }]);
+          }
+          break;
+        case "hall":
+          opts.push([S.evidence.hammer ? "✓ 已調查鎚子" : "調查鎚子（III）", () => {
+            if (!S.evidence.hammer) {
+              S.evidence.hammer = true;
+              addTrust(8, "你注意到鎚柄刻痕");
+              pushLog("📌 物證：陳舊生鏽鎚子（第一碼 3）");
+            }
+            advance(8, "調查鎚子");
+            render();
+          }]);
+          opts.push([S.evidence.clover ? "✓ 已調查四葉草" : "調查四葉草（壹）", () => {
+            if (!S.evidence.clover) {
+              S.evidence.clover = true;
+              addTrust(8, "你追到艾莉卡線索");
+              pushLog("📌 物證：幸運四葉草（第二碼 1）");
+            }
+            advance(8, "調查四葉草");
+            render();
+          }]);
+          opts.push([S.evidence.jeans ? "✓ 已調查牛仔褲" : "調查牛仔褲（第四排）", () => {
+            if (!S.evidence.jeans) {
+              S.evidence.jeans = true;
+              addTrust(8, "你鎖定天王星線索");
+              pushLog("📌 物證：YV 牛仔褲（第三碼 4）");
+            }
+            advance(8, "調查牛仔褲");
+            render();
+          }]);
+          opts.push(["回到 3F 地圖", () => { advance(6, "返回地圖"); goto("map3"); }]);
+          break;
+        case "desk":
+          if (!S.clues.honghua) {
+            S.clues.honghua = true;
+            addTrust(12, "你認真讀完紅花筆記");
+            pushLog("🧩 人物線索：紅花的案情紀錄");
+          }
+          opts.push(["返回 2F 地圖", () => goto("map2")]);
+          break;
+        case "window":
+          if (!S.clues.amelia) {
+            S.clues.amelia = true;
+            addTrust(12, "你找到艾蜜莉亞字條");
+            pushLog("🧩 人物線索：艾蜜莉亞失蹤原因");
+          }
+          opts.push(["返回 2F 地圖", () => goto("map2")]);
+          break;
+        case "bookshelves":
+          if (!S.flags.basementOpen) {
+            S.flags.basementOpen = true;
+            addTrust(10, "你解開時間線謎題");
+            pushLog("🔑 取得地下密室鑰匙");
+          }
+          opts.push(["返回 1F 地圖", () => goto("map1")]);
+          break;
+        case "basement":
+          opts.push(["進入倉庫（供詞）", () => { advance(12, "查閱供詞"); goto("basementDeep"); }]);
+          opts.push(["離開地下區", () => { advance(8, "返回 1F"); goto("map1"); }]);
+          break;
+        case "basementDeep":
+          if (!S.clues.starscream) {
+            S.clues.starscream = true;
+            S.flags.trueSong = true;
+            addTrust(18, "你掌握天王星供詞與關鍵真相");
+            pushLog("🧩 人物線索：天王星親筆供詞");
+            pushLog("🎼 取得鎮魂歌譜");
+          }
+          opts.push(["返回 3F 面對紅花", () => { advance(20, "回到 3F"); goto("map3"); }]);
+          break;
+        default:
+          opts.push(["重新開始", () => { S = initialState(); render(); }]);
+          break;
+      }
+      return opts;
+    }
+
+    function endingCheck() {
+      const e = evidenceCount();
+      const c = clueCount();
+      const t = S.trust;
+      advance(5, "面對紅花");
+      if (S.flags.trueSong && c === 3 && t >= 70) {
+        S.scene = "ending_secret";
+        pushLog("✅ 達成：秘密結局");
+      } else if (S.flags.trueSong && t >= 45) {
+        S.scene = "ending_true";
+        pushLog("✅ 達成：真結局");
+      } else if (e >= 2 && t >= 60) {
+        S.scene = "ending_trust";
+        pushLog("✅ 達成：信任結局");
+      } else if (e >= 2) {
+        S.scene = "ending_normal";
+        pushLog("✅ 達成：普通結局");
+      } else {
+        S.scene = "ending_bad";
+        pushLog("☠ 達成：壞結局");
+      }
+      render();
+    }
+
+    function endingText() {
+      switch (S.scene) {
+        case "ending_secret":
+          return "【秘密結局】\n你遞出鎮魂歌譜與完整人物線索。紅花第一次真正笑了。";
+        case "ending_true":
+          return "【真結局】\n你證明了案件的關鍵脈絡，紅花終於願意與你並肩作證。";
+        case "ending_trust":
+          return "【信任結局】\n證據未齊，但紅花選擇相信你的判斷。";
+        case "ending_normal":
+          return "【普通結局】\n你帶著部分物證離開，真相仍有缺口。";
+        case "ending_bad":
+          return "【壞結局】\n準備不足就面對紅花，對話在沉默中結束。";
+        default:
+          return "";
+      }
+    }
+
+    function render() {
+      document.getElementById("clock").textContent = nowClock();
+      document.getElementById("dangerState").innerHTML = dangerOn()
+        ? '<span class="danger">危險（2AM 後）</span>'
+        : "一般";
+      document.getElementById("trustText").textContent = `${S.trust}/100`;
+      document.getElementById("trustBar").style.width = `${S.trust}%`;
+      document.getElementById("evidenceText").textContent = `${evidenceCount()}/3`;
+      document.getElementById("clueText").textContent = `${clueCount()}/3`;
+
+      const evidenceNames = [["hammer", "生鏽鎚子"], ["clover", "四葉草"], ["jeans", "YV 牛仔褲"]];
+      const clueNames = [["honghua", "紅花筆記"], ["amelia", "艾蜜莉亞字條"], ["starscream", "天王星供詞"]];
+      document.getElementById("evidenceChips").innerHTML =
+        evidenceNames.filter(([k]) => S.evidence[k]).map(([, n]) => `<span class="chip">${n}</span>`).join("") || '<span class="chip">尚未取得</span>';
+      document.getElementById("clueChips").innerHTML =
+        clueNames.filter(([k]) => S.clues[k]).map(([, n]) => `<span class="chip">${n}</span>`).join("") || '<span class="chip">尚未取得</span>';
+
+      const isEnding = S.scene.startsWith("ending_");
+      document.getElementById("sceneName").textContent = isEnding ? "ENDING" : S.scene.toUpperCase();
+      document.getElementById("sceneText").innerHTML = (isEnding ? `<span class="ending">${endingText()}</span>` : sceneText(S.scene));
+      document.getElementById("statusLine").textContent =
+        `MVP 範圍：核心劇情流程、對話分支、信任度、時間/危險旗標、結局判定（地圖熱區/音效/動畫為後續階段）`;
+
+      const optionsEl = document.getElementById("options");
+      optionsEl.innerHTML = "";
+      const opts = makeOptions();
+      opts.forEach(([label, fn]) => {
+        const b = document.createElement("button");
+        b.textContent = label;
+        b.onclick = fn;
+        optionsEl.appendChild(b);
+      });
+      if (isEnding) {
+        const restart = document.createElement("button");
+        restart.textContent = "重新開始";
+        restart.onclick = () => { S = initialState(); render(); };
+        optionsEl.appendChild(restart);
+      }
+
+      document.getElementById("log").innerHTML = S.log.map(x => `<div>${x}</div>`).join("");
+    }
+
+    function saveGame() {
+      const data = { version: SAVE_VERSION, state: S };
+      localStorage.setItem(SAVE_KEY, JSON.stringify(data));
+      pushLog("💾 已儲存至瀏覽器 localStorage");
+      render();
+    }
+
+    function loadGame() {
+      const raw = localStorage.getItem(SAVE_KEY);
+      if (!raw) {
+        pushLog("⚠ 找不到存檔");
+        render();
+        return;
+      }
+      try {
+        const data = JSON.parse(raw);
+        if (!data || data.version !== SAVE_VERSION || !data.state) {
+          pushLog("⚠ 存檔版本不相容，已忽略");
+          render();
+          return;
+        }
+        S = deepClone(data.state);
+        pushLog("📂 已載入存檔");
+      } catch {
+        pushLog("⚠ 存檔損毀，無法載入");
+      }
+      render();
+    }
+
+    document.getElementById("saveBtn").onclick = saveGame;
+    document.getElementById("loadBtn").onclick = loadGame;
+    document.getElementById("resetBtn").onclick = () => {
+      S = initialState();
+      pushLog("♻ 已重新開始");
+      render();
+    };
+
+    render();
+  </script>
+</body>
+</html>
