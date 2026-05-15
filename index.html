@@ -177,21 +177,26 @@
       guardRoom:      "assets/scenes/guard_room.png",
       workshop:       "assets/scenes/workshop.png",
       abandonedRoom:  "assets/scenes/abandoned_room.png",
+      alliance_followup: "assets/scenes/confront.png",
       ending_secret:  "assets/scenes/secret_end.png",
       ending_true:    "assets/scenes/true_end.png",
       ending_trust:   "assets/scenes/normal_end.png",
       ending_normal:  "assets/scenes/normal_end.png",
       ending_bad:     "assets/scenes/bad_a.png",
+      ending_alliance_capture: "assets/scenes/secret_end.png",
+      ending_alliance_solo_bad: "assets/scenes/bad_a.png",
+      python_hidden_start: "assets/scenes/true_end.png",
+      python_hidden_london: "assets/scenes/true_end.png",
     };
 
 const TEXT_ARCHIVE = {
   "story_texts.py": {
     "INTRO": "===================================\n  紅花吃檳榔：蔚藍學院秘案  深夜調查版\n===================================\n\n17世紀英格蘭。\n\n蔚藍學院——曾是英倫最負盛名的貴族學院，\n如今大門緊閉，雜草叢生，廢棄整整兩年。\n\n兩年前，學院內發生了一場至今未破的謀殺案。\n受害者是校內受人愛戴的米糕店長。\n真兇至今逍遙法外，學院因此被迫關閉。\n\n「紅花綻放之處，是你尋找答案的起點。\n 但你能否離開，則是另一回事。」\n                              ——紅花\n\n廢棄圖書館深處，一盞燭火搖曳於幽暗之中。\n傳說中的紅花，就在那裡守候。",
     "PROLOGUE": "你——英國皇家警察——踏入了蔚藍學院廢棄的圖書館。\n\n這是你的母校。也是你反覆做惡夢的地方。\n\n兩年前的那個傍晚，米糕店長倒在這裡。\n案件懸而未決，學院就此關閉。\n而你，曾是法國海軍，如今兼任英國皇家警察，\n今夜隻身來此，要終結這一切。\n\n你彎低身子穿過積滿灰塵的門廊，沿著旋梯一路上行。\n三樓管理室的門半掩著，燭光映照著牆上的上帝視角地圖。\n然後你看見了她。\n\n銀白色短髮，筆挺的水手服。\n她端坐於正中央的椅子上，\n嘴角含著一抹說不清是什麼顏色的紅。\n\n「英國皇家警察，」她緩緩開口，\n「真是個奇妙的名字——或者說，奇妙的稱號。」\n\n「你來這裡是為了什麼，我已經知道了。」\n她淡淡地說，「問題是……\n 你能找到答案嗎？」\n\n你掃視地圖——圖書館分成三層，每層中央外圍皆是展示書架，\n旁邊還細細標著各層房間：一樓是閱覽室與古籍收藏室，\n二樓是研究室、禁書檔案室與修復工坊，\n三樓則是館長室、私人研究室與通往閣樓的塔樓通道；\n一、二樓的所有通道都被紅筆標注：\n『三樓以外，背後隨時可能有人。』\n\n天亮之前，必須找到真相。",
-    "HALL": "你站在三樓館長室外的展示區。\n灰塵、蛛網與腐舊的書香充滿了每一個角落。\n\n書架底層，一件疊得整整齊齊的牛仔褲靜靜躺著，\n這東西，不應該出現在廢棄的圖書館裡。\n\n密碼盒就立在書架旁，等待正確的三位數。\n\n【鎚子→一樓收藏室 / 四葉草→二樓檔案室 / 牛仔褲→本層】",
+    "HALL": "你站在三樓館長室外的展示區。\n灰塵、蛛網與腐舊的書香充滿了每一個角落。\n\n密碼盒就立在書架旁，等待正確的三位數。\n\n【鎚子→一樓收藏室 / 四葉草→二樓檔案室 / 牛仔褲→三樓廢棄閱覽室】",
     "MAP_FLOOR_1": "【圖書館平面圖｜一樓】\n\n本層可探索：閱覽室A、閱覽室B、收藏室（古籍庫）、會議廳I、管理室走廊、守衛室。\n整層被標紅：『此層任何角落，背後隨時可能有人。』\n\n點擊地圖房間或使用下方按鈕進行探索。\n⚠ 收藏室藏有鎚子（第一碼）／守衛室有守衛記錄本線索。",
     "MAP_FLOOR_2": "【圖書館平面圖｜二樓】\n\n本層可探索：研究室A（研究桌）、研究室B（窗邊）、檔案室（禁書區）、會議廳II、修復工坊、二樓迴廊。\n整層同樣被標紅：『此層任何角落，背後隨時可能有人。』\n\n點擊地圖房間或使用下方按鈕進行探索。\n⚠ 檔案室藏有四葉草（第二碼）／修復工坊有工作卡線索。",
-    "MAP_FLOOR_3": "【圖書館平面圖｜三樓】\n\n本層可探索：館長室外（牛仔褲＋密碼盒）、館長室（面對紅花）、私人研究室、廢棄閱覽室、封閉儲藏室（危險）。\n三樓相對安全，但封閉儲藏室有危機。\n\n⚠ 館長室外藏有牛仔褲（第三碼）。",
+    "MAP_FLOOR_3": "【圖書館平面圖｜三樓】\n\n本層可探索：館長室外（密碼盒）、館長室（面對紅花）、私人研究室、廢棄閱覽室、封閉儲藏室（危險）。\n三樓相對安全，但封閉儲藏室有危機。\n\n⚠ 廢棄閱覽室藏有牛仔褲（第三碼）。",
     "INSPECT_HAMMER": "收藏室書架的深處角落，一把鏽跡斑斑、長約{hammer_length}公分的鎚子橫臥於塵埃之中。\n\n{hammer_length}公分，沉甸甸——這是一件兇器嗎？\n\n鎚柄上有三道深刻的刻痕，像是刻意留下的記號。\n你在案卷中見過這個記號——\n案發現場的地面，留下過同樣的痕跡。\n\n鎚柄底端刻著羅馬數字「III」。\n\n【物證取得】第一碼是 3。\n【推斷】這把鎚子，極可能是米糕店長遇害的兇器。",
     "INSPECT_CLOVER": "一片乾燥的四葉草，夾在檔案室禁書區的書縫之中，\n邊緣已泛黃，但保存得出奇完好。\n\n四葉草的葉片中央，用細筆寫著一個「壹」字。\n\n你記得蔚藍學院有一位出了名幸運的轉學生——\n她叫艾莉卡，「幸運的艾莉卡」。\n這片四葉草是她的標誌性飾品。\n\n她曾在案發前夕造訪學院。\n她說……她只是「順路帶來好運」。\n但案發當晚，她已不知去向。\n\n【物證取得】第二碼是 1。\n【推斷】艾莉卡可能是案發現場的目擊者。",
     "INSPECT_JEANS": "書架底層，一件疊得整整齊齊的牛仔褲。\n\n標籤上印著「YV」兩個字母——\n這是英倫近年流行的品牌，\n據說只有特定社交圈的人才會穿。\n\n褲腿內側縫著手寫的文字：\n「R.U. · 第四排 · 入場許可」\n\nR.U.——你腦海中浮現一個名字：\n天王星（Starscream）。退學生天王星，\n曾因家道中落憤恨離校，愛攀關係，\n卻也因此對某些人懷恨在心。\n\n而「第四排」，正是學院劇場的黑市座位……\n\n【物證取得】第三碼是 4。\n【推斷】天王星曾在案發前後秘密返回學院。",
@@ -305,7 +310,7 @@ const TEXT_ARCHIVE = {
 「三樓以外，背後隨時可能有人。」`,
       map3:
 `【3F 平面圖】
-可探索：館長室外（牛仔褲＋密碼盒）、館長室（面對紅花）、私人研究室、廢棄閱覽室、封閉儲藏室。
+可探索：館長室外（密碼盒）、館長室（面對紅花）、私人研究室、廢棄閱覽室、封閉儲藏室。
 點擊房間區域或下方按鈕移動。`,
       map2:
 `【2F 平面圖】
@@ -317,8 +322,8 @@ const TEXT_ARCHIVE = {
 點擊房間區域或下方按鈕移動。`,
       hall:
 `你在三樓館長室外展示區，空氣中瀰漫灰塵與潮濕紙張味。
-牛仔褲就在書架底層，密碼盒就立在旁邊等待作答。
-（鎚子在一樓收藏室，四葉草在二樓檔案室。）`,
+密碼盒就立在旁邊等待作答。
+（鎚子在一樓收藏室，四葉草在二樓檔案室，牛仔褲改在廢棄閱覽室。）`,
       bookshelves:
 `書架深處有四份案卷。
 你依序整理「失蹤案卷→退學檔案→死亡報告→停課公告」後，暗格開啟。`,
@@ -334,6 +339,16 @@ const TEXT_ARCHIVE = {
       confront:
 `你回到紅花面前。
 她看著你手中的證據，靜靜等你給出結論。`
+      ,
+      alliance_followup:
+`紅花收下你遞出的證據後，終於站到你身旁。
+「你說得對，兇手沒有離開圖書館。」
+她用指尖點了點你剛整理出的線索：
+地下儲藏室的門從內反鎖、呼吸聲持續、補給痕跡沒中斷——
+那個人一直躲在裡面。
+
+「帶路吧，」紅花說，
+「這次我跟你一起下去。」`
     };
 
     const CHARACTER = {
@@ -385,9 +400,12 @@ const TEXT_ARCHIVE = {
       ],
       // ── 3F hall (館長室外) ────────────────────────────────────────────────
       hall: [
-        { label: "牛仔褲", rect: [62, 65, 30, 27], match: "調查牛仔褲（第四排）" },
         { label: "密碼盒", rect: [69, 30, 28, 27], match: "密碼盒" },
         { label: "回地圖", rect: [73, 86, 24,  9], match: "回到三樓地圖" },
+      ],
+      abandonedRoom: [
+        { label: "牛仔褲", rect: [53, 58, 34, 30], match: "調查閱讀台下的牛仔褲（第四排）" },
+        { label: "回地圖", rect: [73, 86, 24,  9], match: "離開廢棄閱覽室，返回三樓地圖" },
       ],
     };
 
@@ -412,6 +430,7 @@ const TEXT_ARCHIVE = {
       guardRoom: "守衛室",
       workshop: "修復工坊",
       abandonedRoom: "廢棄閱覽室",
+      alliance_followup: "同盟追兇",
       basement: "地下區域岔路",
       basementDeep: "地下倉庫供詞區",
       ending_secret: "秘密結局場景",
@@ -419,6 +438,10 @@ const TEXT_ARCHIVE = {
       ending_trust: "信任結局場景",
       ending_normal: "普通結局場景",
       ending_bad: "壞結局場景",
+      ending_alliance_capture: "同盟追兇結局場景",
+      ending_alliance_solo_bad: "單獨追兇失敗結局場景",
+      python_hidden_start: "Python 隱藏線起點",
+      python_hidden_london: "Python 隱藏線（倫敦）",
     };
     const MAP_SCENE_VIEWPORTS = {};  // floor maps are now dedicated images (no crop)
 
@@ -434,6 +457,9 @@ const TEXT_ARCHIVE = {
       guardRoom:    "守衛室",
       workshop:     "修復工坊",
       abandonedRoom:"廢棄閱覽室",
+      alliance_followup:"同盟追兇",
+      python_hidden_start:"隱藏線：夢醒時分",
+      python_hidden_london:"隱藏線：航向倫敦",
     };
 
     function archiveKeys(group) {
@@ -702,6 +728,13 @@ const TEXT_ARCHIVE = {
       if (key === "guardRoom") return STORY.SCENE_GUARD_ROOM || "【守衛室】\n\n守衛室已人去樓空，桌角有一本記錄本……";
       if (key === "workshop") return STORY.SCENE_WORKSHOP || "【修復工坊】\n\n工作台上有一本工作記錄……";
       if (key === "abandonedRoom") return STORY.SCENE_ABANDONED_ROOM || "【廢棄閱覽室】\n\n積灰的閱讀台下藏著某些東西……";
+      if (key === "alliance_followup") return STORY.alliance_followup;
+      if (key === "python_hidden_start") {
+        return formatTemplateText(TEXT_ARCHIVE["story_texts.py"]?.ENDING_HIDDEN || "【隱藏結局】夢醒時分。");
+      }
+      if (key === "python_hidden_london") {
+        return formatTemplateText(TEXT_ARCHIVE["story_texts.py"]?.LONDON_HIDDEN_PROLOGUE || "【隱藏分支】航向倫敦。");
+      }
       if (key === "archive_index") {
         const storyCount = archiveKeys("story_texts.py").length;
         const characterCount = archiveKeys("character_texts.py").length;
@@ -807,15 +840,6 @@ const TEXT_ARCHIVE = {
           opts.push(["查看三樓", () => { advance(15, "前往 3F"); goto("map3"); }]);
           break;
         case "hall":
-          opts.push([S.evidence.jeans ? "✓ 已調查牛仔褲" : "調查牛仔褲（第四排）", () => {
-            if (!S.evidence.jeans) {
-              S.evidence.jeans = true;
-              addTrust(8, "你鎖定天王星線索");
-              pushLog("📌 物證：YV 牛仔褲（第三碼 4）");
-            }
-            advance(8, "調查牛仔褲");
-            render();
-          }]);
           opts.push(["密碼盒", () => { advance(5, "嘗試密碼盒"); render(); }]);
           opts.push(["前往書架深處（取得密碼盒線索）", () => { advance(15, "排列案卷"); goto("bookshelves"); }]);
           opts.push(["回到三樓地圖", () => { advance(6, "返回地圖"); goto("map3"); }]);
@@ -867,7 +891,70 @@ const TEXT_ARCHIVE = {
             addTrust(5, "你找到廢棄手冊");
             pushLog("🧩 人物線索：廢棄相框（艾莉卡的監視行程）");
           }
+          opts.push([S.evidence.jeans ? "✓ 已調查牛仔褲" : "調查閱讀台下的牛仔褲（第四排）", () => {
+            if (!S.evidence.jeans) {
+              S.evidence.jeans = true;
+              addTrust(8, "你鎖定天王星線索");
+              pushLog("📌 物證：YV 牛仔褲（第三碼 4）");
+            }
+            advance(8, "調查牛仔褲");
+            render();
+          }]);
           opts.push(["離開廢棄閱覽室，返回三樓地圖", () => goto("map3")]);
+          break;
+        case "alliance_followup":
+          opts.push(["帶紅花前往地下儲藏室", () => {
+            advance(15, "與紅花前往地下儲藏室");
+            if (S.clues.starscream) {
+              S.scene = "ending_alliance_capture";
+              pushLog("✅ 達成：同盟追兇結局");
+            } else {
+              pushLog("⚠ 線索不足，無法鎖定兇手藏匿點。");
+              goto("map1");
+              return;
+            }
+            render();
+          }]);
+          opts.push(["我自己先去地下室確認", () => {
+            advance(12, "單獨前往地下儲藏室");
+            if (S.clues.starscream) {
+              S.scene = "ending_alliance_solo_bad";
+              pushLog("☠ 達成：單獨追兇失敗");
+              render();
+              return;
+            }
+            goto("basement");
+          }]);
+          opts.push(["先補齊線索再行動", () => goto("map3")]);
+          break;
+        case "ending_bad":
+          opts.push(["疲憊地離去，沉沉睡去（Python 隱藏線）", () => {
+            goto("python_hidden_start");
+          }]);
+          opts.push(["重新開始", () => {
+            S = initialState();
+            pushLog("♻ 已重新開始");
+            render();
+          }]);
+          break;
+        case "python_hidden_start":
+          opts.push(["乘船前往倫敦，尋找真正的答案", () => goto("python_hidden_london")]);
+          opts.push(["重新開始", () => {
+            S = initialState();
+            pushLog("♻ 已重新開始");
+            render();
+          }]);
+          break;
+        case "python_hidden_london":
+          opts.push(["◆ 選項B｜借用Yv醫生身份，啟程前往倫敦", () => {
+            pushLog("🚢 你以 Yv 醫生身份啟程，Python 隱藏故事線已接軌。");
+            S = initialState();
+            render();
+          }]);
+          opts.push(["◆ 選項A｜留在原地，讓這一切就此落幕", () => {
+            S = initialState();
+            render();
+          }]);
           break;
         case "desk":
           if (!S.clues.honghua) {
@@ -930,8 +1017,8 @@ const TEXT_ARCHIVE = {
         S.scene = "ending_true";
         pushLog("✅ 達成：真結局");
       } else if (e >= 2 && t >= 60) {
-        S.scene = "ending_trust";
-        pushLog("✅ 達成：信任結局");
+        S.scene = "alliance_followup";
+        pushLog("🤝 紅花加入：解鎖同盟追兇分支");
       } else if (e >= 2) {
         S.scene = "ending_normal";
         pushLog("✅ 達成：普通結局");
@@ -954,6 +1041,10 @@ const TEXT_ARCHIVE = {
           return "【普通結局】\n你帶著部分物證離開，真相仍有缺口。";
         case "ending_bad":
           return "【壞結局】\n準備不足就面對紅花，對話在沉默中結束。";
+        case "ending_alliance_capture":
+          return "【同盟追兇結局】\n你依線索帶紅花下到地下儲藏室，兇手果然仍在。\n紅花一拳擊倒對方，嫌犯供出：封閉房內有暗門直通館外，\n過往失蹤調查員都是被他誘入地下後殺害。";
+        case "ending_alliance_solo_bad":
+          return "【壞結局 · 單獨追兇】\n你帶著線索獨自闖入地下儲藏室。\n門後黑影早已等著你——下一秒，刀光落下。\n你終於明白，這條路本該和紅花一起走。";
         default:
           return "";
       }
