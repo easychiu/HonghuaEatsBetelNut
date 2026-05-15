@@ -381,6 +381,11 @@ const TEXT_ARCHIVE = {
       ending_normal: "普通結局場景",
       ending_bad: "壞結局場景",
     };
+    const MAP_SCENE_VIEWPORTS = {
+      map3: { objectPosition: "50% 18%", scale: 1.8 },
+      map2: { objectPosition: "50% 50%", scale: 1.8 },
+      map1: { objectPosition: "50% 82%", scale: 1.8 },
+    };
 
     function archiveKeys(group) {
       return Object.keys(TEXT_ARCHIVE[group] || {}).sort();
@@ -770,6 +775,13 @@ const TEXT_ARCHIVE = {
       imgEl.src = imgSrc;
       imgEl.alt = SCENE_ALT_TEXTS[S.scene] || `${S.scene.toUpperCase()} 場景`;
       imgEl.style.display = imgSrc ? "block" : "none";
+      imgEl.style.objectPosition = "50% 50%";
+      imgEl.style.transform = "scale(1)";
+      const mapViewport = MAP_SCENE_VIEWPORTS[S.scene];
+      if (mapViewport) {
+        imgEl.style.objectPosition = mapViewport.objectPosition;
+        imgEl.style.transform = `scale(${mapViewport.scale})`;
+      }
       const sceneEl = document.getElementById("sceneText");
       if (isEnding) {
         sceneEl.innerHTML = `<span class="ending">${endingText()}</span>`;
