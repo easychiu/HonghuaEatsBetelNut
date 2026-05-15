@@ -19,7 +19,7 @@ import story_texts as ST
 
 # ── optional dependencies ──────────────────────────────────────────────────────
 try:
-    from PIL import Image, ImageDraw, ImageFilter, ImageEnhance, ImageTk
+    from PIL import Image, ImageTk
     _PIL = True
     _RESAMPLING = getattr(Image, "Resampling", None)
     _LANCZOS    = _RESAMPLING.LANCZOS if _RESAMPLING else Image.LANCZOS  # type: ignore[attr-defined]
@@ -41,7 +41,6 @@ except ImportError:
 
 # ── paths ──────────────────────────────────────────────────────────────────────
 _DIR      = os.path.dirname(os.path.abspath(__file__))
-INFO_JPG  = os.path.join(_DIR, "info.jpg")
 HONGHUA_READ_BOOK_JPG = os.path.join(_DIR, "HonghuaReadBook.jpg")
 HONGHUA_IN_ENG_JPG = os.path.join(_DIR, "HonghuaInENG.jpg")
 ASSETS    = os.path.join(_DIR, "assets")
@@ -154,11 +153,13 @@ SCENE_TITLES: dict[str, str] = {
 }
 
 # ── layout ─────────────────────────────────────────────────────────────────────
-WIN_W, WIN_H = 1920, 1080
-IW, IH       = 1462, 1076        # scene image size
+IW, IH       = 1462, 1076        # scene image size (must remain fixed)
 TITLE_H      = 52
 STATUS_H     = 28
 BTN_H        = 100
+DIALOG_H     = 180
+DIALOG_MAX_LINES = 7
+WIN_W, WIN_H = IW + 24, TITLE_H + IH + STATUS_H + BTN_H + 44
 
 # ── gothic palette (extracted from info.jpg) ───────────────────────────────────
 C = dict(
@@ -189,64 +190,6 @@ def _f(size: int, bold: bool = False) -> tuple:
 #  Scene image factory
 # ══════════════════════════════════════════════════════════════════════════════
 _img_cache: dict[str, object] = {}
-_base_img: Optional[object]   = None
-
-
-def _init_images() -> None:
-    global _base_img
-    if _PIL and os.path.exists(INFO_JPG):
-        _base_img = Image.open(INFO_JPG).convert("RGBA")
-
-
-def _tinted(
-    darken: float = 0.75,
-    tint: tuple = (0, 0, 0, 0),
-    crop: Optional[tuple] = None,
-) -> Optional[object]:
-    """Return ImageTk.PhotoImage from info.jpg with tint/darken/crop."""
-    if not _PIL or _base_img is None:
-        return None
-    img = _base_img.copy()
-    if crop:
-        img = img.crop(crop)
-    img = img.resize((IW, IH), Image.LANCZOS)
-    img = ImageEnhance.Brightness(img.convert("RGB")).enhance(darken).convert("RGBA")
-    if any(tint):
-        overlay = Image.new("RGBA", img.size, tint)
-        img = Image.alpha_composite(img, overlay)
-    return ImageTk.PhotoImage(img.convert("RGB"))
-
-
-def _atmospheric(
-    base_rgb: tuple,
-    lights: list,
-    blur: float = 2.5,
-) -> Optional[object]:
-    """Generate a procedural atmospheric scene image with Pillow."""
-    if not _PIL:
-        return None
-    img = Image.new("RGBA", (IW, IH), base_rgb + (255,))
-    draw = ImageDraw.Draw(img, "RGBA")
-    for cx, cy, r, col in lights:
-        rc, gc, bc, ma = col
-        for rad in range(r, 0, -3):
-            a = int(ma * (1 - rad / r) ** 0.65)
-            draw.ellipse([cx - rad, cy - rad, cx + rad, cy + rad],
-                         fill=(rc, gc, bc, a))
-    if blur > 0:
-        img = img.filter(ImageFilter.GaussianBlur(blur))
-    # vignette
-    v = Image.new("RGBA", (IW, IH), (0, 0, 0, 0))
-    vd = ImageDraw.Draw(v, "RGBA")
-    maxr = int((IW ** 2 + IH ** 2) ** 0.5) // 2 + 40
-    for rad in range(maxr, 0, -5):
-        a = int(130 * (rad / maxr) ** 1.5)
-        vd.ellipse(
-            [IW // 2 - rad, IH // 2 - rad, IW // 2 + rad, IH // 2 + rad],
-            fill=(0, 0, 0, a),
-        )
-    img = Image.alpha_composite(img, v)
-    return ImageTk.PhotoImage(img.convert("RGB"))
 
 
 def scene_image(key: str) -> Optional[object]:
@@ -276,146 +219,12 @@ def _load_scene_asset(key: str) -> Optional[object]:
     return ImageTk.PhotoImage(img)
 
 
-def _default_scene_image(key: str) -> Optional[object]:
-    if not _PIL:
-        return None
-    source = (
-        SCENE_SOURCE_OVERRIDES.get(key)
-        or (HONGHUA_READ_BOOK_JPG if os.path.exists(HONGHUA_READ_BOOK_JPG) else "")
-        or (HONGHUA_IN_ENG_JPG if os.path.exists(HONGHUA_IN_ENG_JPG) else "")
-        or (INFO_JPG if os.path.exists(INFO_JPG) else "")
-    )
-    if source:
-        img = Image.open(source).convert("RGBA")
-        img = img.resize((IW, IH), Image.LANCZOS)
-        img = ImageEnhance.Brightness(img.convert("RGB")).enhance(0.68).convert("RGBA")
-    else:
-        img = Image.new("RGBA", (IW, IH), (12, 10, 18, 255))
-
-    overlay = Image.new("RGBA", img.size, (16, 8, 14, 92))
-    img = Image.alpha_composite(img, overlay)
-    draw = ImageDraw.Draw(img, "RGBA")
-    draw.rectangle([0, IH - 120, IW, IH], fill=(7, 5, 9, 214))
-    draw.rectangle([18, 18, 138, 48], fill=(85, 20, 28, 180))
-    draw.text((28, 25), "預設場景", fill=(255, 236, 220))
-    draw.text((26, IH - 95), SCENE_TITLES.get(key, "紅花場景"), fill=(230, 214, 192))
-    draw.text((26, IH - 63), "若缺少專屬圖像，先以紅花主視覺代替。", fill=(193, 163, 128))
-    return ImageTk.PhotoImage(img.convert("RGB"))
-
-
 def _build(key: str) -> Optional[object]:
     map_img = LM.build_library_map_image(key, IW, IH)
     if map_img is not None:
         return map_img
 
-    prebuilt = _load_scene_asset(key)
-    if prebuilt is not None:
-        return prebuilt
-
-    # info.jpg-derived scenes  (darken, tint_rgba, crop_box)
-    INFO: dict[str, tuple] = {
-        "intro":       (0.58, (30, 0, 0, 80),    None),
-        "prologue":    (0.62, (0, 10, 20, 60),    None),
-        "hall":        (0.52, (0, 15, 35, 70),    None),
-        "book":        (0.68, (50, 30, 0, 90),    (0, 600, 800, 880)),
-        "feather":     (0.65, (20, 35, 10, 85),   (0, 430, 500, 880)),
-        "box":         (0.62, (0, 40, 10, 95),    (550, 580, 1196, 880)),
-        "desk_info":   (0.65, (30, 20, 0, 80),    (0, 450, 950, 880)),
-        "window_info": (0.55, (0, 10, 30, 90),    (0, 0, 500, 500)),
-        "confront":    (0.72, (100, 0, 0, 110),   None),
-        "true_end":    (0.82, (50, 25, 0, 55),    None),
-        "secret_end":  (0.80, (20, 10, 35, 65),   None),
-        "normal_end":  (0.45, (0, 5, 25, 90),     None),
-        "hidden_end":  (0.60, (10, 20, 45, 100),  None),
-    }
-    if key in INFO:
-        d, t, c = INFO[key]
-        return _tinted(d, t, c)
-
-    # procedural scenes
-    PROC: dict[str, tuple] = {
-        "bookshelves": (
-            (6, 4, 3),
-            [(70, IH // 2, 130, (180, 95, 25, 75)),
-             (IW - 60, IH // 2 + 40, 95, (120, 60, 15, 55))],
-        ),
-        "puzzle_book": (
-            (5, 5, 8),
-            [(IW // 2, IH // 2, 220, (160, 110, 40, 85)),
-             (IW // 2, IH // 2, 75, (220, 170, 80, 90))],
-        ),
-        "desk": (
-            (5, 7, 4),
-            [(IW // 2, IH - 80, 220, (210, 125, 40, 100)),
-             (IW // 2, IH - 80, 75, (255, 185, 85, 110))],
-        ),
-        "diary": (
-            (11, 7, 4),
-            [(IW // 2, IH // 2, 185, (200, 155, 75, 90)),
-             (IW // 2 - 70, IH // 2 + 30, 65, (255, 200, 115, 75))],
-        ),
-        "window": (
-            (4, 7, 12),
-            [(IW // 2, 75, 170, (30, 55, 85, 95)),
-             (IW // 2, 75, 55, (60, 95, 145, 75))],
-        ),
-        "basement": (
-            (3, 3, 7),
-            [(IW // 2, IH, 210, (18, 25, 58, 80)),
-             (IW // 2, IH // 2, 38, (38, 48, 88, 55))],
-        ),
-        "basement_deep": (
-            (2, 2, 5),
-            [(IW // 2, IH // 2, 160, (65, 0, 20, 105)),
-             (IW // 2, IH // 2, 48, (105, 0, 28, 80))],
-        ),
-        "bad_a": (
-            (5, 0, 0),
-            [(IW // 2, IH // 2, 190, (155, 0, 0, 120)),
-             (IW // 2, IH // 2, 58, (200, 20, 20, 95))],
-        ),
-        "bad_b": (
-            (7, 1, 1),
-            [(IW // 2, IH // 2, 225, (185, 0, 18, 130)),
-             (IW // 4, IH // 3, 105, (225, 45, 0, 100)),
-             (3 * IW // 4, 2 * IH // 3, 82, (205, 28, 8, 88))],
-        ),
-        "corridor_1f": (
-            (4, 4, 3),
-            [(IW // 2, IH // 2, 200, (110, 75, 30, 65)),
-             (IW - 80, IH // 2, 90, (90, 55, 18, 50))],
-        ),
-        "corridor_2f": (
-            (3, 3, 4),
-            [(80, IH // 2, 140, (80, 55, 20, 70)),
-             (IW // 2, IH - 100, 170, (60, 40, 15, 55))],
-        ),
-        "corridor_3f": (
-            (5, 5, 4),
-            [(IW // 2, 100, 190, (140, 100, 50, 70)),
-             (IW // 2, IH // 2, 80, (180, 140, 70, 60))],
-        ),
-        "room_a": (
-            (6, 5, 4),
-            [(IW // 2, IH // 2, 190, (120, 80, 35, 75)),
-             (IW // 2, IH // 2, 60, (170, 120, 55, 60))],
-        ),
-        "room_b": (
-            (4, 5, 5),
-            [(60, IH // 3, 120, (90, 65, 30, 65)),
-             (IW // 2, 2 * IH // 3, 160, (70, 50, 20, 55))],
-        ),
-        "meeting_room": (
-            (5, 4, 3),
-            [(IW // 2, IH // 3, 200, (100, 65, 25, 70)),
-             (IW // 2, 2 * IH // 3, 70, (140, 90, 35, 55))],
-        ),
-    }
-    if key in PROC:
-        base_rgb, lights = PROC[key]
-        return _atmospheric(base_rgb, lights)
-
-    return _default_scene_image(key)
+    return _load_scene_asset(key)
 
 
 class MusicPlayer:
@@ -513,10 +322,9 @@ class HonghuaGame:
         self.root = root
         self.root.title(self.WINDOW_TITLE)
         self.root.geometry(f"{WIN_W}x{WIN_H}")
-        self.root.minsize(900, 600)
+        self.root.minsize(WIN_W, WIN_H)
+        self.root.resizable(False, False)
         self.root.configure(bg=C["bg"])
-
-        _init_images()
 
         self.inventory: set[str] = set()
         self.clues: dict[str, int] = {}
@@ -529,6 +337,9 @@ class HonghuaGame:
         self._current_scene: str = ""
         self._image_actions: list[dict[str, object]] = []
         self._hover_action: Optional[int] = None
+        self._story_content: str = ""
+        self._story_bg_id: Optional[int] = None
+        self._story_text_id: Optional[int] = None
         self._honghua_click_count: int = 0
         self._candle_click_count: int = 0
         self._hall_visit_count: int = 0
@@ -572,7 +383,7 @@ class HonghuaGame:
             fg=C["title_fg"],
         ).pack(side="right", padx=16, pady=10)
 
-        # main content row
+        # main content
         content = tk.Frame(self.root, bg=C["bg"])
         content.pack(fill="both", expand=True, padx=8, pady=(6, 0))
 
@@ -590,39 +401,11 @@ class HonghuaGame:
         self.img_canvas.bind("<Button-1>", self._on_image_click)
         self.img_canvas.bind("<Motion>", self._on_image_motion)
         self.img_canvas.bind("<Leave>", self._on_image_leave)
-
-        # right: story + status + buttons
-        right = tk.Frame(content, bg=C["bg"])
-        right.pack(side="left", fill="both", expand=True)
-
-        # story text
-        txt_frame = tk.Frame(
-            right, bg=C["border"], bd=0,
-            highlightbackground=C["border"], highlightthickness=1,
-        )
-        txt_frame.pack(fill="both", expand=True)
-        self.story_text = tk.Text(
-            txt_frame,
-            wrap="word",
-            font=_f(12),
-            bg=C["txt_bg"],
-            fg=C["fg"],
-            insertbackground=C["fg"],
-            selectbackground=C["txt_sel"],
-            relief="flat",
-            bd=0,
-            padx=14,
-            pady=12,
-            spacing1=3,
-            spacing2=2,
-            spacing3=3,
-        )
-        self.story_text.pack(fill="both", expand=True)
-        self.story_text.configure(state="disabled")
+        self._draw_story_overlay()
 
         # status bar
         self.status_var = tk.StringVar(value="準備中...")
-        status_bar = tk.Frame(right, bg=C["status_bg"], height=STATUS_H)
+        status_bar = tk.Frame(self.root, bg=C["status_bg"], height=STATUS_H)
         status_bar.pack(fill="x", pady=(4, 0))
         status_bar.pack_propagate(False)
         tk.Label(
@@ -636,8 +419,50 @@ class HonghuaGame:
         ).pack(fill="x", expand=True)
 
         # button bar
-        self.btn_frame = tk.Frame(right, bg=C["bg"], height=BTN_H)
+        self.btn_frame = tk.Frame(self.root, bg=C["bg"], height=BTN_H)
         self.btn_frame.pack(fill="x", pady=(5, 4))
+        self.btn_frame.pack_propagate(False)
+
+    def _trim_story_text(self, text: str) -> str:
+        lines = text.splitlines()
+        if len(lines) <= DIALOG_MAX_LINES:
+            return text
+        return "\n".join(lines[-DIALOG_MAX_LINES:])
+
+    def _draw_story_overlay(self) -> None:
+        self.img_canvas.delete("dialog_overlay")
+        top = IH - DIALOG_H
+        self._story_bg_id = self.img_canvas.create_rectangle(
+            0,
+            top,
+            IW,
+            IH,
+            fill=C["txt_bg"],
+            outline=C["border"],
+            width=1,
+            stipple="gray50",
+            tags=("dialog_overlay",),
+        )
+        self._story_text_id = self.img_canvas.create_text(
+            16,
+            top + 12,
+            anchor="nw",
+            text=self._trim_story_text(self._story_content),
+            fill=C["fg"],
+            font=_f(12),
+            width=IW - 32,
+            justify="left",
+            tags=("dialog_overlay",),
+        )
+
+    def _update_story_text(self, text: str) -> None:
+        self._story_content = text
+        if self._story_text_id is None:
+            return
+        self.img_canvas.itemconfigure(
+            self._story_text_id,
+            text=self._trim_story_text(self._story_content),
+        )
 
     # ── helpers ────────────────────────────────────────────────────────────────
     def _show_image(self, key: str) -> None:
@@ -684,6 +509,7 @@ class HonghuaGame:
             self.img_canvas.create_image(0, 0, anchor="nw", image=img)
         else:
             self.img_canvas.configure(bg=C["panel"])
+        self._draw_story_overlay()
 
     def _set_image_actions(self, actions: list[dict[str, object]]) -> None:
         self._image_actions = actions
@@ -758,9 +584,7 @@ class HonghuaGame:
         if self._type_job:
             self.root.after_cancel(self._type_job)
             self._type_job = None
-        self.story_text.configure(state="normal")
-        self.story_text.delete("1.0", "end")
-        self.story_text.configure(state="disabled")
+        self._update_story_text("")
         if typing:
             if self._current_scene in _SCENE1_CHAR_SCENES:
                 self._apply_scene1_dialogue_pose()
@@ -768,26 +592,17 @@ class HonghuaGame:
                 self.animator.set_lip_sync_intensity(self.LIP_SYNC_INTENSITY_TYPING_START)
             self._type_text(text, 0)
         else:
-            self.story_text.configure(state="normal")
-            self.story_text.insert("1.0", text)
-            self.story_text.configure(state="disabled")
+            self._update_story_text(text)
             self.animator.set_lip_sync_intensity(0.0)
 
     def _type_text(self, text: str, idx: int) -> None:
         if idx >= len(text):
             # Ensure the full text is displayed on the last frame
-            self.story_text.configure(state="normal")
-            self.story_text.delete("1.0", "end")
-            self.story_text.insert("1.0", text)
-            self.story_text.configure(state="disabled")
+            self._update_story_text(text)
             self.animator.set_lip_sync_intensity(0.0)
             self._type_job = None
             return
-        self.story_text.configure(state="normal")
-        self.story_text.delete("1.0", "end")
-        self.story_text.insert("1.0", text[:idx])
-        self.story_text.configure(state="disabled")
-        self.story_text.see("end")
+        self._update_story_text(text[:idx])
         if self._current_scene in _CHAR_ANIM_SCENES:
             prev_char = text[idx - 1] if idx > 0 else ""
             intensity = (
@@ -1084,10 +899,8 @@ class HonghuaGame:
         if self._type_job:
             self.root.after_cancel(self._type_job)
             self._type_job = None
-        self.story_text.configure(state="normal")
-        self.story_text.insert("end", f"\n\n【主角OS】{text}")
-        self.story_text.see("end")
-        self.story_text.configure(state="disabled")
+        prefix = f"{self._story_content}\n\n" if self._story_content else ""
+        self._update_story_text(f"{prefix}【主角OS】{text}")
         if self._current_scene in _CHAR_ANIM_SCENES:
             self.animator.set_lip_sync_intensity(self.LIP_SYNC_INTENSITY_OS)
 

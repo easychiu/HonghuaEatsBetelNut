@@ -119,7 +119,7 @@ python generate_assets.py --bgm-only
 ### 場景圖素材
 
 - 遊戲會優先讀取 `assets/scenes/*.png`
-- 若場景圖不存在，會先回退到 `assets/scenes/default.png`；若連預設圖都不存在，再使用程式內建的即時生成版本
+- 若場景圖不存在，會先回退到 `assets/scenes/default.png`
 - 場景一（`prologue` / `hall`）支援日夜素材切換，資源可放在 `assets/scene1/`：
   - 進場看書圖：`honghua_readbook_{day|dusk|night}.{png|jpg|jpeg}`
   - 對話看向你（一般）：`honghua_look_{day|dusk|night}.{png|jpg|jpeg}`
