@@ -28,6 +28,26 @@ MAP_SCENE_TITLES: dict[str, str] = {
     "map_f3": "圖書館地圖・三樓",
 }
 
+_FLOOR_ACTION_LABELS = {
+    1: {
+        "room_a": "閱覽室A",
+        "room_b": "閱覽室B",
+        "meeting_room": "會議室I",
+        "corridor": "一樓走廊",
+    },
+    2: {
+        "desk": "研究室A（研究桌）",
+        "window": "研究室B（窗邊）",
+        "meeting_room": "會議室II",
+        "corridor": "二樓迴廊",
+    },
+    3: {
+        "hall": "館長室外",
+        "confront": "進入館長室（紅花）",
+        "corridor": "三樓迴廊",
+    },
+}
+
 _MAP_BASE_W = 460
 _MAP_BASE_H = 490
 _MAP_CANVAS_W = 1462
@@ -98,14 +118,14 @@ def _pixel_library_map(floor: int, iw: int, ih: int) -> Optional[MapImage]:
     room_color = (66, 82, 110, 255)
     room_outline = (160, 196, 255, 255)
     # Per-floor room labels for top-left and top-right rooms
-    _top_left_label  = {1: "房間A", 2: "研究桌", 3: "房間A"}
-    _top_right_label = {1: "房間B", 2: "窗邊",   3: "房間B"}
+    _top_left_label  = {1: "閱覽室A", 2: "研究室A", 3: "私人研究室"}
+    _top_right_label = {1: "閱覽室B", 2: "研究室B", 3: "觀景閱覽室"}
     rooms = [
         (36, 36, 126, 106, _top_left_label.get(floor, "房間A")),
         (334, 36, 424, 106, _top_right_label.get(floor, "房間B")),
-        (36, 384, 126, 454, "房間C"),
-        (334, 384, 424, 454, "會議1"),
-        (334, 288, 424, 358, "會議2"),
+        (36, 384, 126, 454, {1: "收藏室", 2: "檔案室", 3: "封閉儲藏室"}.get(floor, "房間C")),
+        (334, 384, 424, 454, {1: "守衛室", 2: "修復工坊", 3: "塔通道"}.get(floor, "會議1")),
+        (334, 288, 424, 358, {1: "會議I", 2: "會議II", 3: "館長室"}.get(floor, "會議2")),
     ]
     for x1, y1, x2, y2, label in rooms:
         draw.rectangle([x1, y1, x2, y2], fill=room_color, outline=room_outline, width=2)
@@ -284,25 +304,25 @@ def show_library_map_scene(game: MapSceneGame, floor: int) -> None:
     if game._map_floor == 1:
         opts.extend([
             ("前往書架深處（一樓）", game.scene_bookshelves),
-            ("探索一樓走廊", game.scene_corridor_1f),
-            ("前往房間A", game.scene_room_a),
-            ("前往房間B", game.scene_room_b),
-            ("前往會議室", game.scene_meeting_room),
+            (f"探索{_FLOOR_ACTION_LABELS[1]['corridor']}", game.scene_corridor_1f),
+            (f"前往{_FLOOR_ACTION_LABELS[1]['room_a']}", game.scene_room_a),
+            (f"前往{_FLOOR_ACTION_LABELS[1]['room_b']}", game.scene_room_b),
+            (f"前往{_FLOOR_ACTION_LABELS[1]['meeting_room']}", game.scene_meeting_room),
         ])
         if has_key:
             opts.append(("打開地下密室", game.scene_basement))
     elif game._map_floor == 2:
         opts.extend([
-            ("前往二樓研究桌區", game.scene_desk),
-            ("前往二樓窗邊區", game.scene_window),
-            ("探索二樓走廊", game.scene_corridor_2f),
-            ("前往二樓會議室", game.scene_meeting_room),
+            (f"前往{_FLOOR_ACTION_LABELS[2]['desk']}", game.scene_desk),
+            (f"前往{_FLOOR_ACTION_LABELS[2]['window']}", game.scene_window),
+            (f"探索{_FLOOR_ACTION_LABELS[2]['corridor']}", game.scene_corridor_2f),
+            (f"前往{_FLOOR_ACTION_LABELS[2]['meeting_room']}", game.scene_meeting_room),
         ])
     else:
         opts.extend([
-            ("前往三樓管理室外調查", game.scene_hall),
-            ("直接進管理室找紅花", game.scene_confront),
-            ("探索三樓走廊", game.scene_corridor_3f),
+            (f"前往{_FLOOR_ACTION_LABELS[3]['hall']}調查", game.scene_hall),
+            (_FLOOR_ACTION_LABELS[3]["confront"], game.scene_confront),
+            (f"探索{_FLOOR_ACTION_LABELS[3]['corridor']}", game.scene_corridor_3f),
         ])
     game._set_options(opts)
 
@@ -324,22 +344,22 @@ def show_library_map_scene(game: MapSceneGame, floor: int) -> None:
                 "command": game.scene_bookshelves,
             },
             {
-                "label": "一樓走廊",
+                "label": _FLOOR_ACTION_LABELS[1]["corridor"],
                 "area": _CORRIDOR_AREA,
                 "command": game.scene_corridor_1f,
             },
             {
-                "label": "房間A",
+                "label": _FLOOR_ACTION_LABELS[1]["room_a"],
                 "area": _scale_area((36, 36, 126, 106)),
                 "command": game.scene_room_a,
             },
             {
-                "label": "房間B",
+                "label": _FLOOR_ACTION_LABELS[1]["room_b"],
                 "area": _scale_area((334, 36, 424, 106)),
                 "command": game.scene_room_b,
             },
             {
-                "label": "會議室",
+                "label": _FLOOR_ACTION_LABELS[1]["meeting_room"],
                 "area": _scale_area((334, 288, 424, 454)),
                 "command": game.scene_meeting_room,
             },
@@ -353,22 +373,22 @@ def show_library_map_scene(game: MapSceneGame, floor: int) -> None:
     elif game._map_floor == 2:
         actions.extend([
             {
-                "label": "研究桌",
+                "label": _FLOOR_ACTION_LABELS[2]["desk"],
                 "area": _scale_area((36, 36, 126, 106)),
                 "command": game.scene_desk,
             },
             {
-                "label": "窗邊",
+                "label": _FLOOR_ACTION_LABELS[2]["window"],
                 "area": _scale_area((334, 36, 424, 106)),
                 "command": game.scene_window,
             },
             {
-                "label": "二樓走廊",
+                "label": _FLOOR_ACTION_LABELS[2]["corridor"],
                 "area": _CORRIDOR_AREA,
                 "command": game.scene_corridor_2f,
             },
             {
-                "label": "二樓會議室",
+                "label": _FLOOR_ACTION_LABELS[2]["meeting_room"],
                 "area": _scale_area((334, 288, 424, 454)),
                 "command": game.scene_meeting_room,
             },
@@ -376,17 +396,17 @@ def show_library_map_scene(game: MapSceneGame, floor: int) -> None:
     else:  # 3F
         actions.extend([
             {
-                "label": "管理室外",
+                "label": _FLOOR_ACTION_LABELS[3]["hall"],
                 "area": _scale_area((168, 24, 292, 84)),
                 "command": game.scene_hall,
             },
             {
-                "label": "進管理室（紅花）",
+                "label": _FLOOR_ACTION_LABELS[3]["confront"],
                 "area": _scale_area((168, 84, 292, 150)),
                 "command": game.scene_confront,
             },
             {
-                "label": "三樓走廊",
+                "label": _FLOOR_ACTION_LABELS[3]["corridor"],
                 "area": _CORRIDOR_AREA,
                 "command": game.scene_corridor_3f,
             },
