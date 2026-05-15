@@ -120,14 +120,14 @@ SCENE_SOURCE_OVERRIDES: dict[str, str] = {
 SCENE_TITLES: dict[str, str] = {
     "intro": "開場",
     "prologue": "序章",
-    "hall": "圖書館大廳",
+    "hall": "館長室外展示區",
     "book": "鎚子線索",
     "feather": "四葉草線索",
     "box": "牛仔褲線索",
     "bookshelves": "書架深處",
-    "desk": "研究桌",
+    "desk": "研究室A（研究桌）",
     "diary": "紅花筆記",
-    "window": "窗邊",
+    "window": "研究室B（窗邊）",
     "window_info": "窗台字條",
     "desk_info": "案情分析",
     "basement": "地下密室",
@@ -135,13 +135,20 @@ SCENE_TITLES: dict[str, str] = {
     "confront": "面對紅花",
     **LM.MAP_SCENE_TITLES,
     "basement_storage": "地下儲藏室",
-    # ── new explorable nodes ────────────────────────────────────────────────
-    "corridor_1f":   "一樓走廊",
-    "corridor_2f":   "二樓走廊",
-    "corridor_3f":   "三樓走廊",
-    "room_a":        "閱覽室A",
-    "room_b":        "閱覽室B",
-    "meeting_room":  "會議室",
+    # ── 1F explorable nodes ─────────────────────────────────────────────────
+    "corridor_1f":     "管理室走廊",
+    "room_a":          "閱覽室A",
+    "room_b":          "閱覽室B",
+    "collection_room": "收藏室（古籍庫）",
+    "meeting_room":    "會議廳",
+    "guard_room":      "守衛室",
+    # ── 2F explorable nodes ─────────────────────────────────────────────────
+    "corridor_2f":     "二樓迴廊",
+    "archive_room":    "檔案室（禁書區）",
+    "workshop":        "修復工坊",
+    # ── 3F explorable nodes ─────────────────────────────────────────────────
+    "corridor_3f":     "私人研究室",
+    "abandoned_room":  "廢棄閱覽室",
     # ── time-danger ─────────────────────────────────────────────────────────
     "killer_map":    "大地圖遭遇",
     "true_end": "真結局",
@@ -1001,34 +1008,20 @@ class HonghuaGame:
         self._set_story(
             ST.HALL.format(
                 trust_remark=trust_remark,
-                hammer_length=self.HAMMER_LENGTH_CM,
                 basement_hint=basement_hint,
             )
         )
         opts: list[tuple[str, Callable]] = [
-            ("回到上帝視角地圖", self.scene_map_floor3),
-            ("前往書架深處", self.scene_bookshelves),
-            ("前往研究桌", self.scene_desk),
-            ("前往窗邊", self.scene_window),
+            ("回到三樓地圖", self.scene_map_floor3),
+            ("前往書架深處（取得密碼盒線索）", self.scene_bookshelves),
         ]
         if has_key:
             opts.append(("打開地下密室", self.scene_basement))
-        opts += [
-            ("前去面對紅花", self.scene_confront),
-        ]
+        opts.append(("前去面對紅花", self.scene_confront))
         self._set_options(opts)
         # ── image hotspots ────────────────────────────────────────────────────
-        # All coordinates are (x1, y1, x2, y2) from the top-left of the
-        # 460×490 canvas in pixels.  To calibrate: open HonghuaReadBook.jpg
-        # in an image editor and read pixel coordinates from its status bar.
-        # More-specific (smaller) areas are listed BEFORE the larger Honghua
-        # area so they take priority when both overlap at the same pixel.
-        # NOTE: The candle area (right side) should be recalibrated once the
-        # actual scene1 image assets are placed in assets/scene1/.
         hall_actions: list[dict[str, object]] = [
-            # ── existing investigation items ─────────────────────────────────
-            {"label": "鎚子",  "area": (24, 316, 126, 470), "command": self.inspect_hammer},
-            {"label": "四葉草", "area": (152, 266, 246, 386), "command": self.inspect_clover},
+            # 牛仔褲 stays in 3F hall (moved hammer/clover to 1F/2F)
             {"label": "牛仔褲", "area": (286, 316, 426, 468), "command": self.inspect_jeans},
             {"label": "密碼盒", "area": (316, 146, 448, 278), "command": self.try_unlock},
             # ── book hotspots (upper-left bookshelf area) ────────────────────
@@ -1050,17 +1043,12 @@ class HonghuaGame:
                 "command": self._on_book_clue_click,
                 "hint": "點擊：封面泛黃的年報",
             },
-            # ── right-side candle ─────────────────────────────────────────────
-            # Coordinates assume the candle occupies the upper-right corner of
-            # the scene image.  Adjust after placing actual scene1 assets.
             {
                 "label": "蠟燭",
                 "area": (360, 20, 450, 130),
                 "command": self._on_candle_click,
                 "hint": "點擊：蠟燭",
             },
-            # ── Honghua (centre of image; listed last so books take priority
-            #    where areas overlap) ──────────────────────────────────────────
             {
                 "label": "紅花",
                 "area": (70, 30, 310, 260),
@@ -1088,7 +1076,7 @@ class HonghuaGame:
     def scene_library_map(self, floor: int) -> None:
         LM.show_library_map_scene(self, floor)
 
-    # ── hammer ────────────────────────────────────────────────────────────────
+    # ── hammer (now in 1F collection room) ───────────────────────────────────
     def inspect_hammer(self) -> None:
         self._advance_time(5)
         self._gain_trust("inspect_hammer", 1)
@@ -1101,11 +1089,12 @@ class HonghuaGame:
             + trust_reaction
         )
         self._set_options([
-            ("繼續調查", self.scene_map_floor3),
+            ("繼續調查收藏室", self.scene_collection_room),
+            ("返回一樓地圖", self.scene_map_floor1),
             ("直接面對紅花", self.scene_confront),
         ])
 
-    # ── four-leaf clover ──────────────────────────────────────────────────────
+    # ── four-leaf clover (now in 2F archive room) ─────────────────────────────
     def inspect_clover(self) -> None:
         self._advance_time(5)
         self._gain_trust("inspect_clover", 1)
@@ -1118,7 +1107,8 @@ class HonghuaGame:
             + trust_reaction
         )
         self._set_options([
-            ("繼續調查", self.scene_map_floor3),
+            ("繼續調查檔案室", self.scene_archive_room),
+            ("返回二樓地圖", self.scene_map_floor2),
             ("直接面對紅花", self.scene_confront),
         ])
 
@@ -1138,14 +1128,14 @@ class HonghuaGame:
             ("繼續調查", self.scene_map_floor3),
         ])
 
-    # ── bookshelves area ──────────────────────────────────────────────────────
+    # ── bookshelves puzzle (accessible from 1F collection room) ──────────────
     def scene_bookshelves(self) -> None:
         self._advance_time(8)
         self._refresh_status()
         self._show_image("bookshelves")
         self._set_story(ST.SCENE_BOOKSHELVES)
         self._set_options([
-            ("離開書架，返回走廊", self.scene_map_floor1),
+            ("離開書架，返回收藏室", self.scene_collection_room),
         ])
         self._set_image_actions([
             {"label": "案卷謎題", "area": (82, 108, 380, 360), "command": self.puzzle_bookshelf},
@@ -1728,8 +1718,150 @@ class HonghuaGame:
         ])
 
     # ══════════════════════════════════════════════════════════════════════════
-    #  New explorable nodes — corridors / rooms / meeting rooms
+    #  New room scenes — distributed across 1F / 2F / 3F
     # ══════════════════════════════════════════════════════════════════════════
+
+    # ── 1F: 收藏室（古籍庫）── has 鎚子 ─────────────────────────────────────────
+    def scene_collection_room(self) -> None:
+        self._advance_time(8)
+        self._refresh_status()
+        self._show_image("collection_room")
+        self._set_story(ST.SCENE_COLLECTION_ROOM)
+        self._set_options([
+            ("進入深處查看書架（解謎道具）", self.scene_bookshelves),
+            ("離開收藏室，返回一樓地圖", self.scene_map_floor1),
+        ])
+        self._set_image_actions([
+            {
+                "label": "書架角落的物品",
+                "area": (30, 200, 300, 430),
+                "command": self.inspect_hammer,
+            },
+        ])
+        self._schedule_ambush_check()  # 1F – backstab risk
+
+    # ── 1F: 守衛室 ── 新道具：守衛記錄本 ────────────────────────────────────────
+    def scene_guard_room(self) -> None:
+        self._advance_time(8)
+        self._refresh_status()
+        self._show_image("guard_room")
+        self._set_story(ST.SCENE_GUARD_ROOM)
+        self._set_options([
+            ("離開守衛室，返回一樓地圖", self.scene_map_floor1),
+        ])
+        self._set_image_actions([
+            {
+                "label": "守衛記錄本",
+                "area": (80, 160, 360, 400),
+                "command": self.inspect_guard_logbook,
+            },
+        ])
+        self._schedule_ambush_check()  # 1F – backstab risk
+
+    def inspect_guard_logbook(self) -> None:
+        already_found = "守衛記錄本" in self.lore
+        if not already_found:
+            self._advance_time(5)
+            self.lore.add("守衛記錄本")
+            self._gain_trust("guard_logbook", 1)
+            self._refresh_status()
+        self._show_image("guard_room")
+        text = ST.INSPECT_GUARD_LOGBOOK if not already_found else (
+            "（你已記下守衛記錄本：天王星案發當晚確實在場，但上層命令不追查。）"
+        )
+        self._set_story(text)
+        self._set_options([
+            ("繼續調查守衛室", self.scene_guard_room),
+            ("返回一樓地圖", self.scene_map_floor1),
+        ])
+
+    # ── 2F: 檔案室（禁書區）── has 四葉草 ────────────────────────────────────────
+    def scene_archive_room(self) -> None:
+        self._advance_time(8)
+        self._refresh_status()
+        self._show_image("archive_room")
+        self._set_story(ST.SCENE_ARCHIVE_ROOM)
+        self._set_options([
+            ("離開檔案室，返回二樓地圖", self.scene_map_floor2),
+        ])
+        self._set_image_actions([
+            {
+                "label": "書縫中的四葉草",
+                "area": (60, 80, 380, 340),
+                "command": self.inspect_clover,
+            },
+        ])
+        self._schedule_ambush_check()  # 2F – backstab risk
+
+    # ── 2F: 修復工坊 ── 新道具：修復工作卡 ──────────────────────────────────────
+    def scene_workshop(self) -> None:
+        self._advance_time(8)
+        self._refresh_status()
+        self._show_image("workshop")
+        self._set_story(ST.SCENE_WORKSHOP)
+        self._set_options([
+            ("離開修復工坊，返回二樓地圖", self.scene_map_floor2),
+        ])
+        self._set_image_actions([
+            {
+                "label": "工具箱旁的工作記錄卡",
+                "area": (60, 140, 380, 400),
+                "command": self.inspect_workshop_card,
+            },
+        ])
+        self._schedule_ambush_check()  # 2F – backstab risk
+
+    def inspect_workshop_card(self) -> None:
+        already_found = "修復工作卡" in self.lore
+        if not already_found:
+            self._advance_time(5)
+            self.lore.add("修復工作卡")
+            self._gain_trust("workshop_card", 1)
+            self._refresh_status()
+        self._show_image("workshop")
+        text = ST.INSPECT_WORKSHOP_CARD if not already_found else (
+            "（你已記下天王星案發前委託秘密修復文書的工作記錄。）"
+        )
+        self._set_story(text)
+        self._set_options([
+            ("繼續調查修復工坊", self.scene_workshop),
+            ("返回二樓地圖", self.scene_map_floor2),
+        ])
+
+    # ── 3F: 廢棄閱覽室 ── 新道具：廢棄手冊 ──────────────────────────────────────
+    def scene_abandoned_room(self) -> None:
+        self._advance_time(8)
+        self._refresh_status()
+        self._show_image("abandoned_room")
+        self._set_story(ST.SCENE_ABANDONED_ROOM)
+        self._set_options([
+            ("離開廢棄閱覽室，返回三樓地圖", self.scene_map_floor3),
+        ])
+        self._set_image_actions([
+            {
+                "label": "閱讀台下的相框",
+                "area": (60, 200, 380, 430),
+                "command": self.inspect_abandoned_relic,
+            },
+        ])
+        # 3F is otherwise the safe zone, but this room is isolated
+
+    def inspect_abandoned_relic(self) -> None:
+        already_found = "廢棄手冊" in self.lore
+        if not already_found:
+            self._advance_time(5)
+            self.lore.add("廢棄手冊")
+            self._gain_trust("abandoned_relic", 1)
+            self._refresh_status()
+        self._show_image("abandoned_room")
+        text = ST.INSPECT_ABANDONED_RELIC if not already_found else (
+            "（你已記下艾莉卡的監視行程表：她在案發前幾天有計劃地在館內觀察。）"
+        )
+        self._set_story(text)
+        self._set_options([
+            ("繼續調查廢棄閱覽室", self.scene_abandoned_room),
+            ("返回三樓地圖", self.scene_map_floor3),
+        ])
 
     # ── 1F corridor ───────────────────────────────────────────────────────────
     def scene_corridor_1f(self) -> None:
