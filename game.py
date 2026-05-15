@@ -479,6 +479,8 @@ class HonghuaGame:
     KILLER_MAP_AMBUSH_CHANCE = 0.30      # per floor-map visit after 2AM
     KILLER_MAP_AMBUSH_CHANCE_3F = 0.05   # 3F is much safer (away from killer's basement lair)
     KILLER_PATROL_INTERVAL_MS = 90_000   # ms between killer floor changes
+    MIN_FLOOR = 1                        # lowest library floor accessible to player
+    MAX_FLOOR = 3                        # highest library floor (safe zone)
 
     # ── init ───────────────────────────────────────────────────────────────────
     def __init__(self, root: tk.Tk) -> None:
@@ -840,7 +842,7 @@ class HonghuaGame:
     def _trigger_killer_emergence(self) -> None:
         """Mark killer as emerged, show warning, and start patrol loop."""
         self._killer_emerged = True
-        self._killer_floor = random.randint(1, 3)
+        self._killer_floor = random.randint(self.MIN_FLOOR, self.MAX_FLOOR)
         # Start patrol tick loop.
         self._killer_patrol_job = self.root.after(
             self.KILLER_PATROL_INTERVAL_MS, self._killer_patrol_tick
@@ -851,7 +853,7 @@ class HonghuaGame:
         """Periodically move killer to a random floor."""
         if not self._killer_emerged:
             return
-        self._killer_floor = random.randint(1, 3)
+        self._killer_floor = random.randint(self.MIN_FLOOR, self.MAX_FLOOR)
         self._killer_patrol_job = self.root.after(
             self.KILLER_PATROL_INTERVAL_MS, self._killer_patrol_tick
         )
@@ -1630,7 +1632,8 @@ class HonghuaGame:
         self._set_story(text)
         self._set_options([
             ("繼續調查會議室", self.scene_meeting_room),
-            ("返回地圖", self.scene_map_floor1),
+            ("返回一樓地圖", self.scene_map_floor1),
+            ("返回二樓地圖", self.scene_map_floor2),
         ])
 
     def ending_hidden(self) -> None:
@@ -1829,7 +1832,8 @@ class HonghuaGame:
         self._show_image("meeting_room")
         self._set_story(ST.SCENE_MEETING_ROOM)
         self._set_options([
-            ("離開會議室，返回地圖", self.scene_map_floor1),
+            ("離開會議室，返回一樓地圖", self.scene_map_floor1),
+            ("離開會議室，返回二樓地圖", self.scene_map_floor2),
         ])
         self._set_image_actions([
             {
