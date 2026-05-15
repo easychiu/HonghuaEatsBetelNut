@@ -124,6 +124,7 @@ python generate_assets.py --bgm-only
   - 進場看書圖：`honghua_readbook_{day|dusk|night}.{png|jpg|jpeg}`
   - 對話看向你（一般）：`honghua_look_{day|dusk|night}.{png|jpg|jpeg}`
   - 對話看向你（依信任度）：`honghua_look_{day|dusk|night}_{impatient|peaceful|friendly|trusted}.{png|jpg|jpeg}`
+  - 紅花看向窗外（回訪時偶爾觸發，夜晚不觸發）：`honghua_window_{day|dusk}.{png|jpg|jpeg}`
   - 也可用環境變數 `SCENE1_TIME_OF_DAY=day|dusk|night` 強制指定時段
 - `hall` 對話期間若缺少上述信任度圖，會回退到 `assets/character_emotions/honghua_readbook_{impatient|peaceful|friendly|trusted}.png`
 - 若缺少上述素材，會回退至 `HonghuaReadBook.jpg`（紅花在圖書館看書）

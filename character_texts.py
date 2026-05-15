@@ -6,6 +6,20 @@ HONGHUA_OS_LINES: tuple[str, ...] = (
     "別再看了，再看她也不會吃檳榔給你看。",
 )
 
+# ── Candle click OS lines ──────────────────────────────────────────────────────
+# Cycled through in order, looping back to the start after the last line.
+CANDLE_OS_LINES_DAY: tuple[str, ...] = (
+    "就是蠟燭。",
+    "還是蠟燭。",
+    "怎麼燒不完阿高科技？",
+)
+
+CANDLE_OS_LINES_NIGHT: tuple[str, ...] = (
+    "就是蠟燭，不知道他有換過嗎？",
+    "蠟燭沒什麼特別的。",
+    "該不會這蠟燭會自己增生吧……",
+)
+
 BOOKSHELF_CORRECT_ORDER = [
     "失蹤案卷",
     "退學檔案",
