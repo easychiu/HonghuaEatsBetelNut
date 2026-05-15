@@ -146,6 +146,17 @@ class CharacterAnimator:
     GLOW_VAR_ALPHA   = 4     # amplitude of the pulsing alpha variation
     GLOW_PHASE_MULT  = 0.65  # slows the glow pulse relative to the cheek cycle
 
+    # Cursor-driven focus/parallax (Live2D-like interaction)
+    FOCUS_SMOOTHING     = 0.18  # interpolation factor each frame
+    FOCUS_HEAD_SHIFT_X  = 3     # max horizontal shift (px) for head strip
+    FOCUS_HEAD_SHIFT_Y  = 2     # max vertical shift (px) for head strip
+    FOCUS_EYE_SHIFT_X   = 2     # max horizontal shift (px) for eye strip
+    FOCUS_EYE_SHIFT_Y   = 1     # max vertical shift (px) for eye strip
+    FOCUS_HEAD_Y2_FRAC  = 0.45  # head/face strip affected by parallax
+
+    # Typing-driven lip-sync activity
+    LIP_SYNC_DECAY = 0.88
+
     def __init__(self, canvas: object, width: int, height: int) -> None:
         self._canvas   = canvas
         self._w        = width
@@ -159,6 +170,11 @@ class CharacterAnimator:
         self._next_blink     = self._rand_blink_interval()
         self._blink_phase    = 0   # 0=open  1=closing  2=shut  3=opening
         self._blink_subframe = 0
+        self._target_focus_x = 0.0
+        self._target_focus_y = 0.0
+        self._focus_x = 0.0
+        self._focus_y = 0.0
+        self._lip_sync = 0.0
 
     # ── public API ─────────────────────────────────────────────────────────────
 
@@ -180,6 +196,25 @@ class CharacterAnimator:
         self._state = state
         # Reset blink cadence to match the new emotional state.
         self._next_blink = self._rand_blink_interval()
+
+    def set_focus_point(self, x: int, y: int) -> None:
+        """Set cursor focus point in canvas coordinates for parallax tracking."""
+        if self._w <= 1 or self._h <= 1:
+            return
+        nx = (x / (self._w - 1)) * 2.0 - 1.0
+        ny = (y / (self._h - 1)) * 2.0 - 1.0
+        self._target_focus_x = max(-1.0, min(1.0, nx))
+        self._target_focus_y = max(-1.0, min(1.0, ny))
+
+    def clear_focus(self) -> None:
+        """Relax focus target back to the centre position."""
+        self._target_focus_x = 0.0
+        self._target_focus_y = 0.0
+
+    def set_lip_sync_intensity(self, intensity: float) -> None:
+        """Boost temporary mouth movement (0.0–1.0), e.g. during text typing."""
+        value = max(0.0, min(1.0, intensity))
+        self._lip_sync = max(self._lip_sync, value)
 
     def start(self) -> None:
         """Begin (or restart) the animation loop."""
@@ -225,6 +260,9 @@ class CharacterAnimator:
             self._canvas.tag_lower("char_anim")
         else:
             self._canvas.itemconfig(self._item_id, image=self._photo)
+        self._focus_x += (self._target_focus_x - self._focus_x) * self.FOCUS_SMOOTHING
+        self._focus_y += (self._target_focus_y - self._focus_y) * self.FOCUS_SMOOTHING
+        self._lip_sync *= self.LIP_SYNC_DECAY
         self._frame   += 1
         self._after_id = self._canvas.after(self.INTERVAL_MS, self._tick)
 
@@ -288,6 +326,10 @@ class CharacterAnimator:
                 new_head.paste(bot_row, (0, visible))
             img.paste(new_head, (0, 0))
 
+        # 2.5 Cursor focus parallax (head + eye strip)
+        if abs(self._focus_x) > 0.01 or abs(self._focus_y) > 0.01:
+            img = self._apply_focus_tracking(img, w, h)
+
         # 3. Hair sway (horizontal shift on top region, 3-band gradient) ───────
         sphase = 2 * math.pi * t / (self.FPS * self.HAIR_SWAY_CYCLE)
         dx     = int(self.HAIR_SWAY_AMP * math.sin(sphase))
@@ -306,8 +348,17 @@ class CharacterAnimator:
             img = self._apply_eye_highlight(img, w, h, t)
 
         # 6. Talking mouth animation (talking / excited / friendly / trusted)
-        if self._state in (STATE_TALKING, STATE_EXCITED, STATE_FRIENDLY, STATE_TRUSTED):
-            img = self._apply_talking_anim(img, w, h, t)
+        is_speaking_state = self._state in (
+            STATE_TALKING, STATE_EXCITED, STATE_FRIENDLY, STATE_TRUSTED
+        )
+        if is_speaking_state or self._lip_sync > 0.12:
+            img = self._apply_talking_anim(
+                img,
+                w,
+                h,
+                t,
+                activity=max(self._lip_sync, 0.45 if is_speaking_state else 0.0),
+            )
 
         # 7. Trust-level expression overlays
         if self._state == STATE_IMPATIENT:
@@ -318,6 +369,66 @@ class CharacterAnimator:
         return img
 
     # ── effect helpers ─────────────────────────────────────────────────────────
+
+    def _shift_region(
+        self,
+        img: object,
+        x1: int,
+        y1: int,
+        x2: int,
+        y2: int,
+        dx: int,
+        dy: int,
+    ) -> object:
+        """Shift a rectangular region with edge padding to avoid transparent gaps."""
+        rw = max(0, x2 - x1)
+        rh = max(0, y2 - y1)
+        if rw <= 0 or rh <= 0 or (dx == 0 and dy == 0):
+            return img
+        region = img.crop((x1, y1, x2, y2))
+        shifted = Image.new("RGBA", (rw, rh), (0, 0, 0, 0))
+        src_x1 = max(0, dx)
+        src_y1 = max(0, dy)
+        src_x2 = min(rw, rw + dx)
+        src_y2 = min(rh, rh + dy)
+        dst_x = max(0, -dx)
+        dst_y = max(0, -dy)
+        if src_x2 > src_x1 and src_y2 > src_y1:
+            shifted.paste(region.crop((src_x1, src_y1, src_x2, src_y2)), (dst_x, dst_y))
+
+        # Fill top/bottom edges
+        if dy > 0:
+            top = region.crop((0, 0, rw, 1)).resize((rw, dy), _NEAREST)
+            shifted.paste(top, (0, 0))
+        elif dy < 0:
+            dy_abs = -dy
+            bot = region.crop((0, rh - 1, rw, rh)).resize((rw, dy_abs), _NEAREST)
+            shifted.paste(bot, (0, rh - dy_abs))
+
+        # Fill left/right edges
+        if dx > 0:
+            left = region.crop((0, 0, 1, rh)).resize((dx, rh), _NEAREST)
+            shifted.paste(left, (0, 0))
+        elif dx < 0:
+            dx_abs = -dx
+            right = region.crop((rw - 1, 0, rw, rh)).resize((dx_abs, rh), _NEAREST)
+            shifted.paste(right, (rw - dx_abs, 0))
+
+        result = img.copy()
+        result.paste(shifted, (x1, y1))
+        return result
+
+    def _apply_focus_tracking(self, img: object, w: int, h: int) -> object:
+        """Apply subtle cursor-following head and eye-region parallax."""
+        head_dx = int(self.FOCUS_HEAD_SHIFT_X * self._focus_x)
+        head_dy = int(self.FOCUS_HEAD_SHIFT_Y * self._focus_y)
+        eye_dx = int(self.FOCUS_EYE_SHIFT_X * self._focus_x)
+        eye_dy = int(self.FOCUS_EYE_SHIFT_Y * self._focus_y)
+        head_y2 = int(h * self.FOCUS_HEAD_Y2_FRAC)
+        eye_y1 = int(h * self.EYE_Y1_FRAC)
+        eye_y2 = int(h * self.EYE_Y2_FRAC)
+        out = self._shift_region(img, 0, 0, w, head_y2, head_dx, head_dy)
+        return self._shift_region(out, 0, eye_y1, w, eye_y2, eye_dx, eye_dy)
 
     def _apply_hair_sway(self, img: object, w: int, h: int, dx: int) -> object:
         """Shift the hair region in three horizontal bands (tip → root gradient).
@@ -421,6 +532,8 @@ class CharacterAnimator:
             return img
         hx = int(w * self.EYE_HL_X_FRAC)
         hy = int(h * self.EYE_HL_Y_FRAC)
+        hx += int(self.FOCUS_EYE_SHIFT_X * self._focus_x * 0.8)
+        hy += int(self.FOCUS_EYE_SHIFT_Y * self._focus_y * 0.8)
         r  = self.EYE_HL_R
         overlay = Image.new("RGBA", (w, h), (0, 0, 0, 0))
         draw    = ImageDraw.Draw(overlay)
@@ -432,7 +545,14 @@ class CharacterAnimator:
         )
         return Image.alpha_composite(img, overlay)
 
-    def _apply_talking_anim(self, img: object, w: int, h: int, t: int) -> object:
+    def _apply_talking_anim(
+        self,
+        img: object,
+        w: int,
+        h: int,
+        t: int,
+        activity: float = 1.0,
+    ) -> object:
         """Pulse a mouth-shadow oval to suggest the lips parting when talking.
 
         Two sine waves at an irrational frequency ratio (1.0 : 1.9) produce an
@@ -450,6 +570,7 @@ class CharacterAnimator:
             + self.TALK_SECONDARY_AMP * math.sin(phase * self.TALK_HARMONIC_RATIO)
             + self.TALK_DC_BIAS,
         )
+        open_factor *= max(0.0, min(1.0, activity))
         if open_factor < self.TALK_OPEN_THRESHOLD:
             return img
         mx1 = int(w * self.MOUTH_X1_FRAC)
