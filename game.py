@@ -154,8 +154,8 @@ SCENE_TITLES: dict[str, str] = {
 }
 
 # ── layout ─────────────────────────────────────────────────────────────────────
-WIN_W, WIN_H = 1100, 700
-IW, IH       = 460, 490        # scene image size
+WIN_W, WIN_H = 1920, 1080
+IW, IH       = 1462, 1076        # scene image size
 TITLE_H      = 52
 STATUS_H     = 28
 BTN_H        = 100
@@ -494,8 +494,8 @@ class HonghuaGame:
     STORAGE_AMBUSH_CHANCE = 0.20          # generalised 1F/2F backstab chance
     STORAGE_AMBUSH_CHANCE_HIGH = 0.65    # near the killer's hideout (basement storage room)
     # ── time & killer system ─────────────────────────────────────────────────
-    GAME_START_HOUR    = 23              # game clock starts at 23:00
-    KILLER_EMERGE_ELAPSED = 180          # minutes of game-time before 02:00 (23:00 + 3h)
+    GAME_START_HOUR    = 15              # game clock starts at 15:00
+    KILLER_EMERGE_ELAPSED = 420          # minutes of game-time before 18:00 (15:00 + 7h)
     KILLER_MAP_AMBUSH_CHANCE = 0.30      # per floor-map visit after 2AM
     KILLER_MAP_AMBUSH_CHANCE_3F = 0.05   # 3F is much safer (away from killer's basement lair)
     KILLER_PATROL_INTERVAL_MS = 90_000   # ms between killer floor changes
