@@ -646,8 +646,6 @@ class HonghuaGame:
                 self.animator.clear_focus()
                 self.animator.set_lip_sync_intensity(0.0)
                 self.animator.start()
-                self._current_img = None
-                return
 
         # Fall back to the static scene image.
         img = scene_image(key)

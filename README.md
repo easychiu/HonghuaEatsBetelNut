@@ -7,7 +7,7 @@
 - 哥德式管弦樂 BGM（已隨專案附帶）
 - 豐富的多分支劇情與人物線索系統
 - 新增「紅花信任度」好感度系統
-- 強化紅花「類 Live2D」互動演出（視線跟隨、打字口型、信任表情）
+- 改為「真正 Live2D」渲染流程（Web Cubism runtime + pywebview）
 - 兩種謎題類型與 8 種結局
 - 新增圖書館三層「上帝視角」2D 像素風地圖與樓層切換
 
@@ -54,6 +54,11 @@ python game.py                     # 啟動遊戲
   - `assets/character_emotions/honghua_readbook_{impatient|peaceful|friendly|trusted}.png`
   - `assets/bgm_main.mp3`
   - `assets/bgm_end.mp3`
+- 真正 Live2D 角色模型需自行放到：
+  - `assets/live2d/honghua/model3.json`
+  - 以及該模型依賴的 `.moc3` / `textures` / `motions` / `expressions` 檔案
+- 安裝 `requirements.txt` 後，遊戲會自動啟動 Live2D 視窗（pywebview）
+- 若缺少 `assets/live2d/honghua/model3.json`，遊戲仍可執行，但不會開啟 Live2D 視窗
 - 一般使用者只需要執行 `python game.py`，**不需要**自行生成任何圖像或音樂。
 
 ## 維護者選用：重新生成素材
@@ -138,7 +143,7 @@ python generate_assets.py --bgm-only
 ### 操作方式
 
 - 物證與場景內互動改為點擊左側場景圖上的互動區域
-- 紅花角色場景支援滑鼠跟隨：移動游標時，頭部與視線會輕微追蹤
+- 紅花 Live2D 視窗支援滑鼠跟隨與打字口型（由遊戲狀態即時驅動）
 - 離開目前畫面或切換到其他場景時，仍使用右下方按鈕
 
 ### 紅花信任度
