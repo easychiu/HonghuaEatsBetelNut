@@ -88,6 +88,7 @@ _TOP_MAP_MIN_COMPONENT_W_RATIO = 0.12
 _TOP_MAP_MIN_COMPONENT_H_RATIO = 0.20
 _TOP_MAP_MIN_COMPONENT_DIM_ABS = 90
 _TOP_MAP_MAX_CANDIDATES = 8
+_TOP_MAP_COLUMN_GUTTER_RATIO = 0.006
 _top_map_floor_regions_cache: dict[tuple[int, int], list[tuple[int, int, int, int]]] = {}
 
 
@@ -271,12 +272,48 @@ def _detect_top_map_floor_regions(img: Image.Image) -> list[tuple[int, int, int,
         row = candidates
     row.sort(key=lambda c: c[1])
     regions = [(x1, y1, x2, y2) for _area, x1, y1, x2, y2 in row[:3]]
+    regions = _normalize_floor_regions(regions, w, h)
 
     if len(regions) < 3:
         regions = _fallback_floor_regions(w, h)
 
     _top_map_floor_regions_cache[size_key] = regions
     return regions
+
+
+def _normalize_floor_regions(
+    regions: list[tuple[int, int, int, int]],
+    w: int,
+    h: int,
+) -> list[tuple[int, int, int, int]]:
+    if len(regions) < 3:
+        return regions
+
+    ordered = sorted(regions[:3], key=lambda r: r[0])
+    centers = [(x1 + x2) // 2 for x1, _y1, x2, _y2 in ordered]
+    if not (centers[0] < centers[1] < centers[2]):
+        return ordered
+
+    mid12 = (centers[0] + centers[1]) // 2
+    mid23 = (centers[1] + centers[2]) // 2
+    left = max(0, min(ordered[0][0], 2 * centers[0] - mid12))
+    right = min(w - 1, max(ordered[2][2], 2 * centers[2] - mid23))
+    top = max(0, min(r[1] for r in ordered))
+    bottom = min(h - 1, max(r[3] for r in ordered))
+    if right <= left or bottom <= top:
+        return ordered
+
+    gutter = max(6, int(w * _TOP_MAP_COLUMN_GUTTER_RATIO))
+    b1 = max(left + 1, min(right - 2, mid12 - gutter))
+    b2 = max(b1 + 1, min(right - 1, mid23 + gutter))
+    if b2 >= right:
+        return ordered
+
+    return [
+        (left, top, b1, bottom),
+        (b1 + 1, top, b2, bottom),
+        (b2 + 1, top, right, bottom),
+    ]
 
 
 def _top_map_floor_image(floor: int, iw: int, ih: int) -> Optional[MapImage]:
