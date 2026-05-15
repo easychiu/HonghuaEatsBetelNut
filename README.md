@@ -128,7 +128,9 @@ python generate_assets.py --bgm-only
   - 也可用環境變數 `SCENE1_TIME_OF_DAY=day|dusk|night` 強制指定時段
 - `hall` 對話期間若缺少上述信任度圖，會回退到 `assets/character_emotions/honghua_readbook_{impatient|peaceful|friendly|trusted}.png`
 - 若缺少上述素材，會回退至 `HonghuaReadBook.jpg`（紅花在圖書館看書）
-- 若有 `HonghuaInENG.jpg`，`intro` / `confront` / `basement` / `basement_deep` 會優先使用該圖（紅花人物形象）
+- `intro` 開場畫面會優先使用 `assets/scenes/outside.png`
+- 大地圖模式（`map_f1` / `map_f2` / `map_f3`）會優先使用 `assets/scenes/TopMap.png`，並依樓層顯示對應區域
+- 若有 `HonghuaInENG.jpg`，`confront` / `basement` / `basement_deep` 會優先使用該圖（紅花人物形象）
 - 專案已先行附帶開場、大廳、對峙、地下室、各調查節點與結局場景圖（包含 `assets/scenes/default.png`）
 - 維護者重新生成場景圖時，會一併輸出 `assets/scenes/default.png` 作為紅花主視覺預設場景
 

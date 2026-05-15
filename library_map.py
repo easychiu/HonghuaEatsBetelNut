@@ -1,6 +1,8 @@
 """Library map rendering and interaction flow."""
 from __future__ import annotations
 
+import os
+from collections import deque
 from typing import TYPE_CHECKING, Protocol, Optional, TypeAlias
 
 import story_texts as ST
@@ -13,8 +15,11 @@ else:
 try:
     from PIL import Image, ImageDraw, ImageTk
     _PIL = True
+    _RESAMPLING = getattr(Image, "Resampling", None)
+    _LANCZOS = _RESAMPLING.LANCZOS if _RESAMPLING else Image.LANCZOS  # type: ignore[attr-defined]
 except ImportError:
     _PIL = False
+    _LANCZOS = 1  # unused when _PIL is False
 
 
 MAP_SCENE_TITLES: dict[str, str] = {
@@ -22,6 +27,14 @@ MAP_SCENE_TITLES: dict[str, str] = {
     "map_f2": "圖書館地圖・二樓",
     "map_f3": "圖書館地圖・三樓",
 }
+
+_MAP_BASE_W = 460
+_MAP_BASE_H = 490
+_MAP_CANVAS_W = 1462
+_MAP_CANVAS_H = 1076
+_DIR = os.path.dirname(os.path.abspath(__file__))
+_TOP_MAP_PATH = os.path.join(_DIR, "assets", "scenes", "TopMap.png")
+_top_map_floor_regions_cache: dict[tuple[int, int], list[tuple[int, int, int, int]]] = {}
 
 
 class MapSceneGame(Protocol):
@@ -100,13 +113,139 @@ def _pixel_library_map(floor: int, iw: int, ih: int) -> Optional[MapImage]:
     return ImageTk.PhotoImage(img.convert("RGB"))
 
 
+def _scale_area(
+    area: tuple[int, int, int, int],
+    iw: int = _MAP_CANVAS_W,
+    ih: int = _MAP_CANVAS_H,
+) -> tuple[int, int, int, int]:
+    x1, y1, x2, y2 = area
+    sx = iw / _MAP_BASE_W
+    sy = ih / _MAP_BASE_H
+    return (
+        int(round(x1 * sx)),
+        int(round(y1 * sy)),
+        int(round(x2 * sx)),
+        int(round(y2 * sy)),
+    )
+
+
+def _fallback_floor_regions(w: int, h: int) -> list[tuple[int, int, int, int]]:
+    top = int(h * 0.14)
+    bottom = int(h * 0.55)
+    left = int(w * 0.06)
+    right = int(w * 0.94)
+    span = max(3, right - left)
+    panel = span // 3
+    regions: list[tuple[int, int, int, int]] = []
+    for idx in range(3):
+        x1 = left + idx * panel
+        x2 = left + (idx + 1) * panel - 1 if idx < 2 else right
+        regions.append((x1, top, x2, bottom))
+    return regions
+
+
+def _detect_top_map_floor_regions(img: Image.Image) -> list[tuple[int, int, int, int]]:
+    size_key = img.size
+    cached = _top_map_floor_regions_cache.get(size_key)
+    if cached:
+        return cached
+
+    gray = img.convert("L")
+    w, h = gray.size
+    y_limit = max(1, int(h * 0.62))
+    threshold = 24
+    pix = gray.load()
+    mask = [bytearray(w) for _ in range(y_limit)]
+    for y in range(y_limit):
+        row = mask[y]
+        for x in range(w):
+            row[x] = 1 if pix[x, y] >= threshold else 0
+
+    visited = [bytearray(w) for _ in range(y_limit)]
+    min_area = max(2500, int(w * y_limit * 0.01))
+    min_w = max(90, int(w * 0.12))
+    min_h = max(90, int(h * 0.20))
+    components: list[tuple[int, int, int, int, int]] = []
+
+    for y in range(y_limit):
+        for x in range(w):
+            if not mask[y][x] or visited[y][x]:
+                continue
+            q = deque([(x, y)])
+            visited[y][x] = 1
+            area = 0
+            x1 = x2 = x
+            y1 = y2 = y
+            while q:
+                cx, cy = q.popleft()
+                area += 1
+                x1 = min(x1, cx)
+                x2 = max(x2, cx)
+                y1 = min(y1, cy)
+                y2 = max(y2, cy)
+                if cx > 0 and mask[cy][cx - 1] and not visited[cy][cx - 1]:
+                    visited[cy][cx - 1] = 1
+                    q.append((cx - 1, cy))
+                if cx + 1 < w and mask[cy][cx + 1] and not visited[cy][cx + 1]:
+                    visited[cy][cx + 1] = 1
+                    q.append((cx + 1, cy))
+                if cy > 0 and mask[cy - 1][cx] and not visited[cy - 1][cx]:
+                    visited[cy - 1][cx] = 1
+                    q.append((cx, cy - 1))
+                if cy + 1 < y_limit and mask[cy + 1][cx] and not visited[cy + 1][cx]:
+                    visited[cy + 1][cx] = 1
+                    q.append((cx, cy + 1))
+            if area < min_area:
+                continue
+            if (x2 - x1 + 1) < min_w or (y2 - y1 + 1) < min_h:
+                continue
+            components.append((area, x1, y1, x2, y2))
+
+    if not components:
+        regions = _fallback_floor_regions(w, h)
+        _top_map_floor_regions_cache[size_key] = regions
+        return regions
+
+    components.sort(key=lambda c: (-c[0], c[2], c[1]))
+    candidates = components[:8]
+    top_y = min(c[2] for c in candidates)
+    row_cutoff = top_y + int(h * 0.12)
+    row = [c for c in candidates if c[2] <= row_cutoff]
+    if len(row) < 3:
+        row = candidates
+    row.sort(key=lambda c: c[1])
+    regions = [(x1, y1, x2, y2) for _area, x1, y1, x2, y2 in row[:3]]
+
+    if len(regions) < 3:
+        regions = _fallback_floor_regions(w, h)
+
+    _top_map_floor_regions_cache[size_key] = regions
+    return regions
+
+
+def _top_map_floor_image(floor: int, iw: int, ih: int) -> Optional[MapImage]:
+    if not _PIL or not os.path.exists(_TOP_MAP_PATH):
+        return None
+    try:
+        img = Image.open(_TOP_MAP_PATH).convert("RGB")
+    except Exception:
+        return None
+    regions = _detect_top_map_floor_regions(img)
+    idx = max(0, min(2, floor - 1))
+    x1, y1, x2, y2 = regions[idx]
+    crop = img.crop((x1, y1, x2 + 1, y2 + 1))
+    if crop.size != (iw, ih):
+        crop = crop.resize((iw, ih), _LANCZOS)
+    return ImageTk.PhotoImage(crop)
+
+
 def build_library_map_image(key: str, iw: int, ih: int) -> Optional[MapImage]:
     if key == "map_f1":
-        return _pixel_library_map(1, iw, ih)
+        return _top_map_floor_image(1, iw, ih) or _pixel_library_map(1, iw, ih)
     if key == "map_f2":
-        return _pixel_library_map(2, iw, ih)
+        return _top_map_floor_image(2, iw, ih) or _pixel_library_map(2, iw, ih)
     if key == "map_f3":
-        return _pixel_library_map(3, iw, ih)
+        return _top_map_floor_image(3, iw, ih) or _pixel_library_map(3, iw, ih)
     return None
 
 
@@ -156,19 +295,19 @@ def show_library_map_scene(game: MapSceneGame, floor: int) -> None:
 
     # ── floor-switch tabs at the bottom edge of the canvas ────────────────────
     actions: list[dict[str, object]] = [
-        {"label": "一樓", "area": (20, 420, 130, 478), "command": game.scene_map_floor1},
-        {"label": "二樓", "area": (170, 420, 280, 478), "command": game.scene_map_floor2},
-        {"label": "三樓", "area": (320, 420, 430, 478), "command": game.scene_map_floor3},
+        {"label": "一樓", "area": _scale_area((20, 420, 130, 478)), "command": game.scene_map_floor1},
+        {"label": "二樓", "area": _scale_area((170, 420, 280, 478)), "command": game.scene_map_floor2},
+        {"label": "三樓", "area": _scale_area((320, 420, 430, 478)), "command": game.scene_map_floor3},
     ]
 
     # Top corridor strip — shared click target for corridor scenes
-    _CORRIDOR_AREA = (130, 93, 295, 122)
+    _CORRIDOR_AREA = _scale_area((130, 93, 295, 122))
 
     if game._map_floor == 1:
         actions.extend([
             {
                 "label": "書架深處",
-                "area": (36, 288, 126, 358),
+                "area": _scale_area((36, 288, 126, 358)),
                 "command": game.scene_bookshelves,
             },
             {
@@ -178,36 +317,36 @@ def show_library_map_scene(game: MapSceneGame, floor: int) -> None:
             },
             {
                 "label": "房間A",
-                "area": (36, 36, 126, 106),
+                "area": _scale_area((36, 36, 126, 106)),
                 "command": game.scene_room_a,
             },
             {
                 "label": "房間B",
-                "area": (334, 36, 424, 106),
+                "area": _scale_area((334, 36, 424, 106)),
                 "command": game.scene_room_b,
             },
             {
                 "label": "會議室",
-                "area": (334, 288, 424, 454),
+                "area": _scale_area((334, 288, 424, 454)),
                 "command": game.scene_meeting_room,
             },
         ])
         if has_key:
             actions.append({
                 "label": "地下密室",
-                "area": (36, 384, 126, 454),
+                "area": _scale_area((36, 384, 126, 454)),
                 "command": game.scene_basement,
             })
     elif game._map_floor == 2:
         actions.extend([
             {
                 "label": "研究桌",
-                "area": (36, 36, 126, 106),
+                "area": _scale_area((36, 36, 126, 106)),
                 "command": game.scene_desk,
             },
             {
                 "label": "窗邊",
-                "area": (334, 36, 424, 106),
+                "area": _scale_area((334, 36, 424, 106)),
                 "command": game.scene_window,
             },
             {
@@ -217,7 +356,7 @@ def show_library_map_scene(game: MapSceneGame, floor: int) -> None:
             },
             {
                 "label": "二樓會議室",
-                "area": (334, 288, 424, 454),
+                "area": _scale_area((334, 288, 424, 454)),
                 "command": game.scene_meeting_room,
             },
         ])
@@ -225,12 +364,12 @@ def show_library_map_scene(game: MapSceneGame, floor: int) -> None:
         actions.extend([
             {
                 "label": "管理室外",
-                "area": (168, 24, 292, 84),
+                "area": _scale_area((168, 24, 292, 84)),
                 "command": game.scene_hall,
             },
             {
                 "label": "進管理室（紅花）",
-                "area": (168, 84, 292, 150),
+                "area": _scale_area((168, 84, 292, 150)),
                 "command": game.scene_confront,
             },
             {

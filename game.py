@@ -45,6 +45,7 @@ HONGHUA_READ_BOOK_JPG = os.path.join(_DIR, "HonghuaReadBook.jpg")
 HONGHUA_IN_ENG_JPG = os.path.join(_DIR, "HonghuaInENG.jpg")
 ASSETS    = os.path.join(_DIR, "assets")
 SCENES    = os.path.join(ASSETS, "scenes")
+OUTSIDE_SCENE_PNG = os.path.join(SCENES, "outside.png")
 CHARACTER_EMOTIONS = os.path.join(ASSETS, "character_emotions")
 SCENE1_ASSETS = os.path.join(ASSETS, "scene1")
 BGM_MAIN  = os.path.join(ASSETS, "bgm_main.mp3")
@@ -61,7 +62,6 @@ TRUST_EMOTION_ASSETS: dict[str, str] = {
 # ── character animation: scene → animator state ────────────────────────────────
 # Only scenes that show a character image (via SCENE_SOURCE_OVERRIDES) are listed.
 _CHAR_ANIM_SCENES: dict[str, str] = {
-    "intro":         "talking",
     "prologue":      "talking",   # Honghua is actively speaking in the prologue
     "hall":          "idle",
     "bookshelves":   "idle",
@@ -105,7 +105,7 @@ def _first_existing_path(paths: list[str]) -> str:
     return ""
 
 SCENE_SOURCE_OVERRIDES: dict[str, str] = {
-    "intro": HONGHUA_IN_ENG_JPG,
+    "intro": OUTSIDE_SCENE_PNG,
     "prologue": HONGHUA_READ_BOOK_JPG,
     "hall": HONGHUA_READ_BOOK_JPG,
     "bookshelves": HONGHUA_READ_BOOK_JPG,
