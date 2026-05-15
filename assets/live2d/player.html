@@ -15,7 +15,7 @@
   </head>
   <body>
     <div id="app"></div>
-    <div id="hint">Live2D 載入中...（請先放置 assets/live2d/honghua/model3.json 與 assets/live2d/vendor/*.js）</div>
+    <div id="hint">Live2D 載入中...</div>
     <script>
       const MODEL_SETUP_PATH = "assets/live2d/honghua/model3.json";
       const VENDOR_SETUP_PATHS = "assets/live2d/vendor/pixi.min.js 與 assets/live2d/vendor/cubism4.min.js";
@@ -36,6 +36,7 @@
       const params = new URLSearchParams(location.search);
       const modelPath = params.get("model") || "honghua/model3.json";
       const hint = document.getElementById("hint");
+      hint.textContent = `Live2D 載入中...（請先放置 ${MODEL_SETUP_PATH} 與 ${VENDOR_SETUP_PATHS}）`;
       let app = null;
 
       const state = { focusX: 0, focusY: 0, lipSync: 0, stateName: "idle" };
@@ -85,7 +86,7 @@
           await loadScript("./vendor/pixi.min.js");
           await loadScript("./vendor/cubism4.min.js");
         } catch (e) {
-          hint.textContent = `缺少 Live2D 前端套件：${e}（請放置 ${VENDOR_SETUP_PATHS}）`;
+          hint.textContent = `缺少 Live2D 前端套件：${e}（需要 pixi.min.js 與 cubism4.min.js）`;
           return;
         }
 
@@ -104,7 +105,7 @@
             try { model.motion("idle"); return; } catch (_) {}
           });
         } catch (e) {
-          hint.textContent = `Live2D 載入失敗：${e}（請確認 ${MODEL_SETUP_PATH} 與相依檔案）`;
+          hint.textContent = `Live2D 載入失敗：${e}（請確認 ${modelPath} 與相依檔案）`;
           return;
         }
 
