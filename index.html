@@ -114,8 +114,8 @@
       <h1 class="title">紅花吃檳榔｜單檔 HTML 完整內容版</h1>
       <div class="kv"><span>時間</span><b id="clock"></b></div>
       <div class="kv"><span>危險狀態</span><b id="dangerState"></b></div>
-      <div class="kv"><span>燭火值</span><b id="candleText"></b></div>
-      <div class="bar"><div id="candleBar" class="fill"></div></div>
+      <div class="kv"><span>燭火值</span><b id="candleText" aria-live="polite"></b></div>
+      <div class="bar"><div id="candleBar" class="fill" role="progressbar" aria-label="燭火值" aria-valuemin="0" aria-valuemax="100" aria-valuenow="100"></div></div>
       <div class="kv"><span>信任度</span><b id="trustText"></b></div>
       <div class="bar"><div id="trustBar" class="fill"></div></div>
       <div class="kv"><span>物證進度</span><b id="evidenceText"></b></div>
@@ -766,12 +766,16 @@ const TEXT_ARCHIVE = {
       return "low";
     }
 
+    function isEndingOrHiddenScene(scene) {
+      return scene.startsWith("ending_") || scene.startsWith("python_hidden_");
+    }
+
+    function clampCandle(value) {
+      return Math.max(0, Math.min(MAX_CANDLE, Math.floor(value)));
+    }
+
     function shouldTriggerDarknessEnding() {
-      return (
-        S.candle === 0 &&
-        !S.scene.startsWith("ending_") &&
-        !S.scene.startsWith("python_hidden_")
-      );
+      return S.candle === 0 && !isEndingOrHiddenScene(S.scene);
     }
 
     // ── Scene 1 dynamic image helpers (mirrors Python _scene1_time_of_day / _trust_anim_state) ──
@@ -900,7 +904,7 @@ const TEXT_ARCHIVE = {
 
     function advance(minutes, reason) {
       S.elapsed += minutes;
-      S.candle = Math.max(0, S.candle - Math.floor(minutes * CANDLE_DRAIN_PER_MINUTE));
+      S.candle = clampCandle(S.candle - Math.floor(minutes * CANDLE_DRAIN_PER_MINUTE));
       if (reason) pushLog(`⏱ +${minutes} 分鐘：${reason}`);
       if (shouldTriggerDarknessEnding()) {
         goto("ending_bad_darkness");
@@ -919,8 +923,7 @@ const TEXT_ARCHIVE = {
       if (
         S.candle === 0 &&
         S.scene === "ending_bad_darkness" &&
-        !scene.startsWith("ending_") &&
-        !scene.startsWith("python_hidden_")
+        !isEndingOrHiddenScene(scene)
       ) {
         render();
         return;
@@ -1624,6 +1627,7 @@ const TEXT_ARCHIVE = {
         : "一般";
       document.getElementById("candleText").textContent = `${S.candle}/${MAX_CANDLE}`;
       document.getElementById("candleBar").style.width = `${S.candle}%`;
+      document.getElementById("candleBar").setAttribute("aria-valuenow", String(S.candle));
       document.getElementById("trustText").textContent = `${S.trust}/100`;
       document.getElementById("trustBar").style.width = `${S.trust}%`;
       document.getElementById("evidenceText").textContent = `${evidenceCount()}/3`;
@@ -1701,7 +1705,7 @@ const TEXT_ARCHIVE = {
       merged.flags = Object.assign({}, DEFAULT_FLAGS, state?.flags || {});
       merged.archive = Object.assign({}, DEFAULT_ARCHIVE, state?.archive || {});
       if (typeof merged.candle !== "number" || Number.isNaN(merged.candle)) merged.candle = MAX_CANDLE;
-      merged.candle = Math.max(0, Math.min(MAX_CANDLE, Math.floor(merged.candle)));
+      merged.candle = clampCandle(merged.candle);
       if (!Array.isArray(merged.log)) merged.log = [DEFAULT_LOG_MESSAGE];
       if (!Array.isArray(merged.booksOrder)) merged.booksOrder = [];
       if (typeof merged.passwordFails !== "number") merged.passwordFails = 0;
