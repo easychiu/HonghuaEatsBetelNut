@@ -951,17 +951,16 @@ const TEXT_ARCHIVE = {
 
         case "ending_bad":
         case "ending_normal":
-          if (S.flags.hiddenLondonUnlocked) {
-            opts.push(["(隱藏選項) 等等……妳要不要打胰島素？", () => {
-              pushLog("💉 已解鎖的胰島素關鍵詞再次觸發隱藏線。");
-              goto("python_hidden_start");
-            }]);
-          } else {
-            opts.push(["(察覺違和感) 我不是英國皇家警察……", () => {
-              pushLog("👁️ 你意識到身份錯誤，夢境開始崩解。");
-              goto("python_hidden_start");
-            }]);
-          }
+          const hiddenTriggerLabel = S.flags.hiddenLondonUnlocked
+            ? "(隱藏選項) 等等……妳要不要打胰島素？"
+            : "(察覺違和感) 我不是英國皇家警察……";
+          const hiddenTriggerLog = S.flags.hiddenLondonUnlocked
+            ? "💉 已解鎖的胰島素關鍵詞再次觸發隱藏線。"
+            : "👁️ 你意識到身份錯誤，夢境開始崩解。";
+          opts.push([hiddenTriggerLabel, () => {
+            pushLog(hiddenTriggerLog);
+            goto("python_hidden_start");
+          }]);
           opts.push(["重新開始", () => {
             S = initialState();
             pushLog("♻ 已重新開始");
@@ -984,7 +983,7 @@ const TEXT_ARCHIVE = {
         case "python_hidden_london":
           if (!S.flags.hiddenLondonUnlocked) {
             S.flags.hiddenLondonUnlocked = true;
-            pushLog("🔓 已解鎖：胰島素隱藏選項（倫敦分支後）");
+            pushLog("🔓 已解鎖：胰島素隱藏選項（已抵達倫敦分支）");
           }
           opts.push(["(進入工會據點) 接受艾蜜莉亞的身份", () => {
             S.scene = "archive_index"; // 跳轉到文字庫或其他你想展示的結尾畫面
