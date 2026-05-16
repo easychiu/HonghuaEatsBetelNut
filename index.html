@@ -951,13 +951,14 @@ const TEXT_ARCHIVE = {
 
         case "ending_bad":
         case "ending_normal":
-          opts.push(["(察覺違和感) 我不是英國皇家警察……", () => {
-            pushLog("👁️ 你意識到身份錯位，夢境開始崩解。");
-            goto("python_hidden_start");
-          }]);
           if (S.flags.hiddenLondonUnlocked) {
             opts.push(["(隱藏選項) 等等……妳要不要打胰島素？", () => {
               pushLog("💉 已解鎖的胰島素關鍵詞再次觸發隱藏線。");
+              goto("python_hidden_start");
+            }]);
+          } else {
+            opts.push(["(察覺違和感) 我不是英國皇家警察……", () => {
+              pushLog("👁️ 你意識到身份錯位，夢境開始崩解。");
               goto("python_hidden_start");
             }]);
           }
