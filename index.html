@@ -79,27 +79,22 @@
     }
     .scene-hotspot:hover { background: rgba(159, 132, 214, 0.32); border-color: #d9c8fa; }
 
-    #playerMarker {
-  position: absolute;
-  /* 1. 把寬高稍微放大，適合角色圖片 */
-  width: 32px;
-  height: 32px;
-  
-  /* 2. 設定背景為你的角色圖片 */
-  background-image: url('assets/player.png');
-  background-size: contain;
-  background-repeat: no-repeat;
-  
-  /* 3. 對齊方式：讓角色的腳底對齊目標座標 */
-  background-position: center bottom;
-  transform: translate(-50%, -100%);
-  
-  /* 4. 移動動畫與其他設定保持不變 */
-  transition: all 0.6s ease-in-out;
-  display: none;
-  z-index: 10;
-  pointer-events: none;
-}
+    #playerMarker, #honghuaMarker {
+      position: absolute;
+      width: 32px;
+      height: 32px;
+      background-size: contain;
+      background-repeat: no-repeat;
+      background-position: center bottom;
+      transform: translate(-50%, -100%);
+      transition: all 0.6s ease-in-out;
+      display: none;
+      z-index: 10;
+      pointer-events: none;
+    }
+    #playerMarker { background-image: url('assets/player.png'); }
+    #honghuaMarker { background-image: url('assets/honghua.png'); }
+    #playerMarker.is-amelia { background-image: url('assets/amelia.png') !important; }
 
     .btns { display: grid; gap: 8px; margin-top: 12px; }
     button {
@@ -164,6 +159,7 @@
       <div class="scene-img-wrap">
         <img id="sceneImg" src="" alt="" />
         <div id="sceneHotspots" class="scene-hotspots" aria-label="場景互動熱區"></div>
+        <div id="honghuaMarker" aria-hidden="true"></div>
         <div id="playerMarker" aria-hidden="true"></div>
       </div>
       <div class="scene-name" id="sceneName"></div>
@@ -184,6 +180,8 @@
     const MAX_CANDLE = 100;
     const DEFAULT_PLAYER_X = 50;
     const DEFAULT_PLAYER_Y = 86;
+    const DEFAULT_HONGHUA_X = DEFAULT_PLAYER_X;
+    const DEFAULT_HONGHUA_Y = DEFAULT_PLAYER_Y;
     const MARKER_MOVE_DURATION_MS = 600;
     const CANDLE_DRAIN_PER_MINUTE = 0.5;
     const MATCHES_CANDLE_BONUS = 30;
@@ -689,6 +687,8 @@ const TEXT_ARCHIVE = {
       candle: MAX_CANDLE,
       playerX: DEFAULT_PLAYER_X,
       playerY: DEFAULT_PLAYER_Y,
+      honghuaX: DEFAULT_HONGHUA_X,
+      honghuaY: DEFAULT_HONGHUA_Y,
       evidence: { ...DEFAULT_EVIDENCE },
       clues: { ...DEFAULT_CLUES },
       flags: { ...DEFAULT_FLAGS },
@@ -981,6 +981,16 @@ const TEXT_ARCHIVE = {
           // Calculate the center of the clicked hotspot (percentage coordinates)
           const centerX = left + (width / 2);
           const centerY = top + (height / 2);
+          const previousPlayerX = S.playerX;
+          const previousPlayerY = S.playerY;
+
+          if (S.flags.honghuaJoined) {
+            S.honghuaX = previousPlayerX;
+            S.honghuaY = previousPlayerY;
+            const honghuaMarker = document.getElementById("honghuaMarker");
+            honghuaMarker.style.left = `${S.honghuaX}%`;
+            honghuaMarker.style.top = `${S.honghuaY}%`;
+          }
 
           // Update state and marker position
           // We store target coordinates immediately so save/load reflects the player's intended destination.
@@ -1740,12 +1750,22 @@ const TEXT_ARCHIVE = {
       syncBgmTrack();
       updateAudioButton();
       const marker = document.getElementById("playerMarker");
+      const honghuaMarker = document.getElementById("honghuaMarker");
+      marker.classList.toggle("is-amelia", isAmelia);
       if (MAP_SCENES.has(S.scene)) {
         marker.style.display = "block";
         marker.style.left = `${S.playerX}%`;
         marker.style.top = `${S.playerY}%`;
+        if (S.flags.honghuaJoined) {
+          honghuaMarker.style.display = "block";
+          honghuaMarker.style.left = `${S.honghuaX}%`;
+          honghuaMarker.style.top = `${S.honghuaY}%`;
+        } else {
+          honghuaMarker.style.display = "none";
+        }
       } else {
         marker.style.display = "none";
+        honghuaMarker.style.display = "none";
       }
 
       document.getElementById("log").innerHTML = S.log.map(x => `<div>${x}</div>`).join("");
@@ -1766,6 +1786,8 @@ const TEXT_ARCHIVE = {
       if (!VALID_FLOORS.includes(merged.currentFloor)) merged.currentFloor = 3;
       if (!Number.isFinite(merged.playerX)) merged.playerX = DEFAULT_PLAYER_X;
       if (!Number.isFinite(merged.playerY)) merged.playerY = DEFAULT_PLAYER_Y;
+      if (!Number.isFinite(merged.honghuaX)) merged.honghuaX = merged.playerX;
+      if (!Number.isFinite(merged.honghuaY)) merged.honghuaY = merged.playerY;
       return merged;
     }
 
