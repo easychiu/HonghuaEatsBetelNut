@@ -96,7 +96,7 @@ python game.py                     # 啟動遊戲
 
 ### Copilot 產圖語法（直接貼到 Copilot Chat）
 
-建議每張圖輸出比例固定為 **460x490（直式）**，風格與 `info.jpg` 一致（17 世紀英格蘭、哥德式、陰鬱、燭光、寫實偏插畫）。
+建議每張圖輸出比例固定為 **460x490（直式）**，風格與專案根目錄的參考圖 `./info.jpg` 一致（17 世紀英格蘭、哥德式、陰鬱、燭光、寫實偏插畫）。
 
 | 缺圖檔名 | 想表達的情節 | Copilot Prompt |
 |---|---|---|
@@ -109,7 +109,7 @@ python game.py                     # 啟動遊戲
 | `window.png` | 破窗與窗台字條，揭示艾蜜莉亞失蹤線索。 | `請生成一張 460x490 直式場景圖：破碎窗戶與夜風掀動窗簾，窗台灰塵中有折疊字條與乾燥玫瑰花瓣，暗示失蹤者訊息；gothic window corner, melancholic mystery, moonlight + candlelight, painterly realistic, no text, no watermark.` |
 | `basement.png` | 地下密室入口，分岔石門與未知危機。 | `請生成一張 460x490 直式場景圖：隱藏石階通往地下密室，潮濕牆面、燭火微光、前方兩扇分岔石門，一扇半開一扇緊閉；underground gothic dungeon entrance, ominous atmosphere, painterly realistic, no text, no watermark.` |
 | `basement_deep.png` | 地下深處發現天王星供詞，真相浮現。 | `請生成一張 460x490 直式場景圖：地下石室深處，小桌上攤開日記與未完成信件，紙張沾灰與蠟淚，真相即將被讀出；gothic secret chamber, revelation moment, dramatic warm-cold contrast lighting, painterly realistic, no text, no watermark.` |
-| `confront.png` | 與紅花正面對峙，準備揭露案件真相。 | `請生成一張 460x490 直式場景圖：廢棄圖書館中央對峙場面，銀髮水手服少女（紅花）在燭光中冷靜注視調查者，空氣緊繃；gothic confrontation scene, cinematic tension, painterly realistic anime-inspired, no text, no watermark.` |
+| `confront.png` | 與紅花正面對峙，準備揭露案件真相。 | `請生成一張 460x490 直式場景圖：廢棄圖書館中央對峙場面，銀髮水手服少女（紅花）在燭光中冷靜注視調查者，空氣緊繃；gothic confrontation scene, cinematic tension, painterly realistic style, no text, no watermark.` |
 | `true_end.png` | 真結局：真相揭露後的沉重與釋然。 | `請生成一張 460x490 直式場景圖：真相揭曉後的圖書館黎明前時刻，冷藍晨光與殘燭共存，情緒沉重但帶一絲解脫；true ending mood, gothic drama, cinematic painterly style, no text, no watermark.` |
 | `secret_end.png` | 秘密結局：掌握隱藏線索後的終局儀式感。 | `請生成一張 460x490 直式場景圖：秘密結局氛圍，古老樂譜與象徵物在燭台環繞中發光，紅花與調查者達成隱秘共識；secret ending, ritual-like gothic atmosphere, high contrast lighting, painterly realistic, no text, no watermark.` |
 | `normal_end.png` | 普通／信任路線結局：事件告段落但仍留遺憾。 | `請生成一張 460x490 直式場景圖：案件暫時收束的夜晚圖書館，人物離場後留下半熄燭火與未闔上的案卷，情緒平靜但遺憾；normal ending, subdued gothic tone, painterly realistic, no text, no watermark.` |
