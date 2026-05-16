@@ -155,6 +155,8 @@
     const DEFAULT_FLAGS = {
       basementOpen: false,
       trueSong: false,
+      guardLogbookFound: false,
+      workshopCardFound: false,
       ameliaTalkedClover: false,
       ameliaTalkedErica: false,
       ameliaTalkedShanshan: false,
@@ -923,8 +925,18 @@ const TEXT_ARCHIVE = {
       }
       if (key === "collectionRoom") return STORY.SCENE_COLLECTION_ROOM || "【收藏室（古籍庫）】\n\n厚重的書架深處有什麼東西靜靜躺著……";
       if (key === "archiveRoom") return STORY.SCENE_ARCHIVE_ROOM || "【檔案室（禁書區）】\n\n封閉多年的禁書區，有人留下了足跡……";
-      if (key === "guardRoom") return STORY.SCENE_GUARD_ROOM || "【守衛室】\n\n守衛室已人去樓空，桌角有一本記錄本……";
-      if (key === "workshop") return STORY.SCENE_WORKSHOP || "【修復工坊】\n\n工作台上有一本工作記錄……";
+      if (key === "guardRoom") {
+        if (S.flags.guardLogbookFound) {
+          return STORY.INSPECT_GUARD_LOGBOOK || "你翻開守衛記錄本，記下了案發夜的異常巡邏紀錄。";
+        }
+        return STORY.SCENE_GUARD_ROOM || "【守衛室】\n\n守衛室已人去樓空，桌角有一本記錄本……";
+      }
+      if (key === "workshop") {
+        if (S.flags.workshopCardFound) {
+          return STORY.INSPECT_WORKSHOP_CARD || "你翻閱工作記錄卡，確認案發前三天有人委託秘密修復文書。";
+        }
+        return STORY.SCENE_WORKSHOP || "【修復工坊】\n\n工作台上有一本工作記錄……";
+      }
       if (key === "abandonedRoom") return STORY.SCENE_ABANDONED_ROOM || "【廢棄閱覽室】\n\n積灰的閱讀台下藏著某些東西……";
       if (key === "alliance_followup") return STORY.alliance_followup;
       if (key === "python_hidden_start") {
@@ -1071,6 +1083,30 @@ const TEXT_ARCHIVE = {
             render();
           }]);
           opts.push(["離開檔案室，返回二樓地圖", () => { advance(5, "返回 2F"); goto("map2"); }]);
+          break;
+        case "guardRoom":
+          opts.push([S.flags.guardLogbookFound ? "✓ 已調查守衛記錄本" : "調查桌角的守衛記錄本", () => {
+            if (!S.flags.guardLogbookFound) {
+              S.flags.guardLogbookFound = true;
+              addTrust(5, "你記下守衛記錄本異常內容");
+              pushLog("🧩 線索：守衛記錄本（案發夜異常巡邏紀錄）");
+            }
+            advance(5, "翻閱守衛記錄本");
+            render();
+          }]);
+          opts.push(["離開守衛室，返回一樓地圖", () => { advance(5, "返回 1F"); goto("map1"); }]);
+          break;
+        case "workshop":
+          opts.push([S.flags.workshopCardFound ? "✓ 已調查工作記錄卡" : "調查工具箱旁的工作記錄卡", () => {
+            if (!S.flags.workshopCardFound) {
+              S.flags.workshopCardFound = true;
+              addTrust(5, "你找到秘密修復委託記錄");
+              pushLog("🧩 線索：修復工作卡（T.S. 案發前三天秘密委託）");
+            }
+            advance(5, "翻閱工作記錄卡");
+            render();
+          }]);
+          opts.push(["離開修復工坊，返回二樓地圖", () => { advance(5, "返回 2F"); goto("map2"); }]);
           break;
         case "abandonedRoom":
           if (!S.clues.starscream) {
