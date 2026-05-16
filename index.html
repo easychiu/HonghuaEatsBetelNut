@@ -78,6 +78,20 @@
       text-overflow: ellipsis;
     }
     .scene-hotspot:hover { background: rgba(159, 132, 214, 0.32); border-color: #d9c8fa; }
+    #playerMarker {
+      position: absolute;
+      width: 14px;
+      height: 14px;
+      background: #ffcf54;
+      border: 2px solid #ffffff;
+      border-radius: 50%;
+      transform: translate(-50%, -50%);
+      transition: left var(--player-marker-duration) ease-in-out, top var(--player-marker-duration) ease-in-out;
+      box-shadow: 0 0 10px #ffcf54;
+      display: none;
+      z-index: 10;
+      pointer-events: none;
+    }
     .btns { display: grid; gap: 8px; margin-top: 12px; }
     button {
       width: 100%;
@@ -141,6 +155,7 @@
       <div class="scene-img-wrap">
         <img id="sceneImg" src="" alt="" />
         <div id="sceneHotspots" class="scene-hotspots" aria-label="場景互動熱區"></div>
+        <div id="playerMarker" aria-hidden="true"></div>
       </div>
       <div class="scene-name" id="sceneName"></div>
       <div class="scene" id="sceneText"></div>
@@ -158,6 +173,9 @@
     const STALKER_ENCOUNTER_CHANCE = 0.3;
     const MAX_LOG_ENTRIES = 60;
     const MAX_CANDLE = 100;
+    const DEFAULT_PLAYER_X = 50;
+    const DEFAULT_PLAYER_Y = 86;
+    const MARKER_MOVE_DURATION_MS = 600;
     const CANDLE_DRAIN_PER_MINUTE = 0.5;
     const MATCHES_CANDLE_BONUS = 30;
     const DEFAULT_LOG_MESSAGE = "── 進入蔚藍學院 ──";
@@ -195,6 +213,7 @@
 
     const SCENE1_ASSETS = "assets/scene1/";
     const SCENE1_SCENES = new Set(["prologue", "hall"]);
+    const MAP_SCENES = new Set(["map1", "map2", "map3"]);
     const BGM_MAIN = "assets/bgm_main.mp3";
     const BGM_END = "assets/bgm_end.mp3";
 
@@ -659,6 +678,8 @@ const TEXT_ARCHIVE = {
       elapsed: 0,
       trust: 0,
       candle: MAX_CANDLE,
+      playerX: DEFAULT_PLAYER_X,
+      playerY: DEFAULT_PLAYER_Y,
       evidence: { ...DEFAULT_EVIDENCE },
       clues: { ...DEFAULT_CLUES },
       flags: { ...DEFAULT_FLAGS },
@@ -670,6 +691,9 @@ const TEXT_ARCHIVE = {
     });
 
     let S = initialState();
+    document.documentElement.style.setProperty("--player-marker-duration", `${MARKER_MOVE_DURATION_MS}ms`);
+    let hotspotMoveTimeoutId = null;
+    let hotspotMoveToken = 0;
 
     function deepClone(obj) {
       if (typeof structuredClone === "function") return structuredClone(obj);
@@ -915,6 +939,12 @@ const TEXT_ARCHIVE = {
       return false;
     }
 
+    function setSceneUiInteractivity(enabled) {
+      const pointerEvents = enabled ? "auto" : "none";
+      document.getElementById("sceneHotspots").style.pointerEvents = pointerEvents;
+      document.getElementById("options").style.pointerEvents = pointerEvents;
+    }
+
     function renderHotspots() {
       const wrap = document.getElementById("sceneHotspots");
       wrap.innerHTML = "";
@@ -939,10 +969,38 @@ const TEXT_ARCHIVE = {
         hotspotBtn.style.width = `${width}%`;
         hotspotBtn.style.height = `${height}%`;
         hotspotBtn.onclick = () => {
-          if (!clickOptionByMatch(hotspot.match)) {
-            pushLog(`⚠ 互動區「${hotspot.label}」暫時無法使用，請改用按鈕選項。`);
-            render();
+          // Calculate the center of the clicked hotspot (percentage coordinates)
+          const centerX = left + (width / 2);
+          const centerY = top + (height / 2);
+
+          // Update state and marker position
+          // We store target coordinates immediately so save/load reflects the player's intended destination.
+          S.playerX = centerX;
+          S.playerY = centerY;
+          const marker = document.getElementById("playerMarker");
+          marker.style.left = `${centerX}%`;
+          marker.style.top = `${centerY}%`;
+          const sceneAtClick = S.scene;
+          const moveToken = ++hotspotMoveToken;
+
+          // Disable UI during movement to prevent double-clicking
+          setSceneUiInteractivity(false);
+          if (hotspotMoveTimeoutId !== null) {
+            clearTimeout(hotspotMoveTimeoutId);
           }
+
+          // Wait for the CSS transition to finish before triggering the scene logic
+          hotspotMoveTimeoutId = setTimeout(() => {
+            hotspotMoveTimeoutId = null;
+            if (moveToken !== hotspotMoveToken || S.scene !== sceneAtClick) {
+              return;
+            }
+            setSceneUiInteractivity(true);
+            if (!clickOptionByMatch(hotspot.match)) {
+              pushLog(`⚠ 互動區「${hotspot.label}」暫時無法使用，請改用按鈕選項。`);
+              render();
+            }
+          }, MARKER_MOVE_DURATION_MS);
         };
         wrap.appendChild(hotspotBtn);
       });
@@ -1667,10 +1725,19 @@ const TEXT_ARCHIVE = {
         restart.onclick = () => { S = initialState(); render(); };
         optionsEl.appendChild(restart);
       }
+      setSceneUiInteractivity(true);
       currentSceneOptionButtons = [...optionsEl.querySelectorAll("button")];
       renderHotspots();
       syncBgmTrack();
       updateAudioButton();
+      const marker = document.getElementById("playerMarker");
+      if (MAP_SCENES.has(S.scene)) {
+        marker.style.display = "block";
+        marker.style.left = `${S.playerX}%`;
+        marker.style.top = `${S.playerY}%`;
+      } else {
+        marker.style.display = "none";
+      }
 
       document.getElementById("log").innerHTML = S.log.map(x => `<div>${x}</div>`).join("");
     }
@@ -1688,6 +1755,8 @@ const TEXT_ARCHIVE = {
       if (!Array.isArray(merged.booksOrder)) merged.booksOrder = [];
       if (typeof merged.passwordFails !== "number") merged.passwordFails = 0;
       if (!VALID_FLOORS.includes(merged.currentFloor)) merged.currentFloor = 3;
+      if (!Number.isFinite(merged.playerX)) merged.playerX = DEFAULT_PLAYER_X;
+      if (!Number.isFinite(merged.playerY)) merged.playerY = DEFAULT_PLAYER_Y;
       return merged;
     }
 
