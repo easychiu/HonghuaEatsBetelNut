@@ -97,7 +97,7 @@ python game.py                     # 啟動遊戲
 ### Copilot 產圖語法（直接貼到 Copilot Chat）
 
 建議每張圖輸出比例固定為 **460x490（直式）**，風格與專案根目錄的參考圖 `./info.jpg` 一致（17 世紀英格蘭、哥德式、陰鬱、燭光、寫實偏插畫）。
-若你的工作目錄沒有 `./info.jpg`，請保留 prompt 內的風格關鍵字（`dark gothic`, `candlelight`, `painterly realistic`）作為替代基準。
+若你的工作目錄沒有 `./info.jpg`，請保留 prompt 內的風格關鍵字：`dark gothic`、`candlelight`、`painterly realistic`，作為替代基準。
 
 | 缺圖檔名 | 想表達的情節 | Copilot Prompt |
 |---|---|---|
