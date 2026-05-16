@@ -97,13 +97,14 @@ python game.py                     # 啟動遊戲
 ### Copilot 產圖語法（直接貼到 Copilot Chat）
 
 建議每張圖輸出比例固定為 **460x490（直式）**，風格與專案根目錄的參考圖 `./info.jpg` 一致（17 世紀英格蘭、哥德式、陰鬱、燭光、寫實偏插畫）。
+若你的工作目錄沒有 `./info.jpg`，請保留 prompt 內的風格關鍵字（`dark gothic`, `candlelight`, `painterly realistic`）作為替代基準。
 
 | 缺圖檔名 | 想表達的情節 | Copilot Prompt |
 |---|---|---|
 | `prologue.png` | 主角初入廢棄圖書館，與紅花首次對峙前的壓迫感開場。 | `請生成一張 460x490 直式場景圖：17世紀英格蘭廢棄圖書館內景，夜晚燭光、灰塵與蛛網、陰冷哥德式氛圍，主角剛踏入調查，畫面有「即將見到守館者」的緊張感；dark gothic, cinematic lighting, painterly realistic, no text, no watermark.` |
 | `hall.png` | 三樓館長室外主中樞，玩家在此整理線索並準備輸入密碼。 | `請生成一張 460x490 直式場景圖：三樓館長室外展示區，老舊書架與密碼盒、散落卷宗、微弱燭光，作為調查中樞場景；17th century England library, dark gothic mystery, moody shadows, painterly realistic, no text, no watermark.` |
 | `archive_room.png` | 二樓禁書檔案室，藏有四葉草物證與艾莉卡目擊相關線索。 | `請生成一張 460x490 直式場景圖：禁書檔案室，密集高書櫃、封蠟檔案、灰塵漂浮，書縫中隱約可見乾燥四葉草線索；gothic archive room, suspense, candlelight, painterly realistic, no text, no watermark.` |
-| `guard_room.png` | 一樓守衛室，遺留值勤記錄本，暗示案發夜動線。 | `請生成一張 460x490 直式場景圖：老舊守衛室，木桌上有翻開的值勤紀錄本與油燈，牆面掛著泛黃巡邏地圖，氛圍不安；dark guard room, historical gothic style, dramatic low light, painterly realistic, no text, no watermark.` |
+| `guard_room.png` | 一樓守衛室，遺留值勤記錄本，暗示案發夜動線。 | `請生成一張 460x490 直式場景圖：老舊守衛室，木桌上有翻開的值勤記錄本與油燈，牆面掛著泛黃巡邏地圖，氛圍不安；dark guard room, historical gothic style, dramatic low light, painterly realistic, no text, no watermark.` |
 | `workshop.png` | 二樓修復工坊，遺留工作卡與修復痕跡，暗示有人善後。 | `請生成一張 460x490 直式場景圖：古籍修復工坊，工作台、夾具、裁紙刀、修復中的舊書與工作卡，場景帶有被倉促離開的感覺；gothic workshop, mystery thriller mood, candle and moon mixed light, painterly realistic, no text, no watermark.` |
 | `abandoned_room.png` | 三樓廢棄閱覽室，找到牛仔褲第三碼物證。 | `請生成一張 460x490 直式場景圖：三樓廢棄閱覽室，破損桌椅、厚重灰塵、倒塌書堆，書架下方可見一條折好的牛仔褲作為關鍵證物；abandoned reading room, dark gothic suspense, painterly realistic, no text, no watermark.` |
 | `window.png` | 破窗與窗台字條，揭示艾蜜莉亞失蹤線索。 | `請生成一張 460x490 直式場景圖：破碎窗戶與夜風掀動窗簾，窗台灰塵中有折疊字條與乾燥玫瑰花瓣，暗示失蹤者訊息；gothic window corner, melancholic mystery, moonlight + candlelight, painterly realistic, no text, no watermark.` |
