@@ -114,6 +114,8 @@
       <h1 class="title">紅花吃檳榔｜單檔 HTML 完整內容版</h1>
       <div class="kv"><span>時間</span><b id="clock"></b></div>
       <div class="kv"><span>危險狀態</span><b id="dangerState"></b></div>
+      <div class="kv"><span>燭火值</span><b id="candleText"></b></div>
+      <div class="bar"><div id="candleBar" class="fill"></div></div>
       <div class="kv"><span>信任度</span><b id="trustText"></b></div>
       <div class="bar"><div id="trustBar" class="fill"></div></div>
       <div class="kv"><span>物證進度</span><b id="evidenceText"></b></div>
@@ -170,6 +172,8 @@
       deductionComplete: false,
       guardLogbookFound: false,
       workshopCardFound: false,
+      foundMatches: false,
+      cloverUsed: false,
       ameliaTalkedClover: false,
       ameliaTalkedErica: false,
       ameliaTalkedShanshan: false,
@@ -211,6 +215,7 @@
       ending_alliance_capture: "assets/scenes/secret_end.png",
       ending_alliance_solo_bad: "assets/scenes/bad_a.png",
       ending_bad_codefail: "assets/scenes/bad_a.png",
+      ending_bad_darkness: "assets/scenes/bad_a.png",
       ending_killer_map: "assets/scenes/bad_a.png",
       killer_encounter: "assets/scenes/hall.png",
       deduction: "assets/scenes/desk.png",
@@ -260,6 +265,7 @@ const TEXT_ARCHIVE = {
     "ENDING_BAD_UNPREPARED": "你毫無準備地走向紅花。\n\n一陣沉默，長到有些尷尬。\n\n「你知道嗎，」紅花緩緩開口，\n「蔚藍學院有個傳說——\n 每個空手走進這圖書館的人，\n 都會在某個書架後面找到自己的名字。」\n\n她停頓了一下。\n\n「我是說……刻在木頭上的那種名字。」\n\n你感覺到後背一陣發涼。\n\n「不過放心，」她補充道，\n「我最近沒有空間了。\n 你先回去，明天備好物證再來。」\n\n【壞結局 A · 準備不足】\n你被請出了圖書館。\n紅花依然守在那裡，優雅而神秘，\n傳說中的檳榔味，你沒能親身體驗到。",
     "ENDING_STORAGE_AMBUSH": "黑暗中，你沒有意識到腳步聲正悄悄從背後逼近。\n\n下一秒，冰冷的呼吸落在你頸後，刀光一閃。\n\n你來不及回頭，世界已經傾斜。\n\n【壞結局 C · 背後偷襲】\n兇手一直藏在圖書館地下儲藏室裡，\n悄悄跟出來，趁你背對的那一刻出手。\n在三樓以外的任何地方，背後永遠比正前方更危險。",
     "ENDING_BAD_CODEFAIL": "第三次輸入錯誤的瞬間——\n\n密碼盒劇烈震動。\n一股奇異的氣息從縫隙中湧出，\n帶著舊紙、石灰與某種生澀的植物草腥，\n濃烈得不像是17世紀英國圖書館裡該有的東西。\n\n你試圖後退，卻發現雙腿不聽使喚。\n\n那股氣味愈來愈濃，成了黑暗將你吞噬之前，\n縈繞不散的最後一個念頭——\n\n那到底是……什麼味道？\n\n黑暗中，你聽見紅花輕聲說：\n\n「猜不出密碼的人，\n 就留在這裡當書的護衛吧。」\n\n頓了頓，她補充：\n\n「放心，我會好好照顧你的。\n ……就像照顧這些書一樣。」\n\n【壞結局 B · 密碼失敗】\n你成為了圖書館的新住客。\n另外——傳說中的檳榔味，\n你終於親身體驗到了。\n（等等……那不就是臺灣的……？）",
+    "ENDING_BAD_DARKNESS": "【壞結局 E · 迷失黑暗】\n\n最後一絲燭火發出微弱的『嘶嘶』聲，隨後徹底熄滅。\n\n伸手不見五指的絕對黑暗瞬間湧入，將你吞沒。你試圖摸索牆壁前進，卻在廢棄的走廊中迷失了方向。\n\n不久後，你聽見了某種沉重的腳步聲，正在黑暗中慢慢向你靠近……\n\n在沒有光源的圖書館裡，你連逃跑的機會都沒有。",
     "DANGER_2AM": "【凌晨兩點——】\n\n圖書館裡所有的燭火忽然同時搖曳，\n像是感應到了某種看不見的東西。\n\n你想起紅花說的話：\n『凌晨兩點之後，這裡就不再只屬於你。』\n\n地板深處傳來緩慢而規律的腳步聲——\n從地下室，一步一步往上走來。\n\n兇手……出來了。\n\n在大地圖上移動時，請務必小心。\n三樓目前最為安全。",
     "KILLER_MAP_ENCOUNTER_WARNING": "【走廊盡頭的黑影】\n\n你剛踏入這一層，\n就感覺到空氣裡有什麼不對勁。\n\n走廊盡頭，一個身影背對著你緩緩移動。\n那不是紅花，也不是任何你認識的人。\n\n他……他轉過頭來了。",
     "ENDING_KILLER_MAP": "你在大地圖上移動時，\n忽然意識到那道黑影距離你只剩幾步。\n\n你想回頭，想大喊，想逃——\n但已經太遲了。\n\n「終於……找到你了。」\n\n燭光一口氣全滅。\n黑暗如潮水湧入。\n\n【壞結局 D · 凌晨的獵殺】\n凌晨兩點後，兇手從地下室走出，在圖書館各層巡邏。\n下次記住：天亮之前，移動要謹慎。\n三樓管理室是你唯一的安全地帶。",
@@ -724,6 +730,7 @@ const TEXT_ARCHIVE = {
       scene: "intro",
       elapsed: 0,
       trust: 0,
+      candle: 100,
       evidence: { ...DEFAULT_EVIDENCE },
       clues: { ...DEFAULT_CLUES },
       flags: { ...DEFAULT_FLAGS },
@@ -882,7 +889,18 @@ const TEXT_ARCHIVE = {
 
     function advance(minutes, reason) {
       S.elapsed += minutes;
+      S.candle = Math.max(0, S.candle - Math.floor(minutes * 0.5));
       if (reason) pushLog(`⏱ +${minutes} 分鐘：${reason}`);
+      if (
+        S.candle === 0 &&
+        !S.scene.startsWith("ending_") &&
+        !S.scene.startsWith("python_hidden_")
+      ) {
+        goto("ending_bad_darkness");
+        pushLog("🕯️ 燭火熄滅，黑暗吞噬了你。");
+        return false;
+      }
+      return true;
     }
 
     function addTrust(v, reason) {
@@ -893,6 +911,15 @@ const TEXT_ARCHIVE = {
     }
 
     function goto(scene) {
+      if (
+        S.candle === 0 &&
+        S.scene === "ending_bad_darkness" &&
+        !scene.startsWith("ending_") &&
+        !scene.startsWith("python_hidden_")
+      ) {
+        render();
+        return;
+      }
       S.scene = scene;
       if (scene === "map1") S.currentFloor = 1;
       if (scene === "map2") S.currentFloor = 2;
@@ -1180,6 +1207,19 @@ const TEXT_ARCHIVE = {
             advance(15, "調查四葉草");
             render();
           }]);
+          if (S.evidence.clover && !S.flags.cloverUsed) {
+            opts.push(["(使用四葉草) 將四葉草作為書籤，放入桌上的無字天書", () => {
+              advance(10, "破解天書密碼");
+              S.flags.cloverUsed = true;
+              pushLog("📖 書頁浮現了隱藏的字跡！");
+              if (!S.clues.amelia) {
+                S.clues.amelia = true;
+                addTrust(10, "你透過四葉草解讀出艾蜜莉亞線索");
+                pushLog("🧩 人物線索：艾蜜莉亞失蹤原因（無字天書顯現）");
+              }
+              render();
+            }]);
+          }
           opts.push(["離開檔案室，返回二樓地圖", () => { advance(15, "返回 2F"); goto("map2"); }]);
           break;
         case "guardRoom":
@@ -1192,6 +1232,15 @@ const TEXT_ARCHIVE = {
             advance(15, "翻閱守衛記錄本");
             render();
           }]);
+          if (!S.flags.foundMatches) {
+            opts.push(["尋找抽屜裡的火柴盒 (+30 燭火)", () => {
+              S.candle = Math.min(100, S.candle + 30);
+              advance(5, "點燃新火柴");
+              pushLog("🕯️ 補充光源");
+              S.flags.foundMatches = true;
+              render();
+            }]);
+          }
           opts.push(["離開守衛室，返回一樓地圖", () => { advance(15, "返回 1F"); goto("map1"); }]);
           break;
         case "workshop":
@@ -1243,6 +1292,7 @@ const TEXT_ARCHIVE = {
         case "alliance_followup":
           opts.push(["帶紅花前往地下儲藏室", () => {
             advance(15, "與紅花前往地下儲藏室");
+            if (S.scene === "ending_bad_darkness") return;
             if (S.clues.starscream) {
               S.scene = "ending_alliance_capture";
               pushLog("✅ 達成：同盟追兇結局");
@@ -1255,6 +1305,7 @@ const TEXT_ARCHIVE = {
           }]);
           opts.push(["我自己先去地下室確認", () => {
             advance(12, "單獨前往地下儲藏室");
+            if (S.scene === "ending_bad_darkness") return;
             if (S.clues.starscream) {
               S.scene = "ending_alliance_solo_bad";
               pushLog("☠ 達成：單獨追兇失敗");
@@ -1268,6 +1319,7 @@ const TEXT_ARCHIVE = {
 
         case "ending_bad":
         case "ending_bad_codefail":
+        case "ending_bad_darkness":
         case "ending_normal":
           opts.push(["(察覺違和感) 等等……妳要不要打胰島素？", () => {
             pushLog("👁️ 脫口而出的一句話，打破了夢境的邏輯。");
@@ -1473,7 +1525,18 @@ const TEXT_ARCHIVE = {
           opts.push(["返回 1F 地圖", () => goto("map1")]);
           break;
         case "basement":
-          opts.push(["進入倉庫（供詞）", () => { advance(12, "查閱供詞"); goto("basementDeep"); }]);
+          if (S.evidence.hammer) {
+            opts.push(["(使用生鏽鎚子) 暴力砸開儲藏室的暗鎖", () => {
+              advance(15, "砸開鎖頭");
+              goto("basementDeep");
+            }]);
+          } else {
+            opts.push(["嘗試推開儲藏室的門", () => {
+              advance(5, "推門");
+              pushLog("🔒 門從裡面被鎖死了，需要某種堅硬的工具才能破壞。");
+              render();
+            }]);
+          }
           opts.push(["離開地下區", () => { advance(8, "返回 1F"); goto("map1"); }]);
           break;
         case "basementDeep":
@@ -1502,6 +1565,7 @@ const TEXT_ARCHIVE = {
       const c = clueCount();
       const t = S.trust;
       advance(5, "面對紅花");
+      if (S.scene === "ending_bad_darkness") return;
       if (S.flags.trueSong && c === 3 && t >= 70) {
         S.scene = "ending_secret";
         pushLog("✅ 達成：秘密結局");
@@ -1535,6 +1599,8 @@ const TEXT_ARCHIVE = {
           return "【壞結局】\n準備不足就面對紅花，對話在沉默中結束。";
         case "ending_bad_codefail":
           return "【壞結局 B】\n你在密碼盒前連續輸錯三次，暗鎖警報響起，調查被迫中止。";
+        case "ending_bad_darkness":
+          return formatTemplateText(TEXT_ARCHIVE["story_texts.py"].ENDING_BAD_DARKNESS);
         case "ending_killer_map":
           return "【壞結局】\n你試圖硬闖黑影，下一秒只剩走廊裡急促的腳步與熄滅的燭光。";
         case "ending_alliance_capture":
@@ -1551,6 +1617,8 @@ const TEXT_ARCHIVE = {
       document.getElementById("dangerState").innerHTML = dangerOn()
         ? '<span class="danger">危險（2AM 後）</span>'
         : "一般";
+      document.getElementById("candleText").textContent = `${S.candle}/100`;
+      document.getElementById("candleBar").style.width = `${S.candle}%`;
       document.getElementById("trustText").textContent = `${S.trust}/100`;
       document.getElementById("trustBar").style.width = `${S.trust}%`;
       document.getElementById("evidenceText").textContent = `${evidenceCount()}/3`;
@@ -1627,6 +1695,8 @@ const TEXT_ARCHIVE = {
       merged.clues = Object.assign({}, DEFAULT_CLUES, state?.clues || {});
       merged.flags = Object.assign({}, DEFAULT_FLAGS, state?.flags || {});
       merged.archive = Object.assign({}, DEFAULT_ARCHIVE, state?.archive || {});
+      if (typeof merged.candle !== "number" || Number.isNaN(merged.candle)) merged.candle = 100;
+      merged.candle = Math.max(0, Math.min(100, Math.floor(merged.candle)));
       if (!Array.isArray(merged.log)) merged.log = [DEFAULT_LOG_MESSAGE];
       if (!Array.isArray(merged.booksOrder)) merged.booksOrder = [];
       if (typeof merged.passwordFails !== "number") merged.passwordFails = 0;
