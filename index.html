@@ -152,7 +152,7 @@
     const ARCHIVE_PREVIEW_LIMIT = 12;
     const DEFAULT_EVIDENCE = { hammer: false, clover: false, jeans: false };
     const DEFAULT_CLUES = { honghua: false, amelia: false, starscream: false };
-    const DEFAULT_FLAGS = { basementOpen: false, trueSong: false };
+    const DEFAULT_FLAGS = { basementOpen: false, trueSong: false, hiddenLondonUnlocked: false };
     const DEFAULT_ARCHIVE = { group: "story_texts.py", key: null };
 
     // Scene 1 (prologue / hall) uses assets/scene1/ images that switch by time-of-day and trust.
@@ -177,6 +177,8 @@
       guardRoom:      "assets/scenes/guard_room.png",
       workshop:       "assets/scenes/workshop.png",
       abandonedRoom:  "assets/scenes/abandoned_room.png",
+      privateStudy:   "assets/scenes/default.png",
+      sealedStorage3f:"assets/scenes/default.png",
       alliance_followup: "assets/scenes/confront.png",
       ending_secret:  "assets/scenes/secret_end.png",
       ending_true:    "assets/scenes/true_end.png",
@@ -324,6 +326,13 @@ const TEXT_ARCHIVE = {
 `你在三樓館長室外展示區，空氣中瀰漫灰塵與潮濕紙張味。
 密碼盒就立在旁邊等待作答。
 （鎚子在一樓收藏室，四葉草在二樓檔案室，牛仔褲改在廢棄閱覽室。）`,
+      privateStudy:
+`你踏入三樓私人研究室，桌上只剩下散亂紙頁與未燃盡的蠟燭。
+房內沒有立即可帶走的物證，但有人近期進出過的痕跡仍在。`,
+      sealedStorage3f:
+`你站在三樓封閉儲藏室門外。
+門縫滲出潮濕冷氣，木階下方似乎連著更深的暗梯。
+這裡仍屬三樓，若要深入可選擇走暗梯前往地下。`,
       bookshelves:
 `書架深處有四份案卷。
 你依序整理「失蹤案卷→退學檔案→死亡報告→停課公告」後，暗格開啟。`,
@@ -430,6 +439,8 @@ const TEXT_ARCHIVE = {
       guardRoom: "守衛室",
       workshop: "修復工坊",
       abandonedRoom: "廢棄閱覽室",
+      privateStudy: "私人研究室",
+      sealedStorage3f: "三樓封閉儲藏室",
       alliance_followup: "同盟追兇",
       basement: "地下區域岔路",
       basementDeep: "地下倉庫供詞區",
@@ -457,6 +468,8 @@ const TEXT_ARCHIVE = {
       guardRoom:    "守衛室",
       workshop:     "修復工坊",
       abandonedRoom:"廢棄閱覽室",
+      privateStudy:"私人研究室",
+      sealedStorage3f:"三樓封閉儲藏室",
       alliance_followup:"同盟追兇",
       python_hidden_start:"隱藏線：夢醒時分",
       python_hidden_london:"隱藏線：航向倫敦",
@@ -728,6 +741,8 @@ const TEXT_ARCHIVE = {
       if (key === "guardRoom") return STORY.SCENE_GUARD_ROOM || "【守衛室】\n\n守衛室已人去樓空，桌角有一本記錄本……";
       if (key === "workshop") return STORY.SCENE_WORKSHOP || "【修復工坊】\n\n工作台上有一本工作記錄……";
       if (key === "abandonedRoom") return STORY.SCENE_ABANDONED_ROOM || "【廢棄閱覽室】\n\n積灰的閱讀台下藏著某些東西……";
+      if (key === "privateStudy") return STORY.privateStudy;
+      if (key === "sealedStorage3f") return STORY.sealedStorage3f;
       if (key === "alliance_followup") return STORY.alliance_followup;
       if (key === "python_hidden_start") {
         return formatTemplateText(TEXT_ARCHIVE["story_texts.py"]?.ENDING_HIDDEN || "【隱藏結局】夢醒時分。");
@@ -798,9 +813,9 @@ const TEXT_ARCHIVE = {
         case "map3":
           opts.push(["前往館長室外調查", () => { advance(8, "進入館長室外展示區"); goto("hall"); }]);
           opts.push(["進入館長室（面對紅花）", () => endingCheck()]);
-          opts.push(["前往私人研究室", () => { advance(8, "進入私人研究室"); goto("map3"); }]);
+          opts.push(["前往私人研究室", () => { advance(8, "進入私人研究室"); goto("privateStudy"); }]);
           opts.push(["前往廢棄閱覽室", () => { advance(8, "進入廢棄閱覽室"); goto("abandonedRoom"); }]);
-          opts.push(["前往封閉儲藏室（危險）", () => { advance(8, "靠近封閉儲藏室"); goto("basement"); }]);
+          opts.push(["前往封閉儲藏室（危險）", () => { advance(8, "靠近封閉儲藏室"); goto("sealedStorage3f"); }]);
           opts.push(["查看一樓", () => { advance(15, "前往 1F"); goto("map1"); }]);
           opts.push(["查看二樓", () => { advance(10, "前往 2F"); goto("map2"); }]);
           break;
@@ -831,6 +846,23 @@ const TEXT_ARCHIVE = {
           opts.push(["密碼盒", () => { advance(5, "嘗試密碼盒"); render(); }]);
           opts.push(["前往書架深處（取得密碼盒線索）", () => { advance(15, "排列案卷"); goto("bookshelves"); }]);
           opts.push(["回到三樓地圖", () => { advance(6, "返回地圖"); goto("map3"); }]);
+          break;
+        case "privateStudy":
+          opts.push(["檢查桌面殘頁", () => {
+            pushLog("📝 私人研究室沒有新增物證，但有近期翻動痕跡。");
+            advance(5, "檢查私人研究室");
+            render();
+          }]);
+          opts.push(["離開私人研究室，返回三樓地圖", () => { advance(4, "返回 3F"); goto("map3"); }]);
+          break;
+        case "sealedStorage3f":
+          opts.push(["檢查門縫與地板暗梯", () => {
+            pushLog("⚠ 門後有異常氣息，暗梯可通往地下區。");
+            advance(6, "檢查封閉儲藏室");
+            render();
+          }]);
+          opts.push(["沿暗梯下到地下區", () => { advance(10, "沿暗梯下行"); goto("basement"); }]);
+          opts.push(["離開封閉儲藏室，返回三樓地圖", () => { advance(4, "返回 3F"); goto("map3"); }]);
           break;
         case "collectionRoom":
           opts.push([S.evidence.hammer ? "✓ 已調查鎚子" : "書架角落的物品（鎚子）", () => {
@@ -873,6 +905,24 @@ const TEXT_ARCHIVE = {
           }]);
           opts.push(["離開廢棄閱覽室，返回三樓地圖", () => goto("map3")]);
           break;
+        case "guardRoom":
+          opts.push(["查看守衛記錄本", () => {
+            pushLog("📓 守衛記錄本提到案發前夜有人進出地下樓梯間。");
+            addTrust(4, "你補齊守衛巡查脈絡");
+            advance(6, "查看守衛記錄");
+            render();
+          }]);
+          opts.push(["離開守衛室，返回一樓地圖", () => { advance(4, "返回 1F"); goto("map1"); }]);
+          break;
+        case "workshop":
+          opts.push(["查看工坊工作卡", () => {
+            pushLog("🗂 修復工坊工作卡顯示案發週仍有人領取夜間通行。");
+            addTrust(4, "你補齊修復工坊紀錄");
+            advance(6, "查看工坊工作卡");
+            render();
+          }]);
+          opts.push(["離開修復工坊，返回二樓地圖", () => { advance(4, "返回 2F"); goto("map2"); }]);
+          break;
         case "alliance_followup":
           opts.push(["帶紅花前往地下儲藏室", () => {
             advance(15, "與紅花前往地下儲藏室");
@@ -901,10 +951,16 @@ const TEXT_ARCHIVE = {
 
         case "ending_bad":
         case "ending_normal":
-          opts.push(["(察覺違和感) 等等……妳要不要打胰島素？", () => {
-            pushLog("👁️ 脫口而出的一句話，打破了夢境的邏輯。");
+          opts.push(["(察覺違和感) 我不是英國皇家警察……", () => {
+            pushLog("👁️ 你意識到身份錯位，夢境開始崩解。");
             goto("python_hidden_start");
           }]);
+          if (S.flags.hiddenLondonUnlocked) {
+            opts.push(["(隱藏選項) 等等……妳要不要打胰島素？", () => {
+              pushLog("💉 已解鎖的胰島素關鍵詞再次觸發隱藏線。");
+              goto("python_hidden_start");
+            }]);
+          }
           opts.push(["重新開始", () => {
             S = initialState();
             pushLog("♻ 已重新開始");
@@ -925,6 +981,10 @@ const TEXT_ARCHIVE = {
           break;
 
         case "python_hidden_london":
+          if (!S.flags.hiddenLondonUnlocked) {
+            S.flags.hiddenLondonUnlocked = true;
+            pushLog("🔓 已解鎖：胰島素隱藏選項（倫敦分支後）");
+          }
           opts.push(["(進入工會據點) 接受艾蜜莉亞的身份", () => {
             S.scene = "archive_index"; // 跳轉到文字庫或其他你想展示的結尾畫面
             pushLog("📜 你以艾蜜莉亞的身份回歸了公會。");
@@ -973,7 +1033,7 @@ const TEXT_ARCHIVE = {
             pushLog("🧩 人物線索：天王星親筆供詞");
             pushLog("🎼 取得鎮魂歌譜");
           }
-          opts.push(["返回 3F 面對紅花", () => { advance(20, "回到 3F"); goto("map3"); }]);
+          opts.push(["返回地下岔路", () => { advance(8, "返回地下岔路"); goto("basement"); }]);
           break;
         default:
           opts.push(["重新開始", () => {
