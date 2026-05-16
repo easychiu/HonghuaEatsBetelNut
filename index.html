@@ -92,8 +92,8 @@
       z-index: 10;
       pointer-events: none;
     }
-    #playerMarker { background-image: url('assets/player.png'); }
-    #honghuaMarker { background-image: url('assets/honghua.png'); }
+    #playerMarker { background-image: url('assets/player.png'); z-index: 11; }
+    #honghuaMarker { background-image: url('assets/honghua.png'); z-index: 10; }
     #playerMarker.is-amelia { background-image: url('assets/amelia.png') !important; }
 
     .btns { display: grid; gap: 8px; margin-top: 12px; }
@@ -1786,8 +1786,8 @@ const TEXT_ARCHIVE = {
       if (!VALID_FLOORS.includes(merged.currentFloor)) merged.currentFloor = 3;
       if (!Number.isFinite(merged.playerX)) merged.playerX = DEFAULT_PLAYER_X;
       if (!Number.isFinite(merged.playerY)) merged.playerY = DEFAULT_PLAYER_Y;
-      if (!Number.isFinite(merged.honghuaX)) merged.honghuaX = merged.playerX;
-      if (!Number.isFinite(merged.honghuaY)) merged.honghuaY = merged.playerY;
+      if (!Number.isFinite(merged.honghuaX)) merged.honghuaX = DEFAULT_HONGHUA_X;
+      if (!Number.isFinite(merged.honghuaY)) merged.honghuaY = DEFAULT_HONGHUA_Y;
       return merged;
     }
 
