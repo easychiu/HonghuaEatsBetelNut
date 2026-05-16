@@ -98,6 +98,7 @@ python game.py                     # 啟動遊戲
 
 建議每張圖輸出比例固定為 **460x490（直式）**（與 `generate_assets.py` 的 `IMAGE_WIDTH=460`、`IMAGE_HEIGHT=490` 一致），風格與專案根目錄已附帶的參考圖 `./info.jpg` 一致（17 世紀英格蘭、哥德式、陰鬱、燭光、寫實偏插畫）。
 若你的工作目錄沒有 `./info.jpg`，請保留 prompt 內的風格關鍵字：`dark gothic`、`candlelight`、`painterly realistic`，作為替代基準。
+若你的產圖工具偏好單一語言，可保留同一欄位中的英文風格關鍵字，將前半段中文敘事改寫成全英文後再送出。
 
 | 缺圖檔名 | 想表達的情節 | Copilot Prompt |
 |---|---|---|
@@ -115,6 +116,8 @@ python game.py                     # 啟動遊戲
 | `secret_end.png` | 秘密結局：掌握隱藏線索後的終局儀式感。 | `請生成一張 460x490 直式場景圖：秘密結局氛圍，古老樂譜與象徵物在燭台環繞中發光，紅花與調查者達成隱秘共識；secret ending, ritual-like gothic atmosphere, high contrast lighting, painterly realistic, no text, no watermark.` |
 | `normal_end.png` | 普通／信任路線結局：事件告段落但仍留遺憾。 | `請生成一張 460x490 直式場景圖：案件暫時收束的夜晚圖書館，人物離場後留下半熄燭火與未闔上的案卷，情緒平靜但遺憾；normal ending, subdued gothic tone, painterly realistic, no text, no watermark.` |
 | `bad_a.png` | 壞結局：準備不足導致被反制或死亡。 | `請生成一張 460x490 直式場景圖：失敗結局氛圍，昏暗走廊中的急促危機感、翻落的燭台與拉長陰影，暗示主角遭到致命反制；bad ending, horror gothic suspense, dramatic red accents, painterly realistic, no gore, no text, no watermark.` |
+
+> 註：目前 Web 版 `index.html` 只引用 `bad_a.png`（`bad_b` 尚未在 Web 流程中使用）。
 
 ## 素材說明
 
