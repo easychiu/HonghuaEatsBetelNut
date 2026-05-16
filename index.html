@@ -78,20 +78,29 @@
       text-overflow: ellipsis;
     }
     .scene-hotspot:hover { background: rgba(159, 132, 214, 0.32); border-color: #d9c8fa; }
+
     #playerMarker {
-      position: absolute;
-      width: 14px;
-      height: 14px;
-      background: #ffcf54;
-      border: 2px solid #ffffff;
-      border-radius: 50%;
-      transform: translate(-50%, -50%);
-      transition: left var(--player-marker-duration) ease-in-out, top var(--player-marker-duration) ease-in-out;
-      box-shadow: 0 0 10px #ffcf54;
-      display: none;
-      z-index: 10;
-      pointer-events: none;
-    }
+  position: absolute;
+  /* 1. 把寬高稍微放大，適合角色圖片 */
+  width: 32px;
+  height: 32px;
+  
+  /* 2. 設定背景為你的角色圖片 */
+  background-image: url('assets/player.png');
+  background-size: contain;
+  background-repeat: no-repeat;
+  
+  /* 3. 對齊方式：讓角色的腳底對齊目標座標 */
+  background-position: center bottom;
+  transform: translate(-50%, -100%);
+  
+  /* 4. 移動動畫與其他設定保持不變 */
+  transition: all 0.6s ease-in-out;
+  display: none;
+  z-index: 10;
+  pointer-events: none;
+}
+
     .btns { display: grid; gap: 8px; margin-top: 12px; }
     button {
       width: 100%;
