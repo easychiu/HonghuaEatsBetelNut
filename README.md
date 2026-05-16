@@ -71,14 +71,49 @@ python game.py                     # 啟動遊戲
 ### 後續階段（仍待補齊）
 
 - 更多場景熱區精修（目前已支援主流程地圖、館長室外密碼盒與廢棄閱覽室牛仔褲點擊）
-- 待補場景圖（`index.html` 已引用但目前路徑缺檔）：
-  - `assets/scenes/archive_room.png`
-  - `assets/scenes/guard_room.png`
-  - `assets/scenes/workshop.png`
-  - `assets/scenes/abandoned_room.png`
 - 完整伏擊機制
 - 更多互動音效與完整 UI 動畫
 - 與 Python 版所有場景細節逐項對齊（含隱藏線後續章節完整互動）
+
+### Web 版缺圖檢查（`index.html` 實際引用）
+
+以下檔案目前被 Web 版引用，但 `assets/scenes/` 尚未找到：
+
+- `assets/scenes/prologue.png`
+- `assets/scenes/hall.png`
+- `assets/scenes/window.png`
+- `assets/scenes/basement.png`
+- `assets/scenes/basement_deep.png`
+- `assets/scenes/archive_room.png`
+- `assets/scenes/guard_room.png`
+- `assets/scenes/workshop.png`
+- `assets/scenes/abandoned_room.png`
+- `assets/scenes/confront.png`
+- `assets/scenes/secret_end.png`
+- `assets/scenes/true_end.png`
+- `assets/scenes/normal_end.png`
+- `assets/scenes/bad_a.png`
+
+### Copilot 產圖語法（直接貼到 Copilot Chat）
+
+建議每張圖輸出比例固定為 **460x490（直式）**，風格與 `info.jpg` 一致（17 世紀英格蘭、哥德式、陰鬱、燭光、寫實偏插畫）。
+
+| 缺圖檔名 | 想表達的情節 | Copilot Prompt |
+|---|---|---|
+| `prologue.png` | 主角初入廢棄圖書館，與紅花首次對峙前的壓迫感開場。 | `請生成一張 460x490 直式場景圖：17世紀英格蘭廢棄圖書館內景，夜晚燭光、灰塵與蛛網、陰冷哥德式氛圍，主角剛踏入調查，畫面有「即將見到守館者」的緊張感；dark gothic, cinematic lighting, painterly realistic, no text, no watermark.` |
+| `hall.png` | 三樓館長室外主中樞，玩家在此整理線索並準備輸入密碼。 | `請生成一張 460x490 直式場景圖：三樓館長室外展示區，老舊書架與密碼盒、散落卷宗、微弱燭光，作為調查中樞場景；17th century England library, dark gothic mystery, moody shadows, painterly realistic, no text, no watermark.` |
+| `archive_room.png` | 二樓禁書檔案室，藏有四葉草物證與艾莉卡目擊相關線索。 | `請生成一張 460x490 直式場景圖：禁書檔案室，密集高書櫃、封蠟檔案、灰塵漂浮，書縫中隱約可見乾燥四葉草線索；gothic archive room, suspense, candlelight, painterly realistic, no text, no watermark.` |
+| `guard_room.png` | 一樓守衛室，遺留值勤記錄本，暗示案發夜動線。 | `請生成一張 460x490 直式場景圖：老舊守衛室，木桌上有翻開的值勤紀錄本與油燈，牆面掛著泛黃巡邏地圖，氛圍不安；dark guard room, historical gothic style, dramatic low light, painterly realistic, no text, no watermark.` |
+| `workshop.png` | 二樓修復工坊，遺留工作卡與修復痕跡，暗示有人善後。 | `請生成一張 460x490 直式場景圖：古籍修復工坊，工作台、夾具、裁紙刀、修復中的舊書與工作卡，場景帶有被倉促離開的感覺；gothic workshop, mystery thriller mood, candle and moon mixed light, painterly realistic, no text, no watermark.` |
+| `abandoned_room.png` | 三樓廢棄閱覽室，找到牛仔褲第三碼物證。 | `請生成一張 460x490 直式場景圖：三樓廢棄閱覽室，破損桌椅、厚重灰塵、倒塌書堆，書架下方可見一條折好的牛仔褲作為關鍵證物；abandoned reading room, dark gothic suspense, painterly realistic, no text, no watermark.` |
+| `window.png` | 破窗與窗台字條，揭示艾蜜莉亞失蹤線索。 | `請生成一張 460x490 直式場景圖：破碎窗戶與夜風掀動窗簾，窗台灰塵中有折疊字條與乾燥玫瑰花瓣，暗示失蹤者訊息；gothic window corner, melancholic mystery, moonlight + candlelight, painterly realistic, no text, no watermark.` |
+| `basement.png` | 地下密室入口，分岔石門與未知危機。 | `請生成一張 460x490 直式場景圖：隱藏石階通往地下密室，潮濕牆面、燭火微光、前方兩扇分岔石門，一扇半開一扇緊閉；underground gothic dungeon entrance, ominous atmosphere, painterly realistic, no text, no watermark.` |
+| `basement_deep.png` | 地下深處發現天王星供詞，真相浮現。 | `請生成一張 460x490 直式場景圖：地下石室深處，小桌上攤開日記與未完成信件，紙張沾灰與蠟淚，真相即將被讀出；gothic secret chamber, revelation moment, dramatic warm-cold contrast lighting, painterly realistic, no text, no watermark.` |
+| `confront.png` | 與紅花正面對峙，準備揭露案件真相。 | `請生成一張 460x490 直式場景圖：廢棄圖書館中央對峙場面，銀髮水手服少女（紅花）在燭光中冷靜注視調查者，空氣緊繃；gothic confrontation scene, cinematic tension, painterly realistic anime-inspired, no text, no watermark.` |
+| `true_end.png` | 真結局：真相揭露後的沉重與釋然。 | `請生成一張 460x490 直式場景圖：真相揭曉後的圖書館黎明前時刻，冷藍晨光與殘燭共存，情緒沉重但帶一絲解脫；true ending mood, gothic drama, cinematic painterly style, no text, no watermark.` |
+| `secret_end.png` | 秘密結局：掌握隱藏線索後的終局儀式感。 | `請生成一張 460x490 直式場景圖：秘密結局氛圍，古老樂譜與象徵物在燭台環繞中發光，紅花與調查者達成隱秘共識；secret ending, ritual-like gothic atmosphere, high contrast lighting, painterly realistic, no text, no watermark.` |
+| `normal_end.png` | 普通／信任路線結局：事件告段落但仍留遺憾。 | `請生成一張 460x490 直式場景圖：案件暫時收束的夜晚圖書館，人物離場後留下半熄燭火與未闔上的案卷，情緒平靜但遺憾；normal ending, subdued gothic tone, painterly realistic, no text, no watermark.` |
+| `bad_a.png` | 壞結局：準備不足導致被反制或死亡。 | `請生成一張 460x490 直式場景圖：失敗結局氛圍，昏暗走廊中的急促危機感、翻落的燭台與拉長陰影，暗示主角遭到致命反制；bad ending, horror gothic suspense, dramatic red accents, painterly realistic, no gore, no text, no watermark.` |
 
 ## 素材說明
 
