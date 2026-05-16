@@ -152,6 +152,9 @@
     const STALKER_ENCOUNTER_ELAPSED = 480; // 由 15:00 起算 480 分鐘（23:00）
     const STALKER_ENCOUNTER_CHANCE = 0.3;
     const MAX_LOG_ENTRIES = 60;
+    const MAX_CANDLE = 100;
+    const CANDLE_DRAIN_PER_MINUTE = 0.5;
+    const MATCHES_CANDLE_BONUS = 30;
     const DEFAULT_LOG_MESSAGE = "── 進入蔚藍學院 ──";
     const ARCHIVE_PREVIEW_LIMIT = 12;
     const VALID_FLOORS = [1, 2, 3];
@@ -730,7 +733,7 @@ const TEXT_ARCHIVE = {
       scene: "intro",
       elapsed: 0,
       trust: 0,
-      candle: 100,
+      candle: MAX_CANDLE,
       evidence: { ...DEFAULT_EVIDENCE },
       clues: { ...DEFAULT_CLUES },
       flags: { ...DEFAULT_FLAGS },
@@ -761,6 +764,14 @@ const TEXT_ARCHIVE = {
       if (S.trust >= 60) return "high";
       if (S.trust >= 25) return "mid";
       return "low";
+    }
+
+    function shouldTriggerDarknessEnding() {
+      return (
+        S.candle === 0 &&
+        !S.scene.startsWith("ending_") &&
+        !S.scene.startsWith("python_hidden_")
+      );
     }
 
     // ── Scene 1 dynamic image helpers (mirrors Python _scene1_time_of_day / _trust_anim_state) ──
@@ -889,18 +900,12 @@ const TEXT_ARCHIVE = {
 
     function advance(minutes, reason) {
       S.elapsed += minutes;
-      S.candle = Math.max(0, S.candle - Math.floor(minutes * 0.5));
+      S.candle = Math.max(0, S.candle - Math.floor(minutes * CANDLE_DRAIN_PER_MINUTE));
       if (reason) pushLog(`⏱ +${minutes} 分鐘：${reason}`);
-      if (
-        S.candle === 0 &&
-        !S.scene.startsWith("ending_") &&
-        !S.scene.startsWith("python_hidden_")
-      ) {
+      if (shouldTriggerDarknessEnding()) {
         goto("ending_bad_darkness");
         pushLog("🕯️ 燭火熄滅，黑暗吞噬了你。");
-        return false;
       }
-      return true;
     }
 
     function addTrust(v, reason) {
@@ -1234,7 +1239,7 @@ const TEXT_ARCHIVE = {
           }]);
           if (!S.flags.foundMatches) {
             opts.push(["尋找抽屜裡的火柴盒 (+30 燭火)", () => {
-              S.candle = Math.min(100, S.candle + 30);
+              S.candle = Math.min(MAX_CANDLE, S.candle + MATCHES_CANDLE_BONUS);
               advance(5, "點燃新火柴");
               pushLog("🕯️ 補充光源");
               S.flags.foundMatches = true;
@@ -1617,7 +1622,7 @@ const TEXT_ARCHIVE = {
       document.getElementById("dangerState").innerHTML = dangerOn()
         ? '<span class="danger">危險（2AM 後）</span>'
         : "一般";
-      document.getElementById("candleText").textContent = `${S.candle}/100`;
+      document.getElementById("candleText").textContent = `${S.candle}/${MAX_CANDLE}`;
       document.getElementById("candleBar").style.width = `${S.candle}%`;
       document.getElementById("trustText").textContent = `${S.trust}/100`;
       document.getElementById("trustBar").style.width = `${S.trust}%`;
@@ -1695,8 +1700,8 @@ const TEXT_ARCHIVE = {
       merged.clues = Object.assign({}, DEFAULT_CLUES, state?.clues || {});
       merged.flags = Object.assign({}, DEFAULT_FLAGS, state?.flags || {});
       merged.archive = Object.assign({}, DEFAULT_ARCHIVE, state?.archive || {});
-      if (typeof merged.candle !== "number" || Number.isNaN(merged.candle)) merged.candle = 100;
-      merged.candle = Math.max(0, Math.min(100, Math.floor(merged.candle)));
+      if (typeof merged.candle !== "number" || Number.isNaN(merged.candle)) merged.candle = MAX_CANDLE;
+      merged.candle = Math.max(0, Math.min(MAX_CANDLE, Math.floor(merged.candle)));
       if (!Array.isArray(merged.log)) merged.log = [DEFAULT_LOG_MESSAGE];
       if (!Array.isArray(merged.booksOrder)) merged.booksOrder = [];
       if (typeof merged.passwordFails !== "number") merged.passwordFails = 0;
