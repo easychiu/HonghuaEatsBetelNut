@@ -152,7 +152,17 @@
     const ARCHIVE_PREVIEW_LIMIT = 12;
     const DEFAULT_EVIDENCE = { hammer: false, clover: false, jeans: false };
     const DEFAULT_CLUES = { honghua: false, amelia: false, starscream: false };
-    const DEFAULT_FLAGS = { basementOpen: false, trueSong: false };
+    const DEFAULT_FLAGS = {
+      basementOpen: false,
+      trueSong: false,
+      ameliaTalkedClover: false,
+      ameliaTalkedErica: false,
+      ameliaTalkedShanshan: false,
+      ameliaTalkedJackson: false,
+      ameliaTalkedSeth: false,
+      ameliaEricaFollowup: false,
+      ameliaInsulinUnlocked: false,
+    };
     const DEFAULT_ARCHIVE = { group: "story_texts.py", key: null };
 
     // Scene 1 (prologue / hall) uses assets/scene1/ images that switch by time-of-day and trust.
@@ -187,6 +197,13 @@
       ending_alliance_solo_bad: "assets/scenes/bad_a.png",
       python_hidden_start: "assets/scenes/true_end.png",
       python_hidden_london: "assets/scenes/true_end.png",
+      amelia_hub:           "assets/scenes/map_f1.png",
+      amelia_reading_room:  "assets/scenes/collection_room.png",
+      amelia_archive_room:  "assets/scenes/archive_room.png",
+      amelia_workshop:      "assets/scenes/workshop.png",
+      amelia_meeting_room:  "assets/scenes/guard_room.png",
+      amelia_guild_office:  "assets/scenes/desk.png",
+      amelia_wakeup:        "assets/scenes/outside.png",
     };
 
 const TEXT_ARCHIVE = {
@@ -348,7 +365,174 @@ const TEXT_ARCHIVE = {
 那個人一直躲在裡面。
 
 「帶路吧，」紅花說，
-「這次我跟你一起下去。」`
+「這次我跟你一起下去。」`,
+
+      python_hidden_london:
+`你打開電腦，《大航海時代：傳說》的載入畫面緩緩展開。
+
+右上角，工會圖示亮了起來──水手服同好會。
+成員們都在線上，今天的工會據點應該很熱鬧。
+
+你輸入了密碼。
+以艾蜜莉亞的身份，登入這個你最熟悉的世界。`,
+
+      amelia_hub:
+`你以艾蜜莉亞的身份登入《大航海時代：傳說》。
+
+工會據點──圖書館──熟悉的書香與幾分虛擬的海風交錯。
+身穿淺咖啡色雙馬尾水手服的你，環顧著這個稱為「水手服同好會」的工會據點。
+
+成員們分散在各個角落，談論著航海與冒險。
+新賽季剛剛開始，今天的據點比平日更熱鬧。`,
+
+      amelia_reading_room:
+`閱覽室內，暗金色雙馬尾的幸運四葉草正盯著筆記本，眉飛色舞地圈圈畫畫。
+
+「艾蜜莉亞！」她一看到你立刻揚起笑容，水手服隨動作輕輕飄動。
+「你有沒有試過新賽季的香料群島路線？
+ 那裡有隱藏的海圖碎片，我找了三天才拼出一半──
+ 但據說完整的海圖能換限定稱號『群島探索者』！
+ 而且……」她壓低聲音，「最後一片在馬六甲的隱藏海盜港，
+ 說不定傑克森馬吉斯知道詳細位置！」`,
+
+      amelia_reading_room_visited:
+`幸運四葉草依然埋頭在她的航線計算裡，見你過來歡快地揮手。
+
+「艾蜜莉亞！我跟傑克森確認了──
+ 香料群島最後那片海圖碎片就在馬六甲海峽的隱藏海盜港！
+ 我已經把路線記好了，等你有空，我們一起去拿！」`,
+
+      amelia_archive_room:
+`檔案室的書桌旁，銀白色雙馬尾的艾莉卡正翻閱著一份航海紀錄。
+
+她抬起頭，平靜地點點頭：「艾蜜莉亞。」
+
+「你知道嗎，這個工會最初只有三個人。
+ 紅花、我、還有一個後來轉去其他伺服器的隊員。
+ 我們在《大航海時代》裡找到彼此，只因為都穿水手服。
+ 就這樣。沒有什麼遠大的理由──
+ 同一個審美，就成了夥伴。」
+
+她停頓，看向窗外：「說起來，這比現實裡的很多緣分都單純。」`,
+
+      amelia_archive_room_followup:
+`艾莉卡把桌上的紀錄往旁邊推，看著你進來。
+
+「艾蜜莉亞，你來了。」語氣比平時多了一分認真。
+
+「幸運四葉草告訴我香料群島的最後路線，
+ 傑克森也確認了海盜港的位置。
+ 也就是說──我們可以組成最完整的艦隊了。
+ 水手 × 海盜 × 探索者，三種職業，一個工會。」
+
+她微微笑：「《大航海時代》的設計者很厲害──
+ 他們讓不同性格的人，在同一片海上找到各自的位置。
+ 就像我們。」`,
+
+      amelia_workshop:
+`修復工坊的桌上擺滿了航線圖和攻略筆記。
+戴著眼鏡、黑色中短髮的珊珊正皺眉對著一份任務說明。
+
+「艾蜜莉亞，」她調整眼鏡，語氣一如既往地直接，「你來得正好。
+ 塞特說倫敦教堂有一條隱藏任務鏈，
+ 需要水手和海盜玩家同時在場才能觸發。
+
+ 我試過三次了，一個人不夠。」
+
+她把任務說明推到你面前：
+「你去跟塞特確認觸發條件吧──他在會議室。」`,
+
+      amelia_meeting_room:
+`會議室的長桌旁，粉紅色短髮的傑克森馬吉斯正試算航海戰術表格。
+
+「哦，艾蜜莉亞，」她抬頭，帶著一貫的爽利笑容。
+「我有個好消息──馬六甲的海盜港位置確認了，
+ 就是幸運四葉草要找的那個碎片所在地。
+ 在《大航海時代》裡，情報才是海盜的核心。」
+
+她把一份手寫地圖甩給你：「拿好，說不定我們哪天組隊去。」
+
+她頓了頓，笑意輕輕收了收：
+「說真的，艾蜜莉亞……你最近狀態怎麼樣？現實裡，我是說。」
+
+────
+角落的窗邊，金髮的塞特正看著窗外出神。
+他正在等什麼……你還不清楚。`,
+
+      amelia_meeting_room_seth_avail:
+`會議室的長桌旁，傑克森馬吉斯依然在研究她的戰術表格，偶爾抬頭和你點個頭。
+
+────
+金髮的塞特靠在窗邊，露胸海盜裝在圖書館燈光下格外不羈。
+
+他看到你走近，溫柔地笑了笑：
+「艾蜜莉亞，珊珊說你要來。
+ 倫敦教堂的隱藏任務──我找到觸發條件了。
+ 必須在午夜時分，帶著聖水和一枚舊錢幣，
+ 在地下教堂的彩繪玻璃前等待。
+ 那幅聖喬治屠龍畫後面，藏著古老海圖的第一頁。」
+
+他推開窗，外面是圖書館庭院的夜色：
+「倫敦教堂最高管理員的稱號……其實不重要。
+ 我更喜歡和你們一起探索這件事本身。加油，艾蜜莉亞。」`,
+
+      amelia_meeting_room_seth_done:
+`會議室裡，傑克森馬吉斯和塞特都在，氣氛平靜而熱鬧。
+
+傑克森回頭看了你一眼：「怎樣，塞特說的聽懂了嗎？」
+塞特笑了笑：「她聽懂了。」
+
+《大航海時代》的新賽季，讓這個工會比以往都更有活力。`,
+
+      amelia_guild_office:
+`工會辦公室裡，銀色短髮的紅花端坐於會長椅上，
+翻閱著工會航線統計報告。
+
+「艾蜜莉亞，」她不抬頭，「你今天又在這裡待了很久了。」
+
+她放下報告，看著你：
+「《大航海時代》是個好遊戲，我設立這個工會，
+ 是希望大家能在這裡找到屬於自己的海洋。
+ 但記住──」眼神認真起來，
+「哪些是遊戲裡的風浪，哪些是現實的，要分清楚。」`,
+
+      amelia_guild_office_final:
+`紅花放下報告，罕見地直接盯著你。
+
+「艾蜜莉亞，我直說了。
+ 大家都跟我說你今天的狀態不對──
+ 傑克森說你眼神有點渙散，珊珊說你在線時間太長，
+ 幸運四葉草說你打字比平時慢。
+ 我知道你喜歡待在這裡，」她停頓，
+「但有些事，遊戲替代不了。
+ 你的胰島素──」她直視著你，語氣放輕，像是穿透螢幕在說話：
+「你有記得用嗎？」
+
+那個詞在你心裡迴響。胰島素。
+書頁聲、鍵盤聲、遠處傑克森馬吉斯的笑聲──
+在那一刻，全部變得遙遠。
+
+你……應該回去了。`,
+
+      amelia_wakeup:
+`你睜開眼睛。
+
+臥室的天花板，熟悉而真實。
+窗外的光線平穩，時鐘的秒針一格格地走。
+手機螢幕上，《大航海時代：傳說》的登入畫面靜靜等著。
+
+你的水手服同好會夥伴們，應該還在那片海上。
+
+但現在，有一件事需要先做。
+你翻身起床，從床頭取出胰島素筆。
+刺點、注射、記錄──這個過程你早就做得熟練。
+
+做完之後，你坐回床邊，看著窗外的光。
+有些人在遊戲裡等你，
+但你先得好好照顧現實裡的自己，
+才能繼續和他們一起航行。
+
+【隱藏線真結局：醒來】`,
     };
 
     const CHARACTER = {
@@ -442,6 +626,13 @@ const TEXT_ARCHIVE = {
       ending_alliance_solo_bad: "單獨追兇失敗結局場景",
       python_hidden_start: "Python 隱藏線起點",
       python_hidden_london: "Python 隱藏線（倫敦）",
+      amelia_hub:          "水手服同好會工會據點（大廳）",
+      amelia_reading_room: "閱覽室（幸運四葉草）",
+      amelia_archive_room: "檔案室（艾莉卡）",
+      amelia_workshop:     "修復工坊（珊珊）",
+      amelia_meeting_room: "會議室（塞特・傑克森馬吉斯）",
+      amelia_guild_office: "工會辦公室（紅花）",
+      amelia_wakeup:       "現實：醒來",
     };
     const MAP_SCENE_VIEWPORTS = {};  // floor maps are now dedicated images (no crop)
 
@@ -460,6 +651,13 @@ const TEXT_ARCHIVE = {
       alliance_followup:"同盟追兇",
       python_hidden_start:"隱藏線：夢醒時分",
       python_hidden_london:"隱藏線：航向倫敦",
+      amelia_hub:          "水手服同好會工會據點",
+      amelia_reading_room: "閱覽室",
+      amelia_archive_room: "檔案室",
+      amelia_workshop:     "修復工坊",
+      amelia_meeting_room: "會議室",
+      amelia_guild_office: "工會辦公室",
+      amelia_wakeup:       "醒來",
     };
 
     function archiveKeys(group) {
@@ -733,7 +931,25 @@ const TEXT_ARCHIVE = {
         return formatTemplateText(TEXT_ARCHIVE["story_texts.py"]?.ENDING_HIDDEN || "【隱藏結局】夢醒時分。");
       }
       if (key === "python_hidden_london") {
-        return formatTemplateText(TEXT_ARCHIVE["story_texts.py"]?.LONDON_HIDDEN_PROLOGUE || "【隱藏分支】航向倫敦。");
+        return STORY.python_hidden_london || formatTemplateText(TEXT_ARCHIVE["story_texts.py"]?.LONDON_HIDDEN_PROLOGUE || "【隱藏分支】航向倫敦。");
+      }
+      // ── Amelia mode scenes ─────────────────────────────────────────────────
+      if (key === "amelia_reading_room") {
+        return S.flags.ameliaTalkedClover ? STORY.amelia_reading_room_visited : STORY.amelia_reading_room;
+      }
+      if (key === "amelia_archive_room") {
+        return S.flags.ameliaEricaFollowup ? STORY.amelia_archive_room_followup : STORY.amelia_archive_room;
+      }
+      if (key === "amelia_meeting_room") {
+        if (!S.flags.ameliaTalkedShanshan) return STORY.amelia_meeting_room;
+        if (!S.flags.ameliaTalkedSeth)    return STORY.amelia_meeting_room_seth_avail;
+        return STORY.amelia_meeting_room_seth_done;
+      }
+      if (key === "amelia_guild_office") {
+        const allTalked = S.flags.ameliaTalkedClover && S.flags.ameliaTalkedErica &&
+                          S.flags.ameliaTalkedShanshan && S.flags.ameliaTalkedJackson &&
+                          S.flags.ameliaTalkedSeth;
+        return allTalked ? STORY.amelia_guild_office_final : STORY.amelia_guild_office;
       }
       if (key === "archive_index") {
         const storyCount = archiveKeys("story_texts.py").length;
@@ -926,15 +1142,139 @@ const TEXT_ARCHIVE = {
 
         case "python_hidden_london":
           opts.push(["(進入工會據點) 接受艾蜜莉亞的身份", () => {
-            S.scene = "archive_index"; // 跳轉到文字庫或其他你想展示的結尾畫面
-            pushLog("📜 你以艾蜜莉亞的身份回歸了公會。");
-            render();
+            pushLog("📜 你以艾蜜莉亞的身份進入了公會據點。");
+            goto("amelia_hub");
           }]);
           opts.push(["(登出) 關閉客戶端", () => {
             S = initialState();
             pushLog("♻ 一切重新開始。");
             render();
           }]);
+          break;
+
+        // ── Amelia mode scenes ───────────────────────────────────────────────
+        case "amelia_hub":
+          opts.push(["前往閱覽室（幸運四葉草）", () => { advance(5, "進入閱覽室"); goto("amelia_reading_room"); }]);
+          opts.push(["前往檔案室（艾莉卡）", () => { advance(5, "進入檔案室"); goto("amelia_archive_room"); }]);
+          opts.push(["前往修復工坊（珊珊）", () => { advance(5, "進入修復工坊"); goto("amelia_workshop"); }]);
+          opts.push(["前往會議室（塞特・傑克森馬吉斯）", () => { advance(5, "進入會議室"); goto("amelia_meeting_room"); }]);
+          opts.push(["前往工會辦公室（紅花）", () => { advance(5, "前往工會辦公室"); goto("amelia_guild_office"); }]);
+          opts.push(["（登出）關閉客戶端", () => { S = initialState(); pushLog("♻ 已登出。"); render(); }]);
+          break;
+
+        case "amelia_reading_room":
+          if (!S.flags.ameliaTalkedClover) {
+            opts.push(["和幸運四葉草聊香料群島路線", () => {
+              S.flags.ameliaTalkedClover = true;
+              addTrust(5, "和幸運四葉草聊了新賽季路線");
+              pushLog("💬 幸運四葉草：香料群島海圖碎片線索，最後一片在馬六甲！");
+              advance(10, "閒聊");
+              render();
+            }]);
+          } else {
+            opts.push(["✓ 幸運四葉草（已對話）繼續聊", () => { advance(5, "續聊"); render(); }]);
+          }
+          opts.push(["返回工會據點", () => goto("amelia_hub")]);
+          break;
+
+        case "amelia_archive_room": {
+          const ericaFollowupReady = S.flags.ameliaTalkedClover && S.flags.ameliaTalkedJackson && !S.flags.ameliaEricaFollowup;
+          if (!S.flags.ameliaTalkedErica) {
+            opts.push(["聽艾莉卡說工會的故事", () => {
+              S.flags.ameliaTalkedErica = true;
+              addTrust(5, "了解工會的起源");
+              pushLog("💬 艾莉卡：工會起源——三個水手服同好，就這樣成了夥伴");
+              advance(10, "傾聽");
+              render();
+            }]);
+          } else if (ericaFollowupReady) {
+            opts.push(["艾莉卡有新話題（幸運＋傑克森資訊帶來的感觸）", () => {
+              S.flags.ameliaEricaFollowup = true;
+              addTrust(8, "艾莉卡說出了艦隊完整後的感觸");
+              pushLog("💬 艾莉卡（後續）：三種職業、一個工會——完整的艦隊");
+              advance(10, "傾聽");
+              render();
+            }]);
+          } else {
+            opts.push(["✓ 艾莉卡（已對話）繼續在書架旁坐一會", () => { advance(5, "靜坐"); render(); }]);
+          }
+          opts.push(["返回工會據點", () => goto("amelia_hub")]);
+          break;
+        }
+
+        case "amelia_workshop":
+          if (!S.flags.ameliaTalkedShanshan) {
+            opts.push(["聽珊珊說倫敦教堂任務的事", () => {
+              S.flags.ameliaTalkedShanshan = true;
+              addTrust(5, "了解倫敦教堂隱藏任務鏈");
+              pushLog("💬 珊珊：倫敦教堂隱藏任務需要水手＋海盜同時在場才能觸發");
+              advance(10, "傾聽");
+              render();
+            }]);
+          } else {
+            opts.push(["✓ 珊珊（已對話）繼續整理攻略", () => { advance(5, "觀看"); render(); }]);
+          }
+          opts.push(["返回工會據點", () => goto("amelia_hub")]);
+          break;
+
+        case "amelia_meeting_room":
+          if (!S.flags.ameliaTalkedJackson) {
+            opts.push(["和傑克森馬吉斯聊航海戰術與情報", () => {
+              S.flags.ameliaTalkedJackson = true;
+              addTrust(5, "和傑克森聊了情報與海盜戰術");
+              pushLog("💬 傑克森馬吉斯：情報才是海盜的核心；馬六甲海盜港位置確認");
+              advance(10, "閒聊");
+              render();
+            }]);
+          } else {
+            opts.push(["✓ 傑克森（已對話）繼續聊航線", () => { advance(5, "續聊"); render(); }]);
+          }
+          if (!S.flags.ameliaTalkedShanshan) {
+            opts.push(["塞特（🔒 先去修復工坊找珊珊才能解鎖）", () => {
+              pushLog("💡 提示：先去修復工坊找珊珊聊聊，再回來找塞特。");
+              render();
+            }]);
+          } else if (!S.flags.ameliaTalkedSeth) {
+            opts.push(["向塞特詢問倫敦教堂任務的觸發條件", () => {
+              S.flags.ameliaTalkedSeth = true;
+              addTrust(8, "塞特分享了倫敦任務的秘密");
+              pushLog("💬 塞特：午夜＋聖水＋舊錢幣→聖喬治畫後的古老海圖第一頁");
+              advance(10, "傾聽");
+              render();
+            }]);
+          } else {
+            opts.push(["✓ 塞特（已對話）倫敦任務細節確認完畢", () => { advance(5, "閒聊"); render(); }]);
+          }
+          opts.push(["返回工會據點", () => goto("amelia_hub")]);
+          break;
+
+        case "amelia_guild_office": {
+          const allTalked = S.flags.ameliaTalkedClover && S.flags.ameliaTalkedErica &&
+                            S.flags.ameliaTalkedShanshan && S.flags.ameliaTalkedJackson &&
+                            S.flags.ameliaTalkedSeth;
+          if (S.flags.ameliaInsulinUnlocked) {
+            opts.push(["💊 醒來", () => {
+              pushLog("☀️ 你回到了現實。");
+              goto("amelia_wakeup");
+            }]);
+          } else if (allTalked) {
+            opts.push(["聽紅花說最後一句話……", () => {
+              S.flags.ameliaInsulinUnlocked = true;
+              addTrust(20, "紅花說出了那個詞");
+              pushLog("💊 紅花提到「胰島素」——你應該醒來了");
+              advance(5, "凝神");
+              render();
+            }]);
+          } else {
+            opts.push(["和紅花說說今天工會的狀況", () => { advance(5, "閒聊"); render(); }]);
+          }
+          opts.push(["返回工會據點", () => goto("amelia_hub")]);
+          break;
+        }
+
+        case "amelia_wakeup":
+          opts.push(["重新開始（回到序章）", () => { S = initialState(); pushLog("♻ 已重新開始"); render(); }]);
+          opts.push(["回到工會據點（繼續遊戲）", () => goto("amelia_hub")]);
           break;
 
         case "desk":
