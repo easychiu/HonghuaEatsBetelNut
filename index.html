@@ -147,14 +147,27 @@
     const SAVE_VERSION = 1;
     const GAME_START_HOUR = 15;
     const KILLER_EMERGE_ELAPSED = 660; // 由 15:00 起算 660 分鐘（跨日到翌日 02:00）
+    const STALKER_ENCOUNTER_ELAPSED = 480; // 由 15:00 起算 480 分鐘（23:00）
+    const STALKER_ENCOUNTER_CHANCE = 0.3;
     const MAX_LOG_ENTRIES = 60;
     const DEFAULT_LOG_MESSAGE = "── 進入蔚藍學院 ──";
     const ARCHIVE_PREVIEW_LIMIT = 12;
+    const VALID_FLOORS = [1, 2, 3];
+    const PASSWORD_CODE = "314";
+    const PASSWORD_DIGITS = { hammer: "3", clover: "1", jeans: "4" };
+    const BOOKSHELF_CORRECT_ORDER = ["失蹤案卷", "退學檔案", "死亡報告", "停課公告"];
+    const BOOKSHELF_REQUIRED_COUNT = BOOKSHELF_CORRECT_ORDER.length;
+    const DEDUCTION_QUESTIONS = [
+      { question: "兇器鎚子真正的主人是誰？", answer: "天王星" },
+      { question: "案發當晚的目擊者是誰？", answer: "艾莉卡" },
+      { question: "這起案件為何被封鎖？", answer: "校方掩蓋" },
+    ];
     const DEFAULT_EVIDENCE = { hammer: false, clover: false, jeans: false };
     const DEFAULT_CLUES = { honghua: false, amelia: false, starscream: false };
     const DEFAULT_FLAGS = {
       basementOpen: false,
       trueSong: false,
+      deductionComplete: false,
       guardLogbookFound: false,
       workshopCardFound: false,
       ameliaTalkedClover: false,
@@ -197,6 +210,10 @@
       ending_bad:     "assets/scenes/bad_a.png",
       ending_alliance_capture: "assets/scenes/secret_end.png",
       ending_alliance_solo_bad: "assets/scenes/bad_a.png",
+      ending_bad_codefail: "assets/scenes/bad_a.png",
+      ending_killer_map: "assets/scenes/bad_a.png",
+      killer_encounter: "assets/scenes/hall.png",
+      deduction: "assets/scenes/desk.png",
       python_hidden_start: "assets/scenes/true_end.png",
       python_hidden_london: "assets/scenes/true_end.png",
       amelia_hub:           "assets/scenes/map_f1.png",
@@ -345,7 +362,7 @@ const TEXT_ARCHIVE = {
 （鎚子在一樓收藏室，四葉草在二樓檔案室，牛仔褲改在廢棄閱覽室。）`,
       bookshelves:
 `書架深處有四份案卷。
-你依序整理「失蹤案卷→退學檔案→死亡報告→停課公告」後，暗格開啟。`,
+請依序點選「失蹤案卷→退學檔案→死亡報告→停課公告」啟動機關。`,
       desk:
 `你翻開紅花筆記。
 她曾聽見案發當晚爭吵與倒地聲，但一直等不到能查清真相的人。`,
@@ -359,6 +376,11 @@ const TEXT_ARCHIVE = {
 `你回到紅花面前。
 她看著你手中的證據，靜靜等你給出結論。`
       ,
+      killer_encounter:
+`走廊盡頭出現一道黑影，正緩緩轉過頭來……`,
+      deduction:
+`你深呼吸，開始整理今晚所有線索。
+若推論有誤，你將無法說服紅花。`,
       alliance_followup:
 `紅花收下你遞出的證據後，終於站到你身旁。
 「你說得對，兇手沒有離開圖書館。」
@@ -553,7 +575,7 @@ const TEXT_ARCHIVE = {
       // ── 3F ──────────────────────────────────────────────────────────────────
       map3: [
         { label: "館長室外調查",       rect: [5,   4, 46, 47], match: "前往館長室外調查" },
-        { label: "進入館長室（面對紅花）", rect: [5,  48, 46, 14], match: "進入館長室（面對紅花）" },
+        { label: "面對紅花", rect: [5,  48, 46, 14], match: "面對紅花" },
         { label: "私人研究室",         rect: [56,  4, 35, 43], match: "前往私人研究室" },
         { label: "廢棄閱覽室",         rect: [5,  50, 37, 33], match: "前往廢棄閱覽室" },
         { label: "封閉儲藏室（危險）",  rect: [55, 50, 38, 33], match: "前往封閉儲藏室（危險）" },
@@ -611,6 +633,8 @@ const TEXT_ARCHIVE = {
       desk: "研究室A研究桌",
       window: "研究室B窗邊",
       bookshelves: "收藏室書架深處案卷區",
+      deduction: "推理盤",
+      killer_encounter: "走廊遭遇",
       collectionRoom: "收藏室（古籍庫）",
       archiveRoom: "檔案室（禁書區）",
       guardRoom: "守衛室",
@@ -624,6 +648,8 @@ const TEXT_ARCHIVE = {
       ending_trust: "信任結局場景",
       ending_normal: "普通結局場景",
       ending_bad: "壞結局場景",
+      ending_bad_codefail: "壞結局（密碼失敗）場景",
+      ending_killer_map: "壞結局（走廊殺手）場景",
       ending_alliance_capture: "同盟追兇結局場景",
       ending_alliance_solo_bad: "單獨追兇失敗結局場景",
       python_hidden_start: "Python 隱藏線起點",
@@ -642,6 +668,8 @@ const TEXT_ARCHIVE = {
       intro:        "學院外觀",
       prologue:     "序章",
       hall:         "館長室外展示區",
+      deduction:    "推理盤",
+      killer_encounter: "走廊遭遇",
       map3:         "3F 平面圖",
       map2:         "2F 平面圖",
       map1:         "1F 平面圖",
@@ -650,6 +678,7 @@ const TEXT_ARCHIVE = {
       guardRoom:    "守衛室",
       workshop:     "修復工坊",
       abandonedRoom:"廢棄閱覽室",
+      confront:     "面對紅花",
       alliance_followup:"同盟追兇",
       python_hidden_start:"隱藏線：夢醒時分",
       python_hidden_london:"隱藏線：航向倫敦",
@@ -699,7 +728,10 @@ const TEXT_ARCHIVE = {
       clues: { ...DEFAULT_CLUES },
       flags: { ...DEFAULT_FLAGS },
       archive: { ...DEFAULT_ARCHIVE },
-      log: [DEFAULT_LOG_MESSAGE]
+      log: [DEFAULT_LOG_MESSAGE],
+      passwordFails: 0,
+      booksOrder: [],
+      currentFloor: 3
     });
 
     let S = initialState();
@@ -862,7 +894,44 @@ const TEXT_ARCHIVE = {
 
     function goto(scene) {
       S.scene = scene;
+      if (scene === "map1") S.currentFloor = 1;
+      if (scene === "map2") S.currentFloor = 2;
+      if (scene === "map3") S.currentFloor = 3;
       render();
+    }
+
+    function tryFloorTransition(targetFloor, minutes, reason) {
+      advance(minutes, reason);
+      S.currentFloor = targetFloor;
+      if (S.elapsed > STALKER_ENCOUNTER_ELAPSED && Math.random() < STALKER_ENCOUNTER_CHANCE) {
+        goto("killer_encounter");
+        return;
+      }
+      goto(`map${targetFloor}`);
+    }
+
+    function normalizeAnswer(ans) {
+      return String(ans || "").trim().replace(/\s+/g, "");
+    }
+
+    function startDeductionQuiz() {
+      for (let i = 0; i < DEDUCTION_QUESTIONS.length; i += 1) {
+        const { question, answer } = DEDUCTION_QUESTIONS[i];
+        const input = prompt(question);
+        if (input === null) {
+          pushLog("📝 你暫停了推理。");
+          goto("map3");
+          return;
+        }
+        if (normalizeAnswer(input) !== normalizeAnswer(answer)) {
+          pushLog(`❌ 推理中斷：第 ${i + 1} 題答案不正確。`);
+          goto("map3");
+          return;
+        }
+      }
+      S.flags.deductionComplete = true;
+      pushLog("🧠 推理完成：你整理出完整案件邏輯。");
+      goto("confront");
     }
 
     function clickOptionByMatch(match) {
@@ -922,6 +991,13 @@ const TEXT_ARCHIVE = {
     function sceneText(key) {
       if (key === "hall") {
         return STORY.hall + "\n\n" + CHARACTER.trustRemarks[trustTier()];
+      }
+      if (key === "bookshelves") {
+        const picked = S.booksOrder.length ? S.booksOrder.join(" → ") : "（尚未選擇）";
+        return `${STORY.bookshelves}\n\n目前排序：${picked}`;
+      }
+      if (key === "deduction") {
+        return STORY.deduction + (S.flags.deductionComplete ? "\n\n✅ 已完成推理，可直接面對紅花。" : "");
       }
       if (key === "collectionRoom") return STORY.SCENE_COLLECTION_ROOM || "【收藏室（古籍庫）】\n\n厚重的書架深處有什麼東西靜靜躺著……";
       if (key === "archiveRoom") return STORY.SCENE_ARCHIVE_ROOM || "【檔案室（禁書區）】\n\n封閉多年的禁書區，有人留下了足跡……";
@@ -1021,68 +1097,90 @@ const TEXT_ARCHIVE = {
           opts.push(["開始調查", () => { advance(10, "抵達圖書館"); goto("prologue"); }]);
           break;
         case "prologue":
-          opts.push(["進入 3F 地圖", () => { advance(5, "檢視地圖"); goto("map3"); }]);
+          opts.push(["[強硬] 皇家警察辦案，請妳配合交出所有線索。", () => { addTrust(-15, "態度強硬"); goto("map3"); }]);
+          opts.push(["[溫和] 我知道妳在保護某個秘密，我們目的一致。", () => { addTrust(20, "釋出善意"); goto("map3"); }]);
           break;
         case "map3":
-          opts.push(["前往館長室外調查", () => { advance(8, "進入館長室外展示區"); goto("hall"); }]);
-          opts.push(["進入館長室（面對紅花）", () => endingCheck()]);
-          opts.push(["前往私人研究室", () => { advance(8, "進入私人研究室"); goto("map3"); }]);
-          opts.push(["前往廢棄閱覽室", () => { advance(8, "進入廢棄閱覽室"); goto("abandonedRoom"); }]);
-          opts.push(["前往封閉儲藏室（危險）", () => { advance(8, "靠近封閉儲藏室"); goto("basement"); }]);
-          opts.push(["查看一樓", () => { advance(15, "前往 1F"); goto("map1"); }]);
-          opts.push(["查看二樓", () => { advance(10, "前往 2F"); goto("map2"); }]);
+          opts.push(["前往館長室外調查", () => { advance(20, "進入館長室外展示區"); goto("hall"); }]);
+          opts.push(["開始整理線索 (推理)", () => goto("deduction")]);
+          opts.push(["面對紅花", () => {
+            if (!S.flags.deductionComplete) {
+              pushLog("⚠ 你還沒完成推理盤，無法直接提出結論。");
+              render();
+              return;
+            }
+            goto("confront");
+          }]);
+          opts.push(["前往私人研究室", () => { advance(15, "進入私人研究室"); goto("map3"); }]);
+          opts.push(["前往廢棄閱覽室", () => { advance(20, "進入廢棄閱覽室"); goto("abandonedRoom"); }]);
+          opts.push(["前往封閉儲藏室（危險）", () => { advance(20, "靠近封閉儲藏室"); goto("basement"); }]);
+          opts.push(["查看一樓", () => { tryFloorTransition(1, 30, "前往 1F"); }]);
+          opts.push(["查看二樓", () => { tryFloorTransition(2, 20, "前往 2F"); }]);
           break;
         case "map2":
-          opts.push(["前往研究室A（研究桌）", () => { advance(12, "閱讀案情筆記"); goto("desk"); }]);
-          opts.push(["前往研究室B（窗邊）", () => { advance(12, "查看窗台字條"); goto("window"); }]);
-          opts.push(["前往檔案室（禁書區）", () => { advance(10, "進入禁書區"); goto("archiveRoom"); }]);
-          opts.push(["前往會議廳II", () => { advance(10, "進入會議廳II"); goto("map2"); }]);
-          opts.push(["前往修復工坊", () => { advance(10, "進入修復工坊"); goto("workshop"); }]);
-          opts.push(["前往二樓迴廊", () => { advance(8, "探索二樓迴廊"); goto("map2"); }]);
-          opts.push(["查看一樓", () => { advance(10, "前往 1F"); goto("map1"); }]);
-          opts.push(["查看三樓", () => { advance(10, "前往 3F"); goto("map3"); }]);
+          opts.push(["前往研究室A（研究桌）", () => { advance(20, "閱讀案情筆記"); goto("desk"); }]);
+          opts.push(["前往研究室B（窗邊）", () => { advance(20, "查看窗台字條"); goto("window"); }]);
+          opts.push(["前往檔案室（禁書區）", () => { advance(15, "進入禁書區"); goto("archiveRoom"); }]);
+          opts.push(["前往會議廳II", () => { advance(15, "進入會議廳II"); goto("map2"); }]);
+          opts.push(["前往修復工坊", () => { advance(20, "進入修復工坊"); goto("workshop"); }]);
+          opts.push(["前往二樓迴廊", () => { advance(15, "探索二樓迴廊"); goto("map2"); }]);
+          opts.push(["查看一樓", () => { tryFloorTransition(1, 20, "前往 1F"); }]);
+          opts.push(["查看三樓", () => { tryFloorTransition(3, 20, "前往 3F"); }]);
           break;
         case "map1":
-          opts.push(["前往閱覽室A", () => { advance(8, "進入閱覽室A"); goto("map1"); }]);
-          opts.push(["前往閱覽室B", () => { advance(8, "進入閱覽室B"); goto("map1"); }]);
-          opts.push(["前往收藏室（古籍庫）", () => { advance(10, "進入收藏室"); goto("collectionRoom"); }]);
-          opts.push(["前往會議廳I", () => { advance(10, "進入會議廳I"); goto("map1"); }]);
-          opts.push(["前往管理室走廊", () => { advance(8, "巡查管理室走廊"); goto("map1"); }]);
-          opts.push(["前往守衛室", () => { advance(8, "進入守衛室"); goto("guardRoom"); }]);
+          opts.push(["前往閱覽室A", () => { advance(15, "進入閱覽室A"); goto("map1"); }]);
+          opts.push(["前往閱覽室B", () => { advance(15, "進入閱覽室B"); goto("map1"); }]);
+          opts.push(["前往收藏室（古籍庫）", () => { advance(20, "進入收藏室"); goto("collectionRoom"); }]);
+          opts.push(["前往會議廳I", () => { advance(20, "進入會議廳I"); goto("map1"); }]);
+          opts.push(["前往管理室走廊", () => { advance(15, "巡查管理室走廊"); goto("map1"); }]);
+          opts.push(["前往守衛室", () => { advance(20, "進入守衛室"); goto("guardRoom"); }]);
           if (S.flags.basementOpen) {
-            opts.push(["地下密室", () => { advance(10, "下到地下密室"); goto("basement"); }]);
+            opts.push(["地下密室", () => { advance(20, "下到地下密室"); goto("basement"); }]);
           }
-          opts.push(["查看二樓", () => { advance(10, "前往 2F"); goto("map2"); }]);
-          opts.push(["查看三樓", () => { advance(15, "前往 3F"); goto("map3"); }]);
+          opts.push(["查看二樓", () => { tryFloorTransition(2, 20, "前往 2F"); }]);
+          opts.push(["查看三樓", () => { tryFloorTransition(3, 30, "前往 3F"); }]);
           break;
         case "hall":
-          opts.push(["密碼盒", () => { advance(5, "嘗試密碼盒"); render(); }]);
-          opts.push(["前往書架深處（取得密碼盒線索）", () => { advance(15, "排列案卷"); goto("bookshelves"); }]);
-          opts.push(["回到三樓地圖", () => { advance(6, "返回地圖"); goto("map3"); }]);
+          opts.push(["密碼盒", () => {
+            const ans = prompt("請輸入三位數密碼：");
+            if (ans === PASSWORD_CODE) {
+              S.flags.trueSong = true;
+              advance(5, "解開密碼盒");
+              pushLog("🔓 密碼正確！取得關鍵道具《鎮魂歌譜》");
+            } else {
+              S.passwordFails += 1;
+              pushLog(`❌ 密碼錯誤（${S.passwordFails}/3）`);
+              if (S.passwordFails >= 3) {
+                goto("ending_bad_codefail");
+                return;
+              }
+            }
+            render();
+          }]);
+          opts.push(["前往書架深處（取得密碼盒線索）", () => { advance(20, "排列案卷"); goto("bookshelves"); }]);
+          opts.push(["回到三樓地圖", () => { advance(15, "返回地圖"); goto("map3"); }]);
           break;
         case "collectionRoom":
           opts.push([S.evidence.hammer ? "✓ 已調查鎚子" : "書架角落的物品（鎚子）", () => {
             if (!S.evidence.hammer) {
               S.evidence.hammer = true;
-              addTrust(8, "你注意到鎚柄刻痕");
-              pushLog("📌 物證：陳舊生鏽鎚子（第一碼 3）");
+              pushLog(`📌 物證：陳舊生鏽鎚子（第一碼 ${PASSWORD_DIGITS.hammer}）`);
             }
-            advance(8, "調查鎚子");
+            advance(15, "調查鎚子");
             render();
           }]);
-          opts.push(["離開收藏室，返回一樓地圖", () => { advance(5, "返回 1F"); goto("map1"); }]);
+          opts.push(["離開收藏室，返回一樓地圖", () => { advance(15, "返回 1F"); goto("map1"); }]);
           break;
         case "archiveRoom":
           opts.push([S.evidence.clover ? "✓ 已調查四葉草" : "書縫中的四葉草", () => {
             if (!S.evidence.clover) {
               S.evidence.clover = true;
-              addTrust(8, "你追到艾莉卡線索");
-              pushLog("📌 物證：幸運四葉草（第二碼 1）");
+              pushLog(`📌 物證：幸運四葉草（第二碼 ${PASSWORD_DIGITS.clover}）`);
             }
-            advance(8, "調查四葉草");
+            advance(15, "調查四葉草");
             render();
           }]);
-          opts.push(["離開檔案室，返回二樓地圖", () => { advance(5, "返回 2F"); goto("map2"); }]);
+          opts.push(["離開檔案室，返回二樓地圖", () => { advance(15, "返回 2F"); goto("map2"); }]);
           break;
         case "guardRoom":
           opts.push([S.flags.guardLogbookFound ? "✓ 已調查守衛記錄本" : "調查桌角的守衛記錄本", () => {
@@ -1091,10 +1189,10 @@ const TEXT_ARCHIVE = {
               addTrust(5, "你記下守衛記錄本異常內容");
               pushLog("🧩 線索：守衛記錄本（案發夜異常巡邏紀錄）");
             }
-            advance(5, "翻閱守衛記錄本");
+            advance(15, "翻閱守衛記錄本");
             render();
           }]);
-          opts.push(["離開守衛室，返回一樓地圖", () => { advance(5, "返回 1F"); goto("map1"); }]);
+          opts.push(["離開守衛室，返回一樓地圖", () => { advance(15, "返回 1F"); goto("map1"); }]);
           break;
         case "workshop":
           opts.push([S.flags.workshopCardFound ? "✓ 已調查工作記錄卡" : "調查工具箱旁的工作記錄卡", () => {
@@ -1103,10 +1201,10 @@ const TEXT_ARCHIVE = {
               addTrust(5, "你找到秘密修復委託記錄");
               pushLog("🧩 線索：修復工作卡（T.S. 案發前三天秘密委託）");
             }
-            advance(5, "翻閱工作記錄卡");
+            advance(15, "翻閱工作記錄卡");
             render();
           }]);
-          opts.push(["離開修復工坊，返回二樓地圖", () => { advance(5, "返回 2F"); goto("map2"); }]);
+          opts.push(["離開修復工坊，返回二樓地圖", () => { advance(15, "返回 2F"); goto("map2"); }]);
           break;
         case "abandonedRoom":
           if (!S.clues.starscream) {
@@ -1117,13 +1215,30 @@ const TEXT_ARCHIVE = {
           opts.push([S.evidence.jeans ? "✓ 已調查牛仔褲" : "調查閱讀台下的牛仔褲（第四排）", () => {
             if (!S.evidence.jeans) {
               S.evidence.jeans = true;
-              addTrust(8, "你鎖定天王星線索");
-              pushLog("📌 物證：YV 牛仔褲（第三碼 4）");
+              pushLog(`📌 物證：YV 牛仔褲（第三碼 ${PASSWORD_DIGITS.jeans}）`);
             }
-            advance(8, "調查牛仔褲");
+            advance(15, "調查牛仔褲");
             render();
           }]);
-          opts.push(["離開廢棄閱覽室，返回三樓地圖", () => goto("map3")]);
+          opts.push(["離開廢棄閱覽室，返回三樓地圖", () => { advance(15, "返回 3F"); goto("map3"); }]);
+          break;
+        case "killer_encounter":
+          opts.push(["(躲進旁邊的櫃子) 屏住呼吸", () => {
+            advance(30, "躲避殺手");
+            goto(`map${S.currentFloor}`);
+          }]);
+          opts.push(["(直接衝過去) 試圖硬闖", () => { goto("ending_killer_map"); }]);
+          break;
+        case "deduction":
+          opts.push(["開始回答三題推理", () => startDeductionQuiz()]);
+          if (S.flags.deductionComplete) {
+            opts.push(["面對紅花", () => goto("confront")]);
+          }
+          opts.push(["先回 3F 地圖", () => goto("map3")]);
+          break;
+        case "confront":
+          opts.push(["提出推論與證據", () => endingCheck()]);
+          opts.push(["返回 3F 地圖", () => goto("map3")]);
           break;
         case "alliance_followup":
           opts.push(["帶紅花前往地下儲藏室", () => {
@@ -1152,6 +1267,7 @@ const TEXT_ARCHIVE = {
           break;
 
         case "ending_bad":
+        case "ending_bad_codefail":
         case "ending_normal":
           opts.push(["(察覺違和感) 等等……妳要不要打胰島素？", () => {
             pushLog("👁️ 脫口而出的一句話，打破了夢境的邏輯。");
@@ -1330,10 +1446,29 @@ const TEXT_ARCHIVE = {
           opts.push(["返回 2F 地圖", () => goto("map2")]);
           break;
         case "bookshelves":
-          if (!S.flags.basementOpen) {
-            S.flags.basementOpen = true;
-            addTrust(10, "你解開時間線謎題");
-            pushLog("🔑 取得地下密室鑰匙");
+          BOOKSHELF_CORRECT_ORDER.forEach((book) => {
+            opts.push([book, () => {
+              if (S.booksOrder.length >= BOOKSHELF_REQUIRED_COUNT) {
+                pushLog("ℹ️ 目前排序已滿，請清除後重新嘗試。");
+                render();
+                return;
+              }
+              S.booksOrder.push(book);
+              if (S.booksOrder.length === BOOKSHELF_REQUIRED_COUNT) {
+                const correct = BOOKSHELF_CORRECT_ORDER.every((v, idx) => S.booksOrder[idx] === v);
+                if (correct) {
+                  S.flags.basementOpen = true;
+                  pushLog("🔑 取得地下密室鑰匙");
+                } else {
+                  S.booksOrder = [];
+                  pushLog("❌ 順序錯誤，機關毫無反應。");
+                }
+              }
+              render();
+            }]);
+          });
+          if (S.booksOrder.length > 0) {
+            opts.push(["清除目前排序", () => { S.booksOrder = []; render(); }]);
           }
           opts.push(["返回 1F 地圖", () => goto("map1")]);
           break;
@@ -1398,6 +1533,10 @@ const TEXT_ARCHIVE = {
           return "【普通結局】\n你帶著部分物證離開，真相仍有缺口。";
         case "ending_bad":
           return "【壞結局】\n準備不足就面對紅花，對話在沉默中結束。";
+        case "ending_bad_codefail":
+          return "【壞結局 B】\n你在密碼盒前連續輸錯三次，暗鎖警報響起，調查被迫中止。";
+        case "ending_killer_map":
+          return "【壞結局】\n你試圖硬闖黑影，下一秒只剩走廊裡急促的腳步與熄滅的燭光。";
         case "ending_alliance_capture":
           return "【同盟追兇結局】\n你依線索帶紅花下到地下儲藏室，兇手果然仍在。\n紅花一拳擊倒對方，嫌犯供出：封閉房內有暗門直通館外，\n過往失蹤調查員都是被他誘入地下後殺害。\n收尾後你騎上 GP125，準時下班離開。";
         case "ending_alliance_solo_bad":
@@ -1489,6 +1628,9 @@ const TEXT_ARCHIVE = {
       merged.flags = Object.assign({}, DEFAULT_FLAGS, state?.flags || {});
       merged.archive = Object.assign({}, DEFAULT_ARCHIVE, state?.archive || {});
       if (!Array.isArray(merged.log)) merged.log = [DEFAULT_LOG_MESSAGE];
+      if (!Array.isArray(merged.booksOrder)) merged.booksOrder = [];
+      if (typeof merged.passwordFails !== "number") merged.passwordFails = 0;
+      if (!VALID_FLOORS.includes(merged.currentFloor)) merged.currentFloor = 3;
       return merged;
     }
 
