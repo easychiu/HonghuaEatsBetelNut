@@ -1018,6 +1018,7 @@ const TEXT_ARCHIVE = {
     let lastRenderedScene = null;
 
     function targetBgmForScene() {
+      if (S.scene === "victory") return null; // Mute background music during victory fanfare
       if (S.scene.startsWith("battle_")) return BGM_BATTLE;
       return isEndingOrHiddenScene(S.scene) ? BGM_END : BGM_MAIN;
     }
@@ -1114,14 +1115,19 @@ const TEXT_ARCHIVE = {
 
     function syncBgmTrack() {
       const target = targetBgmForScene();
-      const targetAudio = ALL_BGMS[target];
-      if (!targetAudio) return;
+
       Object.entries(ALL_BGMS).forEach(([src, audio]) => {
-        if (src !== target && !audio.paused) audio.pause();
+        if (src !== target && !audio.paused) {
+          audio.pause();
+          audio.currentTime = 0;
+        }
       });
-      if (audioEnabled && targetAudio.paused) {
-        targetAudio.currentTime = 0;
-        targetAudio.play().catch(() => {});
+
+      if (target && audioEnabled) {
+        const targetAudio = ALL_BGMS[target];
+        if (targetAudio && targetAudio.paused) {
+          targetAudio.play().catch(() => {});
+        }
       }
     }
 
@@ -1951,6 +1957,24 @@ const TEXT_ARCHIVE = {
               render();
             }
           }]);
+
+          // Heal Option in Random Battle
+          if (S.potions > 0) {
+            opts.push([`💊 嚼一口急救檳榔 (剩餘: ${S.potions})`, () => {
+              S.potions--;
+              let heal = 40;
+              S.playerHp = Math.min(S.maxHp, S.playerHp + heal);
+              pushLog(`💚 你嚼了一口檳榔，恢復了 ${heal} 點 HP！`);
+              if (audioEnabled) sfxHeal.play().catch(() => {});
+
+              let mDmg = Math.floor(Math.random() * 8) + 2;
+              S.playerHp -= mDmg;
+              pushLog(`🩸 黑影趁隙攻擊，受到 ${mDmg} 點傷害。`);
+
+              if (S.playerHp <= 0) S.scene = "ending_alliance_solo_bad";
+              render();
+            }]);
+          }
           break;
 
         case "battle_farm":
@@ -2016,6 +2040,25 @@ const TEXT_ARCHIVE = {
               render();
             }
           }]);
+
+          // Heal Option in Farm Battle
+          if (S.potions > 0) {
+            opts.push([`💊 嚼一口急救檳榔 (剩餘: ${S.potions})`, () => {
+              S.potions--;
+              let heal = 40;
+              S.playerHp = Math.min(S.maxHp, S.playerHp + heal);
+              pushLog(`💚 你嚼了一口檳榔，恢復了 ${heal} 點 HP！精神百倍！`);
+              if (audioEnabled) sfxHeal.play().catch(() => {});
+
+              // Monster still attacks while you heal
+              let mDmg = Math.floor(Math.random() * S.monsterAtk) + Math.floor(S.monsterAtk / 2);
+              S.playerHp -= mDmg;
+              pushLog(`🩸 ${S.monsterName} 趁隙攻擊，你受到了 ${mDmg} 點傷害。`);
+
+              if (S.playerHp <= 0) S.scene = "ending_alliance_solo_bad";
+              render();
+            }]);
+          }
           break;
 
         case "victory":
@@ -2266,6 +2309,19 @@ const TEXT_ARCHIVE = {
           }]);
           break;
       }
+
+      // --- GLOBAL MAP OPTIONS: Allow healing outside of battle ---
+      if (MAP_SCENES.has(S.scene) && S.potions > 0 && S.playerHp < S.maxHp) {
+        // Use unshift to place the heal button at the TOP of the options list
+        opts.unshift([`💊 停下腳步吃一顆檳榔 (剩餘: ${S.potions}, 恢復 40 HP)`, () => {
+          S.potions--;
+          S.playerHp = Math.min(S.maxHp, S.playerHp + 40);
+          pushLog(`💚 你在走廊上稍作休息，嚼了一口檳榔，恢復了 40 點 HP。`);
+          if (audioEnabled && typeof sfxHeal !== "undefined") sfxHeal.play().catch(() => {});
+          render();
+        }]);
+      }
+
       return opts;
     }
 
