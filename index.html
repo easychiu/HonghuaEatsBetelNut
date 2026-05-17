@@ -1895,9 +1895,13 @@ const TEXT_ARCHIVE = {
       } else {
         sceneEl.textContent = sceneText(S.scene);
       }
+      const safeHp = Number.isFinite(S.playerHp) ? S.playerHp : 0;
+      const safeMaxHp = Number.isFinite(S.maxHp) ? S.maxHp : 100;
+      const safeWax = Number.isFinite(S.wax) ? S.wax : 0;
+      const safePotions = Number.isFinite(S.potions) ? S.potions : 0;
       document.getElementById("statusLine").innerHTML = inArchive
         ? "完整文本檔案庫：已將 story_texts.py / character_texts.py 內嵌到單一 HTML（可離線瀏覽）"
-        : `<strong>❤️ HP: ${S.playerHp || 0} / ${S.maxHp || 100} &nbsp;|&nbsp; 🕯️ 殘蠟: ${S.wax || 0} 塊 &nbsp;|&nbsp; 💊 檳榔: ${S.potions || 0} 顆</strong>`;
+        : `<strong>❤️ HP: ${safeHp} / ${safeMaxHp} &nbsp;|&nbsp; 🕯️ 殘蠟: ${safeWax} 塊 &nbsp;|&nbsp; 💊 檳榔: ${safePotions} 顆</strong>`;
 
       const optionsEl = document.getElementById("options");
       optionsEl.innerHTML = "";
