@@ -152,7 +152,11 @@
     /* 2. Message Area (Classic DQ text box at bottom) */
     .main.battle-mode .scene {
       grid-area: message-area;
-      composes: dq-window; /* Apply DQ window styles */
+      font-family: monospace;
+      color: #ffffff;
+      border-radius: 0;
+      padding: 10px;
+      box-shadow: 0 0 15px rgba(0,0,0,0.5);
       min-height: 80px;
       background: rgba(0,0,0,0.9);
       border: 4px double #ffffff;
@@ -169,11 +173,13 @@
     }
 
     .main.battle-mode #options button {
-      composes: dq-window; /* Apply DQ window styles to buttons */
+      font-family: monospace;
+      box-shadow: 0 0 15px rgba(0,0,0,0.5);
       background: rgba(0,0,0,0.9);
       border: 4px double #ffffff;
       color: #ffffff;
       border-radius: 0;
+      padding: 10px;
       text-align: left;
       font-size: 13px;
       transition: none; /* Retro feel, no transitions */
@@ -254,7 +260,7 @@
         <div id="sceneHotspots" class="scene-hotspots" aria-label="場景互動熱區"></div>
         <div id="honghuaMarker" aria-hidden="true"></div>
         <div id="playerMarker" aria-hidden="true"></div>
-        <div id="battleStatusWindow" class="dq-window" aria-live="polite"></div>
+        <div id="battleStatusWindow" class="dq-window" aria-live="polite" aria-atomic="true" aria-label="戰鬥狀態資訊"></div>
       </div>
       <div class="scene-name" id="sceneName"></div>
       <div class="scene" id="sceneText"></div>
@@ -286,6 +292,11 @@
     const PASSWORD_DIGITS = { hammer: "3", clover: "1", jeans: "4" };
     const BOOKSHELF_CORRECT_ORDER = ["失蹤案卷", "退學檔案", "死亡報告", "停課公告"];
     const BOOKSHELF_REQUIRED_COUNT = BOOKSHELF_CORRECT_ORDER.length;
+    const DEFAULT_BATTLE_ENEMY_CONFIG = { name: "敵人", hpPool: "monster" };
+    const BATTLE_ENEMY_CONFIG = {
+      battle_starscream: { name: "天王星", hpPool: "boss" },
+      battle_random: { name: "黑影", hpPool: "monster" },
+    };
     const DEDUCTION_QUESTIONS = [
       { question: "兇器鎚子真正的主人是誰？", answer: "天王星" },
       { question: "案發當晚的目擊者是誰？", answer: "艾莉卡" },
@@ -1960,7 +1971,7 @@ const TEXT_ARCHIVE = {
       const isHidden = S.scene.startsWith("python_hidden_") || isAmelia;
       const isBattle = S.scene.startsWith("battle_");
       const mainEl = document.querySelector(".main");
-      mainEl.classList.toggle("battle-mode", isBattle);
+      if (mainEl) mainEl.classList.toggle("battle-mode", isBattle);
 
       document.getElementById("sceneName").textContent =
         (isEnding || isHidden) ? "ENDING" : (inArchive ? "TEXT ARCHIVE" : (SCENE_DISPLAY_NAMES[S.scene] || S.scene.toUpperCase()));
@@ -2005,14 +2016,23 @@ const TEXT_ARCHIVE = {
         : `<strong>❤️ HP: ${safeHp} / ${safeMaxHp} &nbsp;|&nbsp; 🕯️ 殘蠟: ${safeWax} 塊 &nbsp;|&nbsp; 💊 檳榔: ${safePotions} 顆</strong>`;
       const battleStatusWindowEl = document.getElementById("battleStatusWindow");
       if (isBattle) {
-        const enemyStatus = S.scene === "battle_starscream"
-          ? `👹 天王星 HP: ${safeBossHp} / ${safeBossMaxHp}`
-          : `👹 黑影 HP: ${safeMonsterHp} / ${safeMonsterMaxHp}`;
-        battleStatusWindowEl.innerHTML = `<div>❤️ HP ${safeHp}/${safeMaxHp}</div><div>💊 檳榔 ${safePotions}</div><div>${enemyStatus}</div>`;
+        const enemyHpPools = {
+          boss: { hp: safeBossHp, maxHp: safeBossMaxHp },
+          monster: { hp: safeMonsterHp, maxHp: safeMonsterMaxHp },
+        };
+        const enemyConfig = BATTLE_ENEMY_CONFIG[S.scene] || DEFAULT_BATTLE_ENEMY_CONFIG;
+        const enemyPool = enemyHpPools[enemyConfig.hpPool] || enemyHpPools.monster;
+        const enemyStatus = `👹 ${enemyConfig.name} HP: ${enemyPool.hp} / ${enemyPool.maxHp}`;
+        battleStatusWindowEl.replaceChildren();
+        [`❤️ HP ${safeHp}/${safeMaxHp}`, `💊 檳榔 ${safePotions}`, enemyStatus].forEach((line) => {
+          const lineEl = document.createElement("div");
+          lineEl.textContent = line;
+          battleStatusWindowEl.appendChild(lineEl);
+        });
         battleStatusWindowEl.style.display = "block";
       } else {
         battleStatusWindowEl.style.display = "none";
-        battleStatusWindowEl.innerHTML = "";
+        battleStatusWindowEl.replaceChildren();
       }
 
       const optionsEl = document.getElementById("options");
