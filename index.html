@@ -1044,10 +1044,10 @@ const TEXT_ARCHIVE = {
 
     function resolveBattleMonsterSprite() {
       if (S.scene === "victory") {
-        return resolveSpriteFromEnemyNameOrDefault(S.lastVictory?.enemyName || "");
+        return resolveSpriteFromEnemyNameOrDefault(S.lastVictory?.enemyName);
       }
       if (S.scene === "battle_farm") {
-        return resolveSpriteFromEnemyNameOrDefault(S.monsterName || "");
+        return resolveSpriteFromEnemyNameOrDefault(S.monsterName);
       }
       return SCENE_MONSTER_SPRITES[S.scene] || DEFAULT_MONSTER_SPRITE;
     }
