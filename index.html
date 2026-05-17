@@ -75,10 +75,11 @@
     /* Monster Foreground Layer */
     #monsterImg {
       position: absolute;
-      top: 50%;
+      top: auto;
+      bottom: 0; /* Align to the bottom of the wrapper */
       left: 50%;
-      transform: translate(-50%, -50%);
-      max-height: 250px;
+      transform: translateX(-50%); /* Only center horizontally now */
+      max-height: 280px; /* You can adjust this to make the boss larger */
       max-width: 90%;
       object-fit: contain;
       z-index: 5;
@@ -130,7 +131,8 @@
 
     /* DQ Style Window */
     .dq-window {
-      background-color: rgba(0, 0, 0, 0.95);
+      background-color: rgba(0, 0, 0, 0.7) !important; /* Semi-transparent */
+      backdrop-filter: blur(4px); /* Modern blur effect */
       border: 4px double #ffffff; /* Classic thick white double border */
       border-radius: 0; /* Sharp corners for retro feel */
       font-family: monospace; /* Monospace for retro text alignment */
@@ -170,23 +172,24 @@
       object-fit: contain;
     }
 
-    /* Hit Effect Animation */
+    /* Hit Effect Animation (Updated for Bottom Alignment) */
     @keyframes monsterHitEffect {
-      0%   { transform: translate(-50%, -50%) translateX(0); filter: brightness(1); }
-      20%  { transform: translate(-50%, -50%) translateX(-8px) scale(0.95); filter: brightness(0.5) sepia(1) hue-rotate(-50deg) saturate(10); }
-      40%  { transform: translate(-50%, -50%) translateX(8px) scale(1); filter: brightness(1); }
-      60%  { transform: translate(-50%, -50%) translateX(-8px) scale(0.95); filter: brightness(0.5) sepia(1) hue-rotate(-50deg) saturate(10); }
-      80%  { transform: translate(-50%, -50%) translateX(8px) scale(1); filter: brightness(1); }
-      100% { transform: translate(-50%, -50%) translateX(0); filter: brightness(1); }
+      0%   { transform: translateX(-50%); filter: brightness(1); }
+      20%  { transform: translateX(calc(-50% - 8px)) scale(0.95); filter: brightness(0.5) sepia(1) hue-rotate(-50deg) saturate(10); }
+      40%  { transform: translateX(calc(-50% + 8px)) scale(1); filter: brightness(1); }
+      60%  { transform: translateX(calc(-50% - 8px)) scale(0.95); filter: brightness(0.5) sepia(1) hue-rotate(-50deg) saturate(10); }
+      80%  { transform: translateX(calc(-50% + 8px)) scale(1); filter: brightness(1); }
+      100% { transform: translateX(-50%); filter: brightness(1); }
     }
 
     .monster-hurt {
       animation: monsterHitEffect 0.3s ease-out;
     }
 
+    /* Victory Pose Animation (Updated for Bottom Alignment) */
     @keyframes victoryPose {
-      0%, 100% { transform: translate(-50%, -50%) translateY(0) scale(1); filter: brightness(1); }
-      50% { transform: translate(-50%, -50%) translateY(-8px) scale(1.05); filter: brightness(1.15); }
+      0%, 100% { transform: translateX(-50%) translateY(0) scale(1); filter: brightness(1); }
+      50% { transform: translateX(-50%) translateY(-8px) scale(1.05); filter: brightness(1.15); }
     }
     .main.victory-mode #monsterImg {
       animation: victoryPose 1.2s ease-in-out infinite;
@@ -212,7 +215,8 @@
       padding: 10px;
       box-shadow: 0 0 15px rgba(0,0,0,0.5);
       min-height: 80px;
-      background: rgba(0,0,0,0.9);
+      background: rgba(0, 0, 0, 0.7); /* Semi-transparent */
+      backdrop-filter: blur(4px); /* Modern blur effect */
       border: 4px double #ffffff;
     }
     .main.battle-mode .scene span.ending { color: #ffffff !important; } /* Combat text should be white */
@@ -229,7 +233,8 @@
     .main.battle-mode #options button {
       font-family: monospace;
       box-shadow: 0 0 15px rgba(0,0,0,0.5);
-      background: rgba(0,0,0,0.9);
+      background: rgba(0, 0, 0, 0.7); /* Semi-transparent */
+      backdrop-filter: blur(4px); /* Modern blur effect */
       border: 4px double #ffffff;
       color: #ffffff;
       border-radius: 0;
