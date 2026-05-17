@@ -1072,6 +1072,33 @@ const TEXT_ARCHIVE = {
       }
     }
 
+    function triggerMonsterAttackVisual(attackImgSrc, durationMs = 800) {
+      const monsterImgEl = document.getElementById("monsterImg");
+      const mainCard = document.querySelector(".main");
+
+      if (monsterImgEl && attackImgSrc && monsterImgEl.style.display !== "none") {
+        const originalSrc = monsterImgEl.src;
+
+        // Add a timestamp to force the browser to replay the GIF from frame 0
+        const cacheBuster = "?t=" + new Date().getTime();
+        monsterImgEl.src = attackImgSrc + cacheBuster;
+
+        if (mainCard) {
+          mainCard.style.transform = "translateX(10px)";
+          setTimeout(() => mainCard.style.transform = "translateX(-10px)", 50);
+          setTimeout(() => mainCard.style.transform = "translateX(10px)", 100);
+          setTimeout(() => mainCard.style.transform = "translateX(0)", 150);
+        }
+
+        setTimeout(() => {
+          // Use includes without the cacheBuster to safely check if we should revert
+          if (monsterImgEl.src.includes(attackImgSrc)) {
+             monsterImgEl.src = originalSrc;
+          }
+        }, durationMs); // Use the customizable duration
+      }
+    }
+
     function setEffectLayerSource(effectEl, imgEl) {
       if (!effectEl || !imgEl) return;
       // Prefer currentSrc to mirror the browser's currently resolved image URL when available.
@@ -1862,17 +1889,25 @@ const TEXT_ARCHIVE = {
               return;
             }
 
-            // Boss Retaliation
-            let bossDmg = 20 + Math.floor(Math.random() * 10);
-            S.playerHp -= bossDmg;
-            pushLog(`🩸 天王星瘋狂反撲，你受到了 ${bossDmg} 點傷害。`);
-
-            // Check Player Death
-            if (S.playerHp <= 0) {
-              S.scene = "ending_alliance_solo_bad";
-              pushLog("☠ 你在戰鬥中力竭倒下了...");
-            }
             render();
+            setSceneUiInteractivity(false);
+            setTimeout(() => {
+              if (S.scene !== "battle_starscream") return;
+
+              triggerMonsterAttackVisual("assets/boss_starscream_attack.gif", 1000);
+              if (audioEnabled) setTimeout(() => sfxMonsterHit.play().catch(() => {}), 200);
+
+              let bossDmg = 20 + Math.floor(Math.random() * 10);
+              S.playerHp -= bossDmg;
+              pushLog(`🩸 天王星瘋狂反撲，你受到了 ${bossDmg} 點傷害。`);
+
+              if (S.playerHp <= 0) {
+                S.scene = "ending_alliance_solo_bad";
+                pushLog("☠ 你在戰鬥中力竭倒下了...");
+              }
+              render();
+            }, 300);
+            return;
           }]);
 
           // 2. Defend Option
@@ -2012,12 +2047,35 @@ const TEXT_ARCHIVE = {
               return;
             }
 
-            let mDmg = Math.floor(Math.random() * S.monsterAtk) + Math.floor(S.monsterAtk / 2);
-            S.playerHp -= mDmg;
-            pushLog(`🩸 ${S.monsterName} 反擊，你受到 ${mDmg} 點傷害。`);
-
-            if (S.playerHp <= 0) S.scene = "ending_alliance_solo_bad";
             render();
+            setSceneUiInteractivity(false);
+            setTimeout(() => {
+              if (S.scene !== "battle_farm") return;
+
+              let attackGif = "assets/mob_shadow.png";
+              let animDuration = 800;
+
+              if (S.monsterName.includes("米糕")) {
+                attackGif = "assets/boss_migao_attack.gif";
+                animDuration = 1000;
+              } else if (S.monsterName.includes("艾莉卡")) {
+                attackGif = "assets/boss_erica_attack.gif";
+                animDuration = 1800;
+              } else {
+                attackGif = "assets/mob_attack.gif";
+              }
+
+              triggerMonsterAttackVisual(attackGif, animDuration);
+              if (audioEnabled) setTimeout(() => sfxMonsterHit.play().catch(() => {}), 200);
+
+              let mDmg = Math.floor(Math.random() * S.monsterAtk) + Math.floor(S.monsterAtk / 2);
+              S.playerHp -= mDmg;
+              pushLog(`🩸 ${S.monsterName} 反擊，你受到 ${mDmg} 點傷害。`);
+
+              if (S.playerHp <= 0) S.scene = "ending_alliance_solo_bad";
+              render();
+            }, 300);
+            return;
           }]);
 
           opts.push(["🏃 逃跑", () => {
@@ -2053,6 +2111,51 @@ const TEXT_ARCHIVE = {
             }]);
           }
           break;
+
+        case "battle_farm":
+          opts.push(["🗡️ 攻擊", () => {
+            if (audioEnabled) sfxAttack.play().catch(() => {});
+
+            let dmg = getPlayerAtk() + Math.floor(Math.random() * 5);
+            S.monsterHp -= dmg;
+            pushLog(`⚔️ 你擊中 ${S.monsterName}，造成 ${dmg} 點傷害！`);
+            triggerMonsterHitEffect();
+
+            if (S.monsterHp <= 0) {
+              if (S.monsterName === "受害者的怨靈 米糕") {
+                S.lowZoneKills = 0;
+                pushLog("💀 你揮舞重鎚擊散了核心怨念，終於成功超渡了米糕的亡魂... 現場留下了大量遺物。");
+                processVictory(100, 6, 2, 50);
+                return;
+              }
+
+              if (S.monsterName === "【隱藏超魔王】狂暴艾莉卡") {
+                S.highZoneKills = 0;
+                pushLog("👑 奇蹟！你竟然憑藉驚人的毅力與戰術，擊敗了本遊戲的最強傳說──狂暴艾莉卡！");
+                processVictory(400, 20, 5, 100);
+                return;
+              }
+
+              if (S.farmZone === "low") {
+                S.lowZoneKills++;
+                pushLog(`📊 閱覽室淨化進度：${S.lowZoneKills}/10`);
+              } else if (S.farmZone === "high") {
+                S.highZoneKills++;
+                pushLog(`📊 研究室淨化進度：${S.highZoneKills}/10`);
+              }
+
+              let exp = S.monsterMaxHp > 50 ? 30 : 10;
+              let waxDrop = S.monsterMaxHp > 50 ? (Math.floor(Math.random() * 3) + 2) : 1;
+              let candleRestore = S.monsterMaxHp > 50 ? 25 : 10;
+              let potionDrop = (Math.random() < (S.monsterMaxHp / 200)) ? 1 : 0;
+
+              pushLog(`🎉 戰鬥勝利！擊敗了 ${S.monsterName}。`);
+              processVictory(exp, waxDrop, potionDrop, candleRestore);
+              return;
+            }
+
+            render();
+          }]);
 
         case "victory":
           opts.push(["✅ 繼續前進", () => {
