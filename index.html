@@ -62,6 +62,26 @@
     .scene-name { margin: 14px 0 8px; color: var(--accent); letter-spacing: 2px; font-size: 13px; }
     .scene-img-wrap { width: 100%; margin-bottom: 10px; border-radius: 8px; overflow: hidden; background: #0e0a12; display: flex; align-items: center; justify-content: center; position: relative; }
     #sceneImg { width: 100%; max-height: 380px; object-fit: cover; display: block; border-radius: 8px; }
+    #monsterImg,
+    #effectLayer {
+      position: absolute;
+      inset: 0;
+      width: 100%;
+      height: 100%;
+      object-fit: contain;
+      pointer-events: none;
+      display: none;
+      z-index: 5;
+    }
+    #effectLayer.active {
+      display: block;
+      animation: battleSlashEffect 0.35s ease-out forwards;
+    }
+    @keyframes battleSlashEffect {
+      0% { opacity: 0; transform: scale(0.85); filter: brightness(1.2); }
+      25% { opacity: 0.85; transform: scale(1); filter: brightness(2.2) contrast(1.35) saturate(1.45); }
+      100% { opacity: 0; transform: scale(1.1); filter: brightness(1); }
+    }
     .scene-hotspots { position: absolute; inset: 0; pointer-events: none; }
     .scene-hotspot {
       position: absolute;
@@ -281,6 +301,7 @@
       <div class="scene-img-wrap">
         <img id="sceneImg" src="" alt="" />
         <img id="monsterImg" src="" alt="" aria-hidden="true" />
+        <img id="effectLayer" src="" alt="" aria-hidden="true" />
         <div id="sceneHotspots" class="scene-hotspots" aria-label="場景互動熱區"></div>
         <div id="honghuaMarker" aria-hidden="true"></div>
         <div id="playerMarker" aria-hidden="true"></div>
@@ -933,6 +954,7 @@ const TEXT_ARCHIVE = {
     let audioEnabled = false;
     let audioGestureBound = false;
     let monsterHitEffectTimer = null;
+    let overlayEffectTimer = null;
     let lastRenderedScene = null;
 
     function targetBgmForScene() {
@@ -947,6 +969,7 @@ const TEXT_ARCHIVE = {
 
     function triggerMonsterHitEffect() {
       const imgEl = document.getElementById("sceneImg");
+      const effectEl = document.getElementById("effectLayer");
       if (!imgEl || imgEl.style.display === "none") return;
       if (audioEnabled) {
         sfxMonsterHit.currentTime = 0;
@@ -960,6 +983,19 @@ const TEXT_ARCHIVE = {
         imgEl.classList.remove("monster-hurt");
         monsterHitEffectTimer = null;
       }, 300);
+
+      if (effectEl) {
+        const effectSrc = imgEl.currentSrc || imgEl.src || "";
+        if (effectSrc) effectEl.src = effectSrc;
+        effectEl.classList.remove("active");
+        void effectEl.offsetWidth;
+        effectEl.classList.add("active");
+        if (overlayEffectTimer) clearTimeout(overlayEffectTimer);
+        overlayEffectTimer = setTimeout(() => {
+          effectEl.classList.remove("active");
+          overlayEffectTimer = null;
+        }, 350);
+      }
     }
 
     function playVictoryCue() {
@@ -2250,6 +2286,19 @@ const TEXT_ARCHIVE = {
       } else {
         imgEl.style.objectPosition = "50% 50%";
         imgEl.style.transform = "scale(1)";
+      }
+      const effectEl = document.getElementById("effectLayer");
+      if (effectEl) {
+        if (isBattle && imgEl.style.display !== "none") {
+          const effectSrc = imgEl.currentSrc || imgEl.src || "";
+          if (effectSrc) effectEl.src = effectSrc;
+        } else {
+          if (overlayEffectTimer) {
+            clearTimeout(overlayEffectTimer);
+            overlayEffectTimer = null;
+          }
+          effectEl.classList.remove("active");
+        }
       }
       const sceneEl = document.getElementById("sceneText");
       if (isEnding) {
