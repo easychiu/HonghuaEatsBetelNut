@@ -310,3 +310,13 @@
         grid-template-rows: auto auto auto auto;
       }
     }
+
+/* Phantom Attack Fallback Animation */
+@keyframes phantomStrike {
+  0%   { transform: translate(-50%, -50%) scale(1); filter: brightness(0.5) sepia(1) hue-rotate(-50deg) saturate(20); opacity: 0.8; }
+  100% { transform: translate(-50%, -50%) scale(1.5); filter: brightness(0.5) sepia(1) hue-rotate(-50deg) saturate(20); opacity: 0; }
+}
+
+.phantom-strike-anim {
+  animation: phantomStrike 0.4s ease-out forwards;
+}
