@@ -105,7 +105,10 @@ function openArchive() {
     const bgmBattle = new Audio(BGM_BATTLE);
     bgmBattle.loop = true;
     bgmBattle.volume = 0.45;
-    const bgmBoss = new Audio(BGM_BOSS);
+    
+    // SAFE FIX: Define the path directly to avoid ReferenceError
+    const BGM_BOSS_PATH = "assets/bgm_boss.mp3"; 
+    const bgmBoss = new Audio(BGM_BOSS_PATH);
     bgmBoss.loop = true;
     bgmBoss.volume = 0.45;
 
@@ -120,7 +123,7 @@ function openArchive() {
       [BGM_MAIN]: bgm,
       [BGM_END]: bgmEnd,
       [BGM_BATTLE]: bgmBattle,
-      [BGM_BOSS]: bgmBoss,
+      [BGM_BOSS_PATH]: bgmBoss, // Use the safely defined path
     };
 
     let audioEnabled = false;
@@ -147,7 +150,7 @@ function openArchive() {
       if (S.scene === "victory") return null; // Mute background music during victory fanfare
       if (S.scene.startsWith("battle_")) {
         const imgSrc = getMonsterImageSrc();
-        if (imgSrc.includes("boss_")) return BGM_BOSS;
+        if (imgSrc.includes("boss_")) return BGM_BOSS_PATH; // SAFE FIX
         return BGM_BATTLE;
       }
       return isEndingOrHiddenScene(S.scene) ? BGM_END : BGM_MAIN;
