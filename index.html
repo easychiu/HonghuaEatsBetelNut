@@ -424,19 +424,8 @@
     const BGM_MAIN = "assets/bgm_main.mp3";
     const BGM_END = "assets/bgm_end.mp3";
     const BGM_BATTLE = "assets/bgm_battle.mp3";
-    const DEFAULT_MONSTER_SPRITE = "assets/mob_guard.png";
-    const SCENE_MONSTER_SPRITES = {
-      battle_starscream: "assets/boss_starscream.png",
-      battle_random: DEFAULT_MONSTER_SPRITE,
-    };
-    const MONSTER_NAME_SPRITES = new Map([
-      // 艾莉卡沿用 amelia 立繪資源（同角色不同場景稱呼）。
-      ["【隱藏超魔王】狂暴艾莉卡", "assets/boss_erica.png"],
-      // TODO: 若後續提供米糕專屬戰鬥立繪，請改為該素材；目前先用既有立繪占位避免空白。
-      ["受害者的怨靈 米糕", "assets/boss_migao.png"],
-      ["天王星", "assets/boss_starscream.png"],
-      ["退學生 天王星", "assets/boss_starscream.png"],
-    ]);
+    const BGM_BOSS = "assets/bgm_boss.mp3";
+    const BATTLE_BACKGROUND_BRIGHTNESS = 0.4;
 
     const SCENE_IMAGES = {
       intro:          "assets/scenes/outside.png",
@@ -997,6 +986,9 @@ const TEXT_ARCHIVE = {
     const bgmBattle = new Audio(BGM_BATTLE);
     bgmBattle.loop = true;
     bgmBattle.volume = 0.45;
+    const bgmBoss = new Audio(BGM_BOSS);
+    bgmBoss.loop = true;
+    bgmBoss.volume = 0.45;
 
     const sfxAttack = new Audio("assets/sfx_attack.mp3");
     const sfxHeal = new Audio("assets/sfx_heal.mp3");
@@ -1009,6 +1001,7 @@ const TEXT_ARCHIVE = {
       [BGM_MAIN]: bgm,
       [BGM_END]: bgmEnd,
       [BGM_BATTLE]: bgmBattle,
+      [BGM_BOSS]: bgmBoss,
     };
 
     let audioEnabled = false;
@@ -1017,9 +1010,28 @@ const TEXT_ARCHIVE = {
     let overlayEffectTimer = null;
     let lastRenderedScene = null;
 
+    function getMonsterImageSrc() {
+      if (S.scene === "battle_starscream") return "assets/boss_starscream.png";
+
+      const mName = S.lastVictory ? S.lastVictory.enemyName : S.monsterName;
+      if (!mName) return "assets/mob_shadow.png";
+
+      if (mName.includes("幽魂")) return "assets/mob_ghost.png";
+      if (mName.includes("鎧甲")) return "assets/mob_armor.png";
+      if (mName.includes("深淵守衛")) return "assets/mob_guard.png";
+      if (mName.includes("米糕")) return "assets/boss_migao.png";
+      if (mName.includes("艾莉卡")) return "assets/boss_erica.png";
+
+      return "assets/mob_shadow.png";
+    }
+
     function targetBgmForScene() {
       if (S.scene === "victory") return null; // Mute background music during victory fanfare
-      if (S.scene.startsWith("battle_")) return BGM_BATTLE;
+      if (S.scene.startsWith("battle_")) {
+        const imgSrc = getMonsterImageSrc();
+        if (imgSrc.includes("boss_")) return BGM_BOSS;
+        return BGM_BATTLE;
+      }
       return isEndingOrHiddenScene(S.scene) ? BGM_END : BGM_MAIN;
     }
 
@@ -1069,25 +1081,6 @@ const TEXT_ARCHIVE = {
       } else {
         effectEl.removeAttribute("src");
       }
-    }
-
-    function findSpriteByEnemyName(enemyName) {
-      const safeName = enemyName || "";
-      return MONSTER_NAME_SPRITES.get(safeName.trim()) || null;
-    }
-
-    function resolveSpriteFromEnemyNameOrDefault(enemyName) {
-      return findSpriteByEnemyName(enemyName) ?? DEFAULT_MONSTER_SPRITE;
-    }
-
-    function resolveBattleMonsterSprite() {
-      if (S.scene === "victory") {
-        return resolveSpriteFromEnemyNameOrDefault(S.lastVictory?.enemyName);
-      }
-      if (S.scene === "battle_farm") {
-        return resolveSpriteFromEnemyNameOrDefault(S.monsterName);
-      }
-      return SCENE_MONSTER_SPRITES[S.scene] || DEFAULT_MONSTER_SPRITE;
     }
 
     function battleMonsterAltText() {
@@ -2444,16 +2437,17 @@ const TEXT_ARCHIVE = {
       if (monsterEl) {
         const showMonsterLayer = isBattle || S.scene === "victory";
         if (showMonsterLayer) {
-          const monsterSrc = resolveBattleMonsterSprite();
           monsterEl.onerror = () => {
             monsterEl.onerror = null;
-            monsterEl.src = DEFAULT_MONSTER_SPRITE;
+            monsterEl.src = "assets/mob_shadow.png";
           };
-          monsterEl.src = monsterSrc;
+          monsterEl.style.display = "block";
+          imgEl.style.filter = `brightness(${BATTLE_BACKGROUND_BRIGHTNESS})`;
+          monsterEl.src = getMonsterImageSrc();
           monsterEl.alt = battleMonsterAltText();
-          monsterEl.style.display = monsterSrc ? "block" : "none";
         } else {
           monsterEl.style.display = "none";
+          imgEl.style.filter = "none";
           monsterEl.removeAttribute("src");
           monsterEl.alt = "";
         }
