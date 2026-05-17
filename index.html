@@ -394,11 +394,13 @@
       battle_starscream: "assets/boss_starscream.png",
       battle_random: DEFAULT_MONSTER_SPRITE,
     };
-    const MONSTER_NAME_SPRITES = [
-      { keyword: "天王星", src: "assets/boss_starscream.png" },
-      { keyword: "艾莉卡", src: "assets/amelia.png" },
-      { keyword: "米糕", src: "assets/honghua.png" },
-    ];
+    const MONSTER_NAME_SPRITES = new Map([
+      ["【隱藏超魔王】狂暴艾莉卡", "assets/amelia.png"],
+      // 使用既有立繪作為米糕怨靈占位圖，避免缺圖時顯示空白。
+      ["受害者的怨靈 米糕", "assets/honghua.png"],
+      ["天王星", "assets/boss_starscream.png"],
+      ["退學生 天王星", "assets/boss_starscream.png"],
+    ]);
 
     const SCENE_IMAGES = {
       intro:          "assets/scenes/outside.png",
@@ -1034,8 +1036,7 @@ const TEXT_ARCHIVE = {
 
     function findSpriteByEnemyName(enemyName) {
       const safeName = enemyName || "";
-      const matched = MONSTER_NAME_SPRITES.find(({ keyword }) => safeName.includes(keyword));
-      return matched ? matched.src : "";
+      return MONSTER_NAME_SPRITES.get(safeName.trim()) || "";
     }
 
     function resolveSpriteFromEnemyNameOrDefault(enemyName) {
@@ -2352,7 +2353,10 @@ const TEXT_ARCHIVE = {
         const showMonsterLayer = isBattle || S.scene === "victory";
         if (showMonsterLayer) {
           const monsterSrc = resolveBattleMonsterSprite();
-          monsterEl.onerror = null;
+          monsterEl.onerror = () => {
+            monsterEl.onerror = null;
+            monsterEl.src = DEFAULT_MONSTER_SPRITE;
+          };
           monsterEl.src = monsterSrc;
           monsterEl.alt = battleMonsterAltText();
           monsterEl.style.display = monsterSrc ? "block" : "none";
