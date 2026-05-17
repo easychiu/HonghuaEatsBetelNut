@@ -126,7 +126,6 @@ function openArchive() {
     let audioEnabled = false;
     let audioGestureBound = false;
     let monsterHitEffectTimer = null;
-    let overlayEffectTimer = null;
     let lastRenderedScene = null;
 
     function getMonsterImageSrc() {
@@ -163,70 +162,81 @@ function openArchive() {
       const monsterEl = document.getElementById("monsterImg");
       const sceneEl = document.getElementById("sceneImg");
       const imgEl = monsterEl && monsterEl.style.display !== "none" ? monsterEl : sceneEl;
-      const effectEl = document.getElementById("effectLayer");
+      
       if (!imgEl || imgEl.style.display === "none") return;
-      if (audioEnabled) {
+      
+      if (audioEnabled && typeof sfxMonsterHit !== 'undefined') {
         sfxMonsterHit.currentTime = 0;
         sfxMonsterHit.play().catch(() => {});
       }
+      
       imgEl.classList.remove("monster-hurt");
       void imgEl.offsetWidth;
       imgEl.classList.add("monster-hurt");
+      
       if (monsterHitEffectTimer) clearTimeout(monsterHitEffectTimer);
       monsterHitEffectTimer = setTimeout(() => {
-        imgEl.classList.remove("monster-hurt");
+        if(imgEl) imgEl.classList.remove("monster-hurt");
         monsterHitEffectTimer = null;
       }, 300);
+    }
 
+    // Trigger player's attack effect (slash)
+    function triggerPlayerAttackVisual() {
+      const effectEl = document.getElementById("effectLayer");
       if (effectEl) {
-        setEffectLayerSource(effectEl, imgEl);
-        effectEl.classList.remove("active");
-        void effectEl.offsetWidth; // Force a style flush so repeated hits can restart animation immediately.
-        effectEl.classList.add("active");
-        if (overlayEffectTimer) clearTimeout(overlayEffectTimer);
-        overlayEffectTimer = setTimeout(() => {
-          effectEl.classList.remove("active");
-          overlayEffectTimer = null;
-        }, BATTLE_EFFECT_DURATION_MS);
+        effectEl.src = "assets/slash_effect.gif?t=" + new Date().getTime();
+        effectEl.style.maxWidth = "150px"; // Reset to slash size
+        effectEl.style.height = "auto";
+        effectEl.style.display = "block";
+        setTimeout(() => { effectEl.style.display = "none"; }, 500);
       }
     }
 
+    // Trigger monster's attack animation (GIF or Phantom Fallback)
     function triggerMonsterAttackVisual(attackImgSrc, durationMs = 800) {
       const monsterImgEl = document.getElementById("monsterImg");
       const mainCard = document.querySelector(".main");
+      const effectEl = document.getElementById("effectLayer");
 
-      if (monsterImgEl && attackImgSrc && monsterImgEl.style.display !== "none") {
-        const originalSrc = monsterImgEl.src;
-        const attackPath = new URL(attackImgSrc, window.location.href).pathname;
-
-        // Add a timestamp to force the browser to replay the GIF from frame 0
-        const cacheBuster = "?t=" + new Date().getTime();
-        monsterImgEl.src = attackImgSrc + cacheBuster;
-
-        if (mainCard) {
-          mainCard.style.transform = "translateX(10px)";
-          setTimeout(() => mainCard.style.transform = "translateX(-10px)", 50);
-          setTimeout(() => mainCard.style.transform = "translateX(10px)", 100);
-          setTimeout(() => mainCard.style.transform = "translateX(0)", 150);
-        }
-
-        setTimeout(() => {
-          const currentPath = new URL(monsterImgEl.src, window.location.href).pathname;
-          if (currentPath === attackPath) {
-            monsterImgEl.src = originalSrc;
-          }
-        }, durationMs); // Use the customizable duration
+      // 1. Screen Shake
+      if (mainCard) {
+        mainCard.style.transform = "translateX(10px)";
+        setTimeout(() => mainCard.style.transform = "translateX(-10px)", 50);
+        setTimeout(() => mainCard.style.transform = "translateX(10px)", 100);
+        setTimeout(() => mainCard.style.transform = "translateX(0)", 150);
       }
-    }
 
-    function setEffectLayerSource(effectEl, imgEl) {
-      if (!effectEl || !imgEl) return;
-      // Prefer currentSrc to mirror the browser's currently resolved image URL when available.
-      const effectSrc = imgEl.currentSrc || imgEl.src || "";
-      if (effectSrc) {
-        if (effectEl.src !== effectSrc) effectEl.src = effectSrc;
+      // 2. Play GIF if provided
+      if (attackImgSrc && attackImgSrc.endsWith(".gif")) {
+        if (monsterImgEl && monsterImgEl.style.display !== "none") {
+          const originalSrc = monsterImgEl.src;
+          const cacheBuster = "?t=" + new Date().getTime();
+          monsterImgEl.src = attackImgSrc + cacheBuster;
+
+          setTimeout(() => {
+            if (monsterImgEl.src.includes(attackImgSrc)) {
+               monsterImgEl.src = originalSrc;
+            }
+          }, durationMs);
+        }
       } else {
-        effectEl.removeAttribute("src");
+        // 3. Phantom Red Strike Fallback (If no GIF)
+        if (monsterImgEl && effectEl && monsterImgEl.style.display !== "none") {
+          effectEl.src = monsterImgEl.src; // Copy monster image
+          effectEl.style.maxWidth = "none";
+          effectEl.style.height = monsterImgEl.clientHeight + "px"; 
+          effectEl.style.display = "block";
+          
+          effectEl.classList.add("phantom-strike-anim");
+          
+          setTimeout(() => {
+            effectEl.classList.remove("phantom-strike-anim");
+            effectEl.style.display = "none";
+            effectEl.style.maxWidth = "150px"; // Restore slash size
+            effectEl.style.height = "auto";
+          }, 400);
+        }
       }
     }
 
@@ -653,15 +663,10 @@ function openArchive() {
       }
       const effectEl = document.getElementById("effectLayer");
       if (effectEl) {
-        const effectTarget = monsterEl && monsterEl.style.display !== "none" ? monsterEl : imgEl;
-        if (isBattle && effectTarget && effectTarget.style.display !== "none") {
-          setEffectLayerSource(effectEl, effectTarget);
-        } else {
-          if (overlayEffectTimer) {
-            clearTimeout(overlayEffectTimer);
-            overlayEffectTimer = null;
-          }
+        if (!isBattle) {
           effectEl.classList.remove("active");
+          effectEl.classList.remove("phantom-strike-anim");
+          effectEl.style.display = "none";
           effectEl.removeAttribute("src");
         }
       }

@@ -417,6 +417,7 @@ function makeOptions() {
           // 1. Attack Option
           opts.push(["🗡️ 全力攻擊", () => {
             S.isDefending = false;
+            triggerPlayerAttackVisual();
 
             // Player Attack
             let dmg = getPlayerAtk() + Math.floor(Math.random() * 6) - 3;
@@ -499,6 +500,7 @@ function makeOptions() {
 
         case "battle_random":
           opts.push(["🗡️ 攻擊", () => {
+            triggerPlayerAttackVisual();
             // Player hits monster
             let dmg = getPlayerAtk() + Math.floor(Math.random() * 4);
             S.monsterHp -= dmg;
@@ -521,6 +523,7 @@ function makeOptions() {
             }
 
             // Monster hits player
+            triggerMonsterAttackVisual(null, 800);
             let mDmg = Math.floor(Math.random() * 8) + 2;
             S.playerHp -= mDmg;
             pushLog(`🩸 黑影抓傷了你，受到 ${mDmg} 點傷害。`);
@@ -564,6 +567,7 @@ function makeOptions() {
         case "battle_farm":
           opts.push(["🗡️ 攻擊", () => {
             if (audioEnabled) sfxAttack.play().catch(() => {});
+            triggerPlayerAttackVisual();
 
             let dmg = getPlayerAtk() + Math.floor(Math.random() * 5);
             S.monsterHp -= dmg;
@@ -611,33 +615,31 @@ function makeOptions() {
                 return;
               }
 
-              let attackGif = "assets/mob_shadow.png";
-              let animDuration = 800;
+              let attackGif = null; // Default to NULL to trigger phantom strike
+              let animDuration = 800; 
 
               if (S.monsterName.includes("米糕")) {
                 attackGif = "assets/boss_migao_attack.gif";
                 animDuration = 1000;
               } else if (S.monsterName.includes("艾莉卡")) {
                 attackGif = "assets/boss_erica_attack.gif";
-                animDuration = 1800;
-              } else {
-                attackGif = "assets/mob_attack.gif";
+                animDuration = 1200;
               }
 
-              triggerMonsterAttackVisual(attackGif, animDuration);
-              if (audioEnabled) {
-                sfxMonsterHit.currentTime = 0;
-                sfxMonsterHit.play().catch(() => {});
-              }
+              triggerMonsterAttackVisual(attackGif, animDuration); 
+              if (audioEnabled) setTimeout(() => sfxMonsterHit.play().catch(() => {}), 200);
 
               let mDmg = Math.floor(Math.random() * S.monsterAtk) + Math.floor(S.monsterAtk / 2);
               S.playerHp -= mDmg;
               pushLog(`🩸 ${S.monsterName} 反擊，你受到 ${mDmg} 點傷害。`);
 
-              if (S.playerHp <= 0) S.scene = "ending_alliance_solo_bad";
+              if (S.playerHp <= 0) {
+                S.scene = "ending_alliance_solo_bad";
+              }
+              
               setSceneUiInteractivity(true);
               render();
-            }, 300);
+            }, 800);
             return;
           }]);
 
