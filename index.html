@@ -152,6 +152,16 @@
       animation: monsterHitEffect 0.3s ease-out;
     }
 
+    @keyframes victoryPose {
+      0%, 100% { transform: translateY(0) scale(1); filter: brightness(1); }
+      30% { transform: translateY(-8px) scale(1.05); filter: brightness(1.15); }
+      60% { transform: translateY(-4px) scale(1.03); filter: brightness(1.08); }
+    }
+    .main.victory-mode #sceneImg {
+      animation: victoryPose 1.2s ease-in-out infinite;
+      transform-origin: center bottom;
+    }
+
     /* Classic Top-Left Party Stats Window (Floating over monster area) */
     #battleStatusWindow {
       position: absolute;
@@ -376,6 +386,7 @@
       battle_starscream: "assets/scenes/basement_deep.png",
       battle_random: "assets/scenes/basement.png",
       battle_farm:   "assets/scenes/basement.png",
+      victory: "assets/scenes/secret_end.png",
       deduction: "assets/scenes/desk.png",
       python_hidden_start: "assets/scenes/true_end.png",
       python_hidden_london: "assets/scenes/true_end.png",
@@ -746,6 +757,7 @@ const TEXT_ARCHIVE = {
       battle_starscream: "地下儲藏室 · 死鬥",
       battle_random: "突發遭遇戰",
       battle_farm:   "刷怪房",
+      victory:      "戰鬥勝利",
       python_hidden_start:"隱藏線：夢醒時分",
       python_hidden_london:"隱藏線：航向倫敦",
       amelia_hub:          "水手服同好會工會據點",
@@ -835,7 +847,11 @@ const TEXT_ARCHIVE = {
       monsterHp: 0,
       monsterMaxHp: 0,
       monsterAtk: 0,
-      monsterName: "敵人"
+      monsterName: "敵人",
+      level: 1,
+      exp: 0,
+      expNext: 50,
+      lastVictory: null,
     });
 
     let S = initialState();
@@ -898,6 +914,9 @@ const TEXT_ARCHIVE = {
     const sfxAttack = new Audio("assets/sfx_attack.mp3");
     const sfxHeal = new Audio("assets/sfx_heal.mp3");
     const sfxMonsterHit = new Audio("assets/sfx_monster.mp3");
+    const victoryFanfare = new Audio(BGM_END);
+    victoryFanfare.loop = false;
+    victoryFanfare.volume = 0.6;
 
     const ALL_BGMS = {
       [BGM_MAIN]: bgm,
@@ -908,6 +927,7 @@ const TEXT_ARCHIVE = {
     let audioEnabled = false;
     let audioGestureBound = false;
     let monsterHitEffectTimer = null;
+    let lastRenderedScene = null;
 
     function targetBgmForScene() {
       if (S.scene.startsWith("battle_")) return BGM_BATTLE;
@@ -978,6 +998,8 @@ const TEXT_ARCHIVE = {
         tryPlayBgm();
         pushLog("🔊 背景音樂已開啟");
       } else {
+        victoryFanfare.pause();
+        victoryFanfare.currentTime = 0;
         Object.values(ALL_BGMS).forEach(audio => audio.pause());
         pushLog("🔈 背景音樂已關閉");
       }
@@ -1064,6 +1086,41 @@ const TEXT_ARCHIVE = {
       let atk = S.playerBaseAtk;
       if (S.evidence.hammer) atk += 15; // 30cm 生鏽鐵鎚的加成
       return atk;
+    }
+
+    function applyExpAndLevel(expGain) {
+      const gain = Math.max(0, Math.floor(expGain || 0));
+      S.exp += gain;
+      let levelUps = 0;
+      while (S.exp >= S.expNext) {
+        S.exp -= S.expNext;
+        S.level += 1;
+        levelUps += 1;
+        S.maxHp += 10;
+        S.playerBaseAtk += 2;
+        S.playerHp = S.maxHp;
+        S.expNext = Math.floor(S.expNext * 1.4);
+      }
+      return { gain, levelUps };
+    }
+
+    function startVictoryPhase({ enemyName, expGain, waxGain, candleGain, potionGain }) {
+      const safeWaxGain = Math.max(0, Math.floor(waxGain || 0));
+      const safeCandleGain = Math.max(0, Math.floor(candleGain || 0));
+      const safePotionGain = Math.max(0, Math.floor(potionGain || 0));
+      const levelResult = applyExpAndLevel(expGain);
+      S.wax += safeWaxGain;
+      S.candle = Math.min(MAX_CANDLE, S.candle + safeCandleGain);
+      S.potions += safePotionGain;
+      S.lastVictory = {
+        enemyName: enemyName || "敵人",
+        expGain: levelResult.gain,
+        waxGain: safeWaxGain,
+        candleGain: safeCandleGain,
+        potionGain: safePotionGain,
+        levelUps: levelResult.levelUps,
+      };
+      goto("victory");
     }
 
     function tryFloorTransition(targetFloor, minutes, reason) {
@@ -1246,6 +1303,15 @@ const TEXT_ARCHIVE = {
       }
       if (key === "battle_farm") {
         return `【戰鬥】\n你遭遇了『${S.monsterName}』！\n\n[皇家警察 Yv]\n❤️ HP: ${S.playerHp} / ${S.maxHp}\n\n[${S.monsterName}]\n❤️ HP: ${S.monsterHp} / ${S.monsterMaxHp}\n\n請選擇行動：`;
+      }
+      if (key === "victory") {
+        const V = S.lastVictory;
+        if (!V) return "【Victory】\n戰鬥結束，你暫時安全了。";
+        const potionText = V.potionGain > 0 ? `\n• 急救檳榔 +${V.potionGain}` : "";
+        const levelText = V.levelUps > 0
+          ? `\n🎖️ 升級！你提升了 ${V.levelUps} 級，現在是 Lv.${S.level}。`
+          : "\n📘 尚未升級，繼續戰鬥累積經驗。";
+        return `【Victory】\n你擊敗了「${V.enemyName}」！\n\n✨ 戰利品結算\n• EXP +${V.expGain}\n• 殘蠟 +${V.waxGain}\n• 燭火 +${V.candleGain}${potionText}${levelText}\n\n你擺出勝利姿勢，準備繼續調查。`;
       }
       if (key === "python_hidden_start") {
         return formatTemplateText(TEXT_ARCHIVE["story_texts.py"]?.ENDING_HIDDEN || "【隱藏結局】夢醒時分。");
@@ -1676,22 +1742,16 @@ const TEXT_ARCHIVE = {
 
             // Monster dies -> Reward and go back to map
             if (S.monsterHp <= 0) {
-              let waxDrop = Math.floor(Math.random() * 2) + 1; // Drop 1~2 wax
-              let candleRestore = 15; // 恢復 15 點燭火
-              
-              S.wax += waxDrop;
-              S.candle = Math.min(MAX_CANDLE, S.candle + candleRestore);
-              
-              pushLog(`🎉 你擊散了黑影！殘存的靈魂化為光芒，恢復了 ${candleRestore} 點燭火。`);
-              pushLog(`🕯️ 你在地上撿到了 ${waxDrop} 塊【殘蠟】。`);
-              
-              // 20% chance to also drop a betel nut
-              if (Math.random() < 0.2) {
-                S.potions += 1;
-                pushLog("🎁 運氣不錯！額外發現了一顆【急救檳榔】！");
-              }
-              
-              goto(`map${S.currentFloor}`);
+              let waxDrop = Math.floor(Math.random() * 2) + 1;
+              let candleRestore = 15;
+              let potionDrop = Math.random() < 0.2 ? 1 : 0;
+              startVictoryPhase({
+                enemyName: "徘徊的黑影",
+                expGain: 20,
+                waxGain: waxDrop,
+                candleGain: candleRestore,
+                potionGain: potionDrop,
+              });
               return;
             }
 
@@ -1730,17 +1790,14 @@ const TEXT_ARCHIVE = {
             if (S.monsterHp <= 0) {
               let waxDrop = S.monsterMaxHp > 50 ? (Math.floor(Math.random() * 3) + 2) : 1;
               let candleRestore = S.monsterMaxHp > 50 ? 25 : 10;
-
-              S.wax += waxDrop;
-              S.candle = Math.min(MAX_CANDLE, S.candle + candleRestore);
-
-              pushLog(`🎉 戰鬥勝利！恢復了 ${candleRestore} 點燭火，獲得了 ${waxDrop} 塊【殘蠟】。`);
-
-              if (Math.random() < (S.monsterMaxHp / 200)) {
-                S.potions += 1;
-                pushLog("🎁 額外掉落了一顆【急救檳榔】！");
-              }
-              goto(`map${S.currentFloor}`);
+              let potionDrop = Math.random() < (S.monsterMaxHp / 200) ? 1 : 0;
+              startVictoryPhase({
+                enemyName: S.monsterName,
+                expGain: Math.max(20, Math.floor(S.monsterMaxHp * 0.75)),
+                waxGain: waxDrop,
+                candleGain: candleRestore,
+                potionGain: potionDrop,
+              });
               return;
             }
 
@@ -1763,6 +1820,14 @@ const TEXT_ARCHIVE = {
               if (S.playerHp <= 0) S.scene = "ending_alliance_solo_bad";
               render();
             }
+          }]);
+          break;
+
+        case "victory":
+          opts.push(["✅ 繼續前進", () => {
+            const returnScene = `map${S.currentFloor}`;
+            S.lastVictory = null;
+            goto(returnScene);
           }]);
           break;
 
@@ -2100,6 +2165,7 @@ const TEXT_ARCHIVE = {
       const isBattle = S.scene.startsWith("battle_");
       const mainEl = document.querySelector(".main");
       if (mainEl) mainEl.classList.toggle("battle-mode", isBattle);
+      if (mainEl) mainEl.classList.toggle("victory-mode", S.scene === "victory");
 
       document.getElementById("sceneName").textContent =
         (isEnding || isHidden) ? "ENDING" : (inArchive ? "TEXT ARCHIVE" : (SCENE_DISPLAY_NAMES[S.scene] || S.scene.toUpperCase()));
@@ -2139,9 +2205,12 @@ const TEXT_ARCHIVE = {
       const safeBossMaxHp = Number.isFinite(S.bossMaxHp) ? S.bossMaxHp : 150;
       const safeMonsterHp = Number.isFinite(S.monsterHp) ? Math.max(0, S.monsterHp) : 0;
       const safeMonsterMaxHp = Number.isFinite(S.monsterMaxHp) ? S.monsterMaxHp : 0;
+      const safeLevel = Number.isFinite(S.level) ? Math.max(1, Math.floor(S.level)) : 1;
+      const safeExp = Number.isFinite(S.exp) ? Math.max(0, Math.floor(S.exp)) : 0;
+      const safeExpNext = Number.isFinite(S.expNext) ? Math.max(1, Math.floor(S.expNext)) : 50;
       document.getElementById("statusLine").innerHTML = inArchive
         ? "完整文本檔案庫：已將 story_texts.py / character_texts.py 內嵌到單一 HTML（可離線瀏覽）"
-        : `<strong>❤️ HP: ${safeHp} / ${safeMaxHp} &nbsp;|&nbsp; 🕯️ 殘蠟: ${safeWax} 塊 &nbsp;|&nbsp; 💊 檳榔: ${safePotions} 顆</strong>`;
+        : `<strong>🎖️ Lv: ${safeLevel} (EXP: ${safeExp}/${safeExpNext}) &nbsp;|&nbsp; ❤️ HP: ${safeHp} / ${safeMaxHp} &nbsp;|&nbsp; 🕯️ 殘蠟: ${safeWax} &nbsp;|&nbsp; 💊 檳榔: ${safePotions}</strong>`;
       const battleStatusWindowEl = document.getElementById("battleStatusWindow");
       if (isBattle) {
         const enemyHpPools = {
@@ -2183,6 +2252,11 @@ const TEXT_ARCHIVE = {
       currentSceneOptionButtons = [...optionsEl.querySelectorAll("button")];
       renderHotspots();
       syncBgmTrack();
+      if (S.scene === "victory" && lastRenderedScene !== "victory" && audioEnabled) {
+        victoryFanfare.currentTime = 0;
+        victoryFanfare.play().catch(() => {});
+      }
+      lastRenderedScene = S.scene;
       updateAudioButton();
       const marker = document.getElementById("playerMarker");
       const honghuaMarker = document.getElementById("honghuaMarker");
@@ -2235,6 +2309,13 @@ const TEXT_ARCHIVE = {
       if (!Number.isFinite(merged.monsterMaxHp)) merged.monsterMaxHp = 0;
       if (!Number.isFinite(merged.monsterAtk)) merged.monsterAtk = 0;
       if (typeof merged.monsterName !== "string") merged.monsterName = "敵人";
+      if (!Number.isFinite(merged.level)) merged.level = 1;
+      if (!Number.isFinite(merged.exp)) merged.exp = 0;
+      if (!Number.isFinite(merged.expNext)) merged.expNext = 50;
+      merged.level = Math.max(1, Math.floor(merged.level));
+      merged.exp = Math.max(0, Math.floor(merged.exp));
+      merged.expNext = Math.max(1, Math.floor(merged.expNext));
+      if (merged.lastVictory && typeof merged.lastVictory !== "object") merged.lastVictory = null;
       return merged;
     }
 
