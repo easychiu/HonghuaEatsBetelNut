@@ -1352,12 +1352,16 @@ const TEXT_ARCHIVE = {
 
           // --- Firekeeper Rest Mechanic ---
           if (S.wax >= 2) {
-            opts.push([`🔥 [休息] 交出 2 塊殘蠟，請紅花幫忙包紮 (恢復 40 HP)`, () => {
+            opts.push([`🔥 [休息] 交出 2 塊殘蠟 (恢復 40 HP 與 全部燭火)`, () => {
               S.wax -= 2;
               S.playerHp = Math.min(S.maxHp, S.playerHp + 40);
               advance(30, "在紅花的守護下休息");
+              
+              // 確保在 advance 扣除時間後，燭火依然補滿
+              S.candle = MAX_CANDLE; 
+              
               addTrust(2, "依賴與陪伴");
-              pushLog("❤️ 紅花默默接過殘蠟，為快要熄滅的燭台添上燃料。你在溫暖而安全的燭光中沉睡了一會，恢復了 40 點 HP。");
+              pushLog("❤️ 紅花接過殘蠟添入燭台，火光重新明亮起來。你恢復了 40 點 HP，燭火值已補滿！");
               render();
             }]);
           } else {
@@ -1602,8 +1606,13 @@ const TEXT_ARCHIVE = {
             // Monster dies -> Reward and go back to map
             if (S.monsterHp <= 0) {
               let waxDrop = Math.floor(Math.random() * 2) + 1; // Drop 1~2 wax
+              let candleRestore = 15; // 恢復 15 點燭火
+              
               S.wax += waxDrop;
-              pushLog(`🎉 你擊散了黑影！黑影消散後，你在地上撿到了 ${waxDrop} 塊【殘蠟】。`);
+              S.candle = Math.min(MAX_CANDLE, S.candle + candleRestore);
+              
+              pushLog(`🎉 你擊散了黑影！殘存的靈魂化為光芒，恢復了 ${candleRestore} 點燭火。`);
+              pushLog(`🕯️ 你在地上撿到了 ${waxDrop} 塊【殘蠟】。`);
               
               // 20% chance to also drop a betel nut
               if (Math.random() < 0.2) {
