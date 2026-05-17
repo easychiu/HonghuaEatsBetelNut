@@ -75,12 +75,11 @@
     /* Monster Foreground Layer */
     #monsterImg {
       position: absolute;
-      top: auto;
-      bottom: 0; /* Align to the bottom of the wrapper */
+      bottom: 0;
       left: 50%;
-      transform: translateX(-50%); /* Only center horizontally now */
-      max-height: 280px; /* You can adjust this to make the boss larger */
-      max-width: 90%;
+      transform: translateX(-50%);
+      max-height: 290px;
+      max-width: 95%;
       object-fit: contain;
       z-index: 5;
       display: none;
@@ -141,21 +140,46 @@
       box-shadow: 0 0 15px rgba(0,0,0,0.5);
     }
 
-    /* Battle Mode Layout for the Main Card */
+    /* Battle Mode Layout - Restructured to 2 Columns (Left Stats, Right Canvas) */
     .main.battle-mode {
       background-color: #000000 !important;
-      background-image: none !important; /* Pure black background for battle */
+      background-image: none !important;
       display: grid;
       grid-template-areas:
-        "monster-area"
-        "message-area"
-        "command-area";
-      grid-template-rows: 1fr auto auto; /* Image area takes remaining space */
-      gap: 12px;
-      padding: 12px;
+        "status-area monster-area"
+        "message-area message-area"
+        "command-area command-area";
+      grid-template-columns: minmax(200px, 240px) 1fr;
+      grid-template-rows: minmax(280px, 300px) auto auto;
+      gap: 14px;
+      padding: 14px;
     }
 
-    /* 1. Monster Area */
+    /* 1. Left Column: Dedicated DQ Status Window (No longer floating/blocking!) */
+    .main.battle-mode #battleStatusWindow {
+      grid-area: status-area;
+      position: relative;
+      top: auto;
+      left: auto;
+      height: 100%;
+      display: flex;
+      flex-direction: column;
+      justify-content: center;
+      gap: 12px;
+      font-size: 15px;
+      padding: 20px;
+      line-height: 1.6;
+    }
+    .main.battle-mode #battleStatusWindow div {
+      border-bottom: 1px dashed rgba(255, 255, 255, 0.2);
+      padding-bottom: 6px;
+      margin-bottom: 0;
+    }
+    .main.battle-mode #battleStatusWindow div:last-child {
+      border-bottom: none;
+    }
+
+    /* 2. Right Column: Monster Canvas (Shifted to the Right) */
     .main.battle-mode .scene-img-wrap {
       grid-area: monster-area;
       border: none;
@@ -163,7 +187,7 @@
       display: flex;
       justify-content: center;
       align-items: center;
-      position: relative; /* For floating stats */
+      position: relative;
     }
 
     .main.battle-mode #sceneImg {
@@ -195,12 +219,9 @@
       animation: victoryPose 1.2s ease-in-out infinite;
     }
 
-    /* Classic Top-Left Party Stats Window (Floating over monster area) */
+    /* Default hidden state for battle status window */
     #battleStatusWindow {
-      position: absolute;
-      top: 10px;
-      left: 10px;
-      display: none; /* Hidden by default, shown in battle */
+      display: none;
       z-index: 20;
       min-width: 120px;
     }
@@ -286,6 +307,15 @@
     @media (max-width: 920px) {
       .app { grid-template-columns: 1fr; }
       .sidebar { position: static; }
+      .main.battle-mode {
+        grid-template-areas:
+          "status-area"
+          "monster-area"
+          "message-area"
+          "command-area";
+        grid-template-columns: 1fr;
+        grid-template-rows: auto auto auto auto;
+      }
     }
   </style>
 </head>
@@ -314,6 +344,7 @@
     </aside>
 
     <main class="card main">
+      <div id="battleStatusWindow" class="dq-window" aria-live="polite" aria-atomic="true" aria-label="戰鬥狀態資訊"></div>
       <div class="scene-img-wrap">
         <img id="sceneImg" src="" alt="" />
         <img id="monsterImg" src="" alt="" aria-hidden="true" />
@@ -321,7 +352,6 @@
         <div id="sceneHotspots" class="scene-hotspots" aria-label="場景互動熱區"></div>
         <div id="honghuaMarker" aria-hidden="true"></div>
         <div id="playerMarker" aria-hidden="true"></div>
-        <div id="battleStatusWindow" class="dq-window" aria-live="polite" aria-atomic="true" aria-label="戰鬥狀態資訊"></div>
       </div>
       <div class="scene-name" id="sceneName"></div>
       <div class="scene" id="sceneText"></div>
