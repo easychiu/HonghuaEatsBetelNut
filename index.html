@@ -706,6 +706,7 @@ const TEXT_ARCHIVE = {
       maxHp: 100,
       playerBaseAtk: 10,
       potions: 3,
+      wax: 0,
       bossHp: 150,
       bossMaxHp: 150,
       isDefending: false,
@@ -1244,6 +1245,23 @@ const TEXT_ARCHIVE = {
             }]);
           }
 
+          // --- Firekeeper Rest Mechanic ---
+          if (S.wax >= 2) {
+            opts.push([`🔥 [休息] 交出 2 塊殘蠟，請紅花幫忙包紮 (恢復 40 HP)`, () => {
+              S.wax -= 2;
+              S.playerHp = Math.min(S.maxHp, S.playerHp + 40);
+              advance(30, "在紅花的守護下休息");
+              addTrust(2, "依賴與陪伴");
+              pushLog("❤️ 紅花默默接過殘蠟，為快要熄滅的燭台添上燃料。你在溫暖而安全的燭光中沉睡了一會，恢復了 40 點 HP。");
+              render();
+            }]);
+          } else {
+            opts.push([`🔥 [休息] (需要 2 塊殘蠟) 目前殘蠟不足`, () => {
+              pushLog("💡 提示：在圖書館各樓層探索遭遇『黑影』並擊敗它們，可以取得殘蠟。");
+              render();
+            }]);
+          }
+          // -------------------------------------
           opts.push(["回到三樓地圖", () => { advance(15, "返回地圖"); goto("map3"); }]);
           break;
         case "collectionRoom":
@@ -1478,8 +1496,16 @@ const TEXT_ARCHIVE = {
 
             // Monster dies -> Reward and go back to map
             if (S.monsterHp <= 0) {
-              pushLog("🎉 你擊散了黑影！在地上撿到了一顆【急救檳榔】！");
-              S.potions += 1;
+              let waxDrop = Math.floor(Math.random() * 2) + 1; // Drop 1~2 wax
+              S.wax += waxDrop;
+              pushLog(`🎉 你擊散了黑影！黑影消散後，你在地上撿到了 ${waxDrop} 塊【殘蠟】。`);
+              
+              // 20% chance to also drop a betel nut
+              if (Math.random() < 0.2) {
+                S.potions += 1;
+                pushLog("🎁 運氣不錯！額外發現了一顆【急救檳榔】！");
+              }
+              
               goto(`map${S.currentFloor}`);
               return;
             }
@@ -1869,9 +1895,13 @@ const TEXT_ARCHIVE = {
       } else {
         sceneEl.textContent = sceneText(S.scene);
       }
-      document.getElementById("statusLine").textContent = inArchive
+      const safeHp = Number.isFinite(S.playerHp) ? S.playerHp : 0;
+      const safeMaxHp = Number.isFinite(S.maxHp) ? S.maxHp : 100;
+      const safeWax = Number.isFinite(S.wax) ? S.wax : 0;
+      const safePotions = Number.isFinite(S.potions) ? S.potions : 0;
+      document.getElementById("statusLine").innerHTML = inArchive
         ? "完整文本檔案庫：已將 story_texts.py / character_texts.py 內嵌到單一 HTML（可離線瀏覽）"
-        : "遊戲模式：可遊玩主流程；也可隨時切換到全內容文字庫閱讀所有文本";
+        : `<strong>❤️ HP: ${safeHp} / ${safeMaxHp} &nbsp;|&nbsp; 🕯️ 殘蠟: ${safeWax} 塊 &nbsp;|&nbsp; 💊 檳榔: ${safePotions} 顆</strong>`;
 
       const optionsEl = document.getElementById("options");
       optionsEl.innerHTML = "";
@@ -1936,6 +1966,7 @@ const TEXT_ARCHIVE = {
       if (!Number.isFinite(merged.maxHp)) merged.maxHp = 100;
       if (!Number.isFinite(merged.playerBaseAtk)) merged.playerBaseAtk = 10;
       if (!Number.isFinite(merged.potions)) merged.potions = 3;
+      if (!Number.isFinite(merged.wax)) merged.wax = 0;
       if (!Number.isFinite(merged.bossHp)) merged.bossHp = 150;
       if (!Number.isFinite(merged.bossMaxHp)) merged.bossMaxHp = 150;
       if (typeof merged.isDefending !== "boolean") merged.isDefending = false;
