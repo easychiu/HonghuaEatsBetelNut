@@ -1078,6 +1078,7 @@ const TEXT_ARCHIVE = {
 
       if (monsterImgEl && attackImgSrc && monsterImgEl.style.display !== "none") {
         const originalSrc = monsterImgEl.src;
+        const attackPath = new URL(attackImgSrc, window.location.href).pathname;
 
         // Add a timestamp to force the browser to replay the GIF from frame 0
         const cacheBuster = "?t=" + new Date().getTime();
@@ -1091,8 +1092,8 @@ const TEXT_ARCHIVE = {
         }
 
         setTimeout(() => {
-          // Use includes without the cacheBuster to safely check if we should revert
-          if (monsterImgEl.src.includes(attackImgSrc)) {
+          const currentPath = new URL(monsterImgEl.src, window.location.href).pathname;
+          if (currentPath === attackPath) {
             monsterImgEl.src = originalSrc;
           }
         }, durationMs); // Use the customizable duration
@@ -1892,10 +1893,16 @@ const TEXT_ARCHIVE = {
             render();
             setSceneUiInteractivity(false);
             setTimeout(() => {
-              if (S.scene !== "battle_starscream") return;
+              if (S.scene !== "battle_starscream") {
+                setSceneUiInteractivity(true);
+                return;
+              }
 
               triggerMonsterAttackVisual("assets/boss_starscream_attack.gif", 1000);
-              if (audioEnabled) setTimeout(() => sfxMonsterHit.play().catch(() => {}), 200);
+              if (audioEnabled) {
+                sfxMonsterHit.currentTime = 0;
+                sfxMonsterHit.play().catch(() => {});
+              }
 
               let bossDmg = 20 + Math.floor(Math.random() * 10);
               S.playerHp -= bossDmg;
@@ -1905,6 +1912,7 @@ const TEXT_ARCHIVE = {
                 S.scene = "ending_alliance_solo_bad";
                 pushLog("☠ 你在戰鬥中力竭倒下了...");
               }
+              setSceneUiInteractivity(true);
               render();
             }, 300);
             return;
@@ -2050,7 +2058,10 @@ const TEXT_ARCHIVE = {
             render();
             setSceneUiInteractivity(false);
             setTimeout(() => {
-              if (S.scene !== "battle_farm") return;
+              if (S.scene !== "battle_farm") {
+                setSceneUiInteractivity(true);
+                return;
+              }
 
               let attackGif = "assets/mob_shadow.png";
               let animDuration = 800;
@@ -2066,13 +2077,17 @@ const TEXT_ARCHIVE = {
               }
 
               triggerMonsterAttackVisual(attackGif, animDuration);
-              if (audioEnabled) setTimeout(() => sfxMonsterHit.play().catch(() => {}), 200);
+              if (audioEnabled) {
+                sfxMonsterHit.currentTime = 0;
+                sfxMonsterHit.play().catch(() => {});
+              }
 
               let mDmg = Math.floor(Math.random() * S.monsterAtk) + Math.floor(S.monsterAtk / 2);
               S.playerHp -= mDmg;
               pushLog(`🩸 ${S.monsterName} 反擊，你受到 ${mDmg} 點傷害。`);
 
               if (S.playerHp <= 0) S.scene = "ending_alliance_solo_bad";
+              setSceneUiInteractivity(true);
               render();
             }, 300);
             return;
