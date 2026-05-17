@@ -253,6 +253,8 @@
       ending_bad_darkness: "assets/scenes/bad_a.png",
       ending_killer_map: "assets/scenes/bad_a.png",
       killer_encounter: "assets/scenes/hall.png",
+      battle_starscream: "assets/scenes/basement_deep.png",
+      battle_random: "assets/scenes/basement.png",
       deduction: "assets/scenes/desk.png",
       python_hidden_start: "assets/scenes/true_end.png",
       python_hidden_london: "assets/scenes/true_end.png",
@@ -620,6 +622,8 @@ const TEXT_ARCHIVE = {
       abandonedRoom:"廢棄閱覽室",
       confront:     "面對紅花",
       alliance_followup:"同盟追兇",
+      battle_starscream: "地下儲藏室 · 死鬥",
+      battle_random: "突發遭遇戰",
       python_hidden_start:"隱藏線：夢醒時分",
       python_hidden_london:"隱藏線：航向倫敦",
       amelia_hub:          "水手服同好會工會據點",
@@ -696,7 +700,17 @@ const TEXT_ARCHIVE = {
       log: [DEFAULT_LOG_MESSAGE],
       passwordFails: 0,
       booksOrder: [],
-      currentFloor: 3
+      currentFloor: 3,
+      // RPG 戰鬥屬性
+      playerHp: 100,
+      maxHp: 100,
+      playerBaseAtk: 10,
+      potions: 3,
+      bossHp: 150,
+      bossMaxHp: 150,
+      isDefending: false,
+      monsterHp: 0,
+      monsterMaxHp: 0
     });
 
     let S = initialState();
@@ -893,13 +907,31 @@ const TEXT_ARCHIVE = {
       render();
     }
 
+    function getPlayerAtk() {
+      let atk = S.playerBaseAtk;
+      if (S.evidence.hammer) atk += 15; // 30cm 生鏽鐵鎚的加成
+      return atk;
+    }
+
     function tryFloorTransition(targetFloor, minutes, reason) {
       advance(minutes, reason);
       S.currentFloor = targetFloor;
+
+      // 1. Check for Stalker (original logic)
       if (S.elapsed > STALKER_ENCOUNTER_ELAPSED && Math.random() < STALKER_ENCOUNTER_CHANCE) {
         goto("killer_encounter");
         return;
       }
+
+      // 2. 20% chance for random encounter (shadow monster)
+      if (Math.random() < 0.20 && !isEndingOrHiddenScene(S.scene)) {
+        S.monsterHp = 40;
+        S.monsterMaxHp = 40;
+        pushLog("⚠️ 感覺到黑暗中有東西靠近... 進入戰鬥！");
+        goto("battle_random");
+        return;
+      }
+
       goto(`map${targetFloor}`);
     }
 
@@ -1053,6 +1085,12 @@ const TEXT_ARCHIVE = {
       }
       if (key === "abandonedRoom") return STORY.SCENE_ABANDONED_ROOM || "【廢棄閱覽室】\n\n積灰的閱讀台下藏著某些東西……";
       if (key === "alliance_followup") return STORY.alliance_followup;
+      if (key === "battle_starscream") {
+        return `【地下儲藏室 · 死鬥】\n黑暗中，天王星像一頭野獸般轉過身來。\n\n[皇家警察 Yv]\n❤️ HP: ${S.playerHp} / ${S.maxHp}\n⚔️ 攻擊力: ${getPlayerAtk()} (武器裝備中)\n\n[退學生 天王星]\n❤️ HP: ${S.bossHp} / ${S.bossMaxHp}\n\n請選擇你的行動：`;
+      }
+      if (key === "battle_random") {
+        return `【突發戰鬥】\n走廊的陰影中，一具『徘徊的黑影』朝你撲來！\n\n[皇家警察 Yv]\n❤️ HP: ${S.playerHp} / ${S.maxHp}\n\n[徘徊的黑影]\n❤️ HP: ${S.monsterHp} / ${S.monsterMaxHp}\n\n請選擇行動：`;
+      }
       if (key === "python_hidden_start") {
         return formatTemplateText(TEXT_ARCHIVE["story_texts.py"]?.ENDING_HIDDEN || "【隱藏結局】夢醒時分。");
       }
@@ -1340,14 +1378,13 @@ const TEXT_ARCHIVE = {
             advance(15, "與紅花前往地下儲藏室");
             if (S.scene === "ending_bad_darkness") return;
             if (S.clues.starscream) {
-              S.scene = "ending_alliance_capture";
-              pushLog("✅ 達成：同盟追兇結局");
+              pushLog("⚔️ 遭遇了躲在儲藏室深處的天王星！戰鬥開始！");
+              S.bossHp = S.bossMaxHp;
+              goto("battle_starscream");
             } else {
               pushLog("⚠ 線索不足，無法鎖定兇手藏匿點。");
               goto("map1");
-              return;
             }
-            render();
           }]);
           opts.push(["我自己先去地下室確認", () => {
             advance(12, "單獨前往地下儲藏室");
@@ -1361,6 +1398,113 @@ const TEXT_ARCHIVE = {
             goto("basement");
           }]);
           opts.push(["先補齊線索再行動", () => goto("map3")]);
+          break;
+
+        case "battle_starscream":
+          // 1. Attack Option
+          opts.push(["🗡️ 全力攻擊", () => {
+            S.isDefending = false;
+
+            // Player Attack
+            let dmg = getPlayerAtk() + Math.floor(Math.random() * 6) - 3;
+            S.bossHp -= dmg;
+            pushLog(`💥 你揮舞武器，對天王星造成了 ${dmg} 點傷害！`);
+
+            // Honghua Assist
+            if (S.flags.honghuaJoined && S.bossHp > 0) {
+              let hDmg = 8;
+              S.bossHp -= hDmg;
+              pushLog(`✨ 紅花在後方擲出燭台干擾，造成了 ${hDmg} 點追加傷害！`);
+            }
+
+            // Check Boss Death
+            if (S.bossHp <= 0) {
+              pushLog("🎉 天王星倒下了！");
+              S.scene = "ending_alliance_capture";
+              render();
+              return;
+            }
+
+            // Boss Retaliation
+            let bossDmg = 20 + Math.floor(Math.random() * 10);
+            S.playerHp -= bossDmg;
+            pushLog(`🩸 天王星瘋狂反撲，你受到了 ${bossDmg} 點傷害。`);
+
+            // Check Player Death
+            if (S.playerHp <= 0) {
+              S.scene = "ending_alliance_solo_bad";
+              pushLog("☠ 你在戰鬥中力竭倒下了...");
+            }
+            render();
+          }]);
+
+          // 2. Defend Option
+          opts.push(["🛡️ 舉起物品防禦", () => {
+            S.isDefending = true;
+            let bossDmg = Math.floor((20 + Math.floor(Math.random() * 10)) * 0.3);
+            S.playerHp -= bossDmg;
+            pushLog(`🛡️ 你採取守勢，完美格擋！只受到了 ${bossDmg} 點傷害。`);
+
+            if (S.playerHp <= 0) S.scene = "ending_alliance_solo_bad";
+            render();
+          }]);
+
+          // 3. Heal Option
+          if (S.potions > 0) {
+            opts.push([`💊 嚼一口急救檳榔 (剩餘: ${S.potions})`, () => {
+              S.isDefending = false;
+              S.potions--;
+              let heal = 40;
+              S.playerHp = Math.min(S.maxHp, S.playerHp + heal);
+              pushLog(`💚 你嚼了一口檳榔，恢復了 ${heal} 點 HP！精神百倍！`);
+
+              // Boss still attacks while you heal
+              let bossDmg = 20 + Math.floor(Math.random() * 10);
+              S.playerHp -= bossDmg;
+              pushLog(`🩸 天王星趁隙攻擊，你受到了 ${bossDmg} 點傷害。`);
+
+              if (S.playerHp <= 0) S.scene = "ending_alliance_solo_bad";
+              render();
+            }]);
+          }
+          break;
+
+        case "battle_random":
+          opts.push(["🗡️ 攻擊", () => {
+            // Player hits monster
+            let dmg = getPlayerAtk() + Math.floor(Math.random() * 4);
+            S.monsterHp -= dmg;
+            pushLog(`⚔️ 你擊中黑影，造成 ${dmg} 點傷害！`);
+
+            // Monster dies -> Reward and go back to map
+            if (S.monsterHp <= 0) {
+              pushLog("🎉 你擊散了黑影！在地上撿到了一顆【急救檳榔】！");
+              S.potions += 1;
+              goto(`map${S.currentFloor}`);
+              return;
+            }
+
+            // Monster hits player
+            let mDmg = Math.floor(Math.random() * 8) + 2;
+            S.playerHp -= mDmg;
+            pushLog(`🩸 黑影抓傷了你，受到 ${mDmg} 點傷害。`);
+
+            if (S.playerHp <= 0) S.scene = "ending_alliance_solo_bad";
+            render();
+          }]);
+
+          opts.push(["🏃 逃跑", () => {
+            if (Math.random() < 0.6) {
+              pushLog("💨 你成功甩開了黑影！");
+              goto(`map${S.currentFloor}`);
+            } else {
+              let mDmg = Math.floor(Math.random() * 8) + 2;
+              S.playerHp -= mDmg;
+              pushLog(`🩸 逃跑失敗！黑影趁機攻擊，受到 ${mDmg} 點傷害。`);
+              if (S.playerHp <= 0) S.scene = "ending_alliance_solo_bad";
+              render();
+            }
+          }]);
           break;
 
         case "ending_bad":
@@ -1788,6 +1932,15 @@ const TEXT_ARCHIVE = {
       if (!Number.isFinite(merged.playerY)) merged.playerY = DEFAULT_PLAYER_Y;
       if (!Number.isFinite(merged.honghuaX)) merged.honghuaX = DEFAULT_HONGHUA_X;
       if (!Number.isFinite(merged.honghuaY)) merged.honghuaY = DEFAULT_HONGHUA_Y;
+      if (!Number.isFinite(merged.playerHp)) merged.playerHp = 100;
+      if (!Number.isFinite(merged.maxHp)) merged.maxHp = 100;
+      if (!Number.isFinite(merged.playerBaseAtk)) merged.playerBaseAtk = 10;
+      if (!Number.isFinite(merged.potions)) merged.potions = 3;
+      if (!Number.isFinite(merged.bossHp)) merged.bossHp = 150;
+      if (!Number.isFinite(merged.bossMaxHp)) merged.bossMaxHp = 150;
+      if (typeof merged.isDefending !== "boolean") merged.isDefending = false;
+      if (!Number.isFinite(merged.monsterHp)) merged.monsterHp = 0;
+      if (!Number.isFinite(merged.monsterMaxHp)) merged.monsterMaxHp = 0;
       return merged;
     }
 
