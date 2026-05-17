@@ -158,6 +158,7 @@ function openArchive() {
       btn.textContent = audioEnabled ? "🔊 音樂：開" : "🔈 音樂：關";
     }
 
+    // --- 怪物受擊：純粹控制閃紅光 ---
     function triggerMonsterHitEffect() {
       const monsterEl = document.getElementById("monsterImg");
       const sceneEl = document.getElementById("sceneImg");
@@ -171,7 +172,7 @@ function openArchive() {
       }
       
       imgEl.classList.remove("monster-hurt");
-      void imgEl.offsetWidth;
+      void imgEl.offsetWidth; // Force reflow
       imgEl.classList.add("monster-hurt");
       
       if (monsterHitEffectTimer) clearTimeout(monsterHitEffectTimer);
@@ -181,25 +182,26 @@ function openArchive() {
       }, 300);
     }
 
-    // Trigger player's attack effect (slash)
+    // --- 玩家攻擊：在特效圖層播放刀光 GIF ---
     function triggerPlayerAttackVisual() {
       const effectEl = document.getElementById("effectLayer");
       if (effectEl) {
-        effectEl.src = "assets/slash_effect.gif?t=" + new Date().getTime();
-        effectEl.style.maxWidth = "150px"; // Reset to slash size
+        effectEl.src = "assets/slash_effect.gif?t=" + new Date().getTime(); // 防止快取
+        effectEl.style.maxWidth = "150px"; 
         effectEl.style.height = "auto";
         effectEl.style.display = "block";
+        effectEl.classList.remove("phantom-strike-anim"); // 清除可能殘留的動畫
         setTimeout(() => { effectEl.style.display = "none"; }, 500);
       }
     }
 
-    // Trigger monster's attack animation (GIF or Phantom Fallback)
+    // --- 怪物攻擊：無閃爍 GIF 播放 或 紅色殘影突進 ---
     function triggerMonsterAttackVisual(attackImgSrc, durationMs = 800) {
       const monsterImgEl = document.getElementById("monsterImg");
       const mainCard = document.querySelector(".main");
       const effectEl = document.getElementById("effectLayer");
 
-      // 1. Screen Shake
+      // 1. 畫面震動 (主角被打)
       if (mainCard) {
         mainCard.style.transform = "translateX(10px)";
         setTimeout(() => mainCard.style.transform = "translateX(-10px)", 50);
@@ -207,36 +209,45 @@ function openArchive() {
         setTimeout(() => mainCard.style.transform = "translateX(0)", 150);
       }
 
-      // 2. Play GIF if provided
-      if (attackImgSrc && attackImgSrc.endsWith(".gif")) {
-        if (monsterImgEl && monsterImgEl.style.display !== "none") {
-          const originalSrc = monsterImgEl.src;
-          const cacheBuster = "?t=" + new Date().getTime();
-          monsterImgEl.src = attackImgSrc + cacheBuster;
+      if (!monsterImgEl || monsterImgEl.style.display === "none" || !effectEl) return;
 
-          setTimeout(() => {
-            if (monsterImgEl.src.includes(attackImgSrc)) {
-               monsterImgEl.src = originalSrc;
-            }
-          }, durationMs);
-        }
+      // 2. 如果有 GIF，平滑蓋在特效圖層上播放
+      if (attackImgSrc && attackImgSrc.toLowerCase().includes(".gif")) {
+        const cacheBuster = "?t=" + new Date().getTime();
+        
+        effectEl.style.maxWidth = "none";
+        effectEl.style.height = monsterImgEl.clientHeight + "px";
+        effectEl.src = attackImgSrc + cacheBuster;
+        effectEl.style.display = "block";
+        effectEl.classList.remove("phantom-strike-anim");
+        
+        // 將原本立繪變透明，防止閃爍
+        monsterImgEl.style.opacity = "0";
+
+        setTimeout(() => {
+          effectEl.style.display = "none";
+          effectEl.style.maxWidth = "150px"; 
+          effectEl.style.height = "auto";
+          effectEl.src = ""; 
+          monsterImgEl.style.opacity = "1"; // 恢復立繪顯示
+        }, durationMs);
+
       } else {
-        // 3. Phantom Red Strike Fallback (If no GIF)
-        if (monsterImgEl && effectEl && monsterImgEl.style.display !== "none") {
-          effectEl.src = monsterImgEl.src; // Copy monster image
-          effectEl.style.maxWidth = "none";
-          effectEl.style.height = monsterImgEl.clientHeight + "px"; 
-          effectEl.style.display = "block";
-          
-          effectEl.classList.add("phantom-strike-anim");
-          
-          setTimeout(() => {
-            effectEl.classList.remove("phantom-strike-anim");
-            effectEl.style.display = "none";
-            effectEl.style.maxWidth = "150px"; // Restore slash size
-            effectEl.style.height = "auto";
-          }, 400);
-        }
+        // 3. 備案：如果沒有 GIF，觸發紅色的殘影突進 (Phantom Strike)
+        effectEl.src = monsterImgEl.src; 
+        effectEl.style.maxWidth = "none";
+        effectEl.style.height = monsterImgEl.clientHeight + "px"; 
+        effectEl.style.display = "block";
+        
+        effectEl.classList.add("phantom-strike-anim");
+        
+        setTimeout(() => {
+          effectEl.classList.remove("phantom-strike-anim");
+          effectEl.style.display = "none";
+          effectEl.style.maxWidth = "150px"; 
+          effectEl.style.height = "auto";
+          effectEl.src = ""; 
+        }, 400);
       }
     }
 
@@ -654,6 +665,7 @@ function openArchive() {
           imgEl.style.filter = `brightness(${BATTLE_BACKGROUND_BRIGHTNESS})`;
           monsterEl.src = getMonsterImageSrc();
           monsterEl.alt = battleMonsterAltText();
+          monsterEl.style.opacity = "1"; // Ensure opacity is reset
         } else {
           monsterEl.style.display = "none";
           imgEl.style.filter = "none";
