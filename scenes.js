@@ -1,994 +1,853 @@
-function sceneText(key) {
-      if (key === "hall") {
-        return STORY.hall + "\n\n" + CHARACTER.trustRemarks[trustTier()];
-      }
-      if (key === "bookshelves") {
-        const picked = S.booksOrder.length ? S.booksOrder.join(" → ") : "（尚未選擇）";
-        return `${STORY.bookshelves}\n\n目前排序：${picked}`;
-      }
-      if (key === "deduction") {
-        return STORY.deduction + (S.flags.deductionComplete ? "\n\n✅ 已完成推理，可直接面對紅花。" : "");
-      }
-      if (key === "collectionRoom") return STORY.SCENE_COLLECTION_ROOM || "【收藏室（古籍庫）】\n\n厚重的書架深處有什麼東西靜靜躺著……";
-      if (key === "toolbox") return STORY.SCENE_TOOLBOX || "書架深處的角落有一個積滿灰塵的木製工具箱，裡面散落著幾把工具。";
-      if (key === "archiveRoom") return STORY.SCENE_ARCHIVE_ROOM || "【檔案室（禁書區）】\n\n封閉多年的禁書區，有人留下了足跡……";
-      if (key === "guardRoom") {
-        if (S.flags.guardLogbookFound) {
-          return STORY.INSPECT_GUARD_LOGBOOK || "你翻開守衛記錄本，記下了案發夜的異常巡邏紀錄。";
-        }
-        return STORY.SCENE_GUARD_ROOM || "【守衛室】\n\n守衛室已人去樓空，桌角有一本記錄本……";
-      }
-      if (key === "workshop") {
-        if (S.flags.workshopCardFound) {
-          return STORY.INSPECT_WORKSHOP_CARD || "你翻閱工作記錄卡，確認案發前三天有人委託秘密修復文書。";
-        }
-        return STORY.SCENE_WORKSHOP || "【修復工坊】\n\n工作台上有一本工作記錄……";
-      }
-      if (key === "abandonedRoom") return STORY.SCENE_ABANDONED_ROOM || "【廢棄閱覽室】\n\n積灰的閱讀台下藏著某些東西……";
-      if (key === "alliance_followup") return STORY.alliance_followup;
-      if (key === "battle_starscream") {
-        return `【地下儲藏室 · 死鬥】\n黑暗中，天王星像一頭野獸般轉過身來。\n\n[皇家警察 Yv]\n❤️ HP: ${S.playerHp} / ${S.maxHp}\n⚔️ 攻擊力: ${getPlayerAtk()} (武器裝備中)\n\n[退學生 天王星]\n❤️ HP: ${S.bossHp} / ${S.bossMaxHp}\n\n請選擇你的行動：`;
-      }
-      if (key === "battle_random") {
-        return `【突發戰鬥】\n走廊的陰影中，一具『徘徊的黑影』朝你撲來！\n\n[皇家警察 Yv]\n❤️ HP: ${S.playerHp} / ${S.maxHp}\n\n[徘徊的黑影]\n❤️ HP: ${S.monsterHp} / ${S.monsterMaxHp}\n\n請選擇行動：`;
-      }
-      if (key === "battle_farm") {
-        return `【戰鬥】\n你遭遇了『${S.monsterName}』！\n\n[皇家警察 Yv]\n❤️ HP: ${S.playerHp} / ${S.maxHp}\n\n[${S.monsterName}]\n❤️ HP: ${S.monsterHp} / ${S.monsterMaxHp}\n\n請選擇行動：`;
-      }
-      if (key === "victory") {
-        const V = S.lastVictory;
-        if (!V) return "【Victory】\n戰鬥結束，你暫時安全了。";
-        const potionText = V.potionGain > 0 ? `\n• 急救檳榔 +${V.potionGain}` : "";
-        const levelText = V.levelUps > 0
-          ? `\n🎖️ 升級！你提升了 ${V.levelUps} 級，現在是 Lv.${S.level}。`
-          : "\n📘 尚未升級，繼續戰鬥累積經驗。";
-        return `【Victory】\n你擊敗了「${V.enemyName}」！\n\n✨ 戰利品結算\n• EXP +${V.expGain}\n• 殘蠟 +${V.waxGain}\n• 燭火 +${V.candleGain}${potionText}${levelText}\n\n你擺出勝利姿勢，準備繼續調查。`;
-      }
-      if (key === "python_hidden_start") {
-        return formatTemplateText(TEXT_ARCHIVE["story_texts.py"]?.ENDING_HIDDEN || "【隱藏結局】夢醒時分。");
-      }
-      if (key === "python_hidden_london") {
-        return STORY.python_hidden_london || formatTemplateText(TEXT_ARCHIVE["story_texts.py"]?.LONDON_HIDDEN_PROLOGUE || "【隱藏分支】航向倫敦。");
-      }
-      // ── Amelia mode scenes ─────────────────────────────────────────────────
-      if (key === "amelia_reading_room") {
-        return S.flags.ameliaTalkedClover ? STORY.amelia_reading_room_visited : STORY.amelia_reading_room;
-      }
-      if (key === "amelia_archive_room") {
-        return S.flags.ameliaEricaFollowup ? STORY.amelia_archive_room_followup : STORY.amelia_archive_room;
-      }
-      if (key === "amelia_meeting_room") {
-        if (!S.flags.ameliaTalkedShanshan) return STORY.amelia_meeting_room;
-        if (!S.flags.ameliaTalkedSeth)    return STORY.amelia_meeting_room_seth_avail;
-        return STORY.amelia_meeting_room_seth_done;
-      }
-      if (key === "amelia_guild_office") {
-        const allTalked = S.flags.ameliaTalkedClover && S.flags.ameliaTalkedErica &&
-                          S.flags.ameliaTalkedShanshan && S.flags.ameliaTalkedJackson &&
-                          S.flags.ameliaTalkedSeth;
-        return allTalked ? STORY.amelia_guild_office_final : STORY.amelia_guild_office;
-      }
-      if (key === "archive_index") {
-        const storyCount = archiveKeys("story_texts.py").length;
-        const characterCount = archiveKeys("character_texts.py").length;
-        return [
-          "【全內容文字庫】",
-          "這裡已將 Python 版文本常數 HTML 化並內嵌到單一 index.html。",
-          `可瀏覽：主劇情 ${storyCount} 筆、角色文本 ${characterCount} 筆。`,
-          "請選擇要瀏覽的文本群組。",
-        ].join("\n\n");
-      }
-      if (key === "archive_group") {
-        ensureArchiveState();
-        const keys = archiveKeys(S.archive.group);
-        const sample = keys.slice(0, ARCHIVE_PREVIEW_LIMIT).join("、");
-        return [
-          `【${ARCHIVE_LABELS[S.archive.group] || S.archive.group}】`,
-          `共 ${keys.length} 筆常數。`,
-          sample ? `部分條目：${sample}` : "（無資料）",
-          "請從下方按鈕選擇要查看的條目。",
-        ].join("\n\n");
-      }
-      if (key === "archive_entry") {
-        ensureArchiveState();
-        const val = (TEXT_ARCHIVE[S.archive.group] || {})[S.archive.key];
-        return [
-          `【${S.archive.key || "未選擇條目"}】`,
-          "",
-          formatTemplateText(val ?? "（此條目不存在）"),
-        ].join("\n");
-      }
-      return STORY[key] || "（場景資料不存在）";
-    }
-
-function makeOptions() {
-      const opts = [];
-      switch (S.scene) {
-        case "archive_index":
-          opts.push([ARCHIVE_LABELS["story_texts.py"], () => { S.archive.group = "story_texts.py"; S.archive.key = null; goto("archive_group"); }]);
-          opts.push([ARCHIVE_LABELS["character_texts.py"], () => { S.archive.group = "character_texts.py"; S.archive.key = null; goto("archive_group"); }]);
-          opts.push(["返回遊戲", () => goto("map3")]);
-          break;
-        case "archive_group": {
-          ensureArchiveState();
-          for (const key of archiveKeys(S.archive.group)) {
-            opts.push([key, () => { S.archive.key = key; goto("archive_entry"); }]);
-          }
-          opts.push(["← 回到文字庫首頁", () => goto("archive_index")]);
-          opts.push(["返回遊戲", () => goto("map3")]);
-          break;
-        }
-        case "archive_entry":
-          opts.push(["← 回到條目列表", () => goto("archive_group")]);
-          opts.push(["返回遊戲", () => goto("map3")]);
-          break;
-        case "intro":
-          opts.push(["開始調查", () => { advance(10, "抵達圖書館"); goto("prologue"); }]);
-          break;
-        case "prologue":
-          opts.push(["[強硬] 皇家警察辦案，請妳配合交出所有線索。", () => { addTrust(-15, "態度強硬"); goto("map3"); }]);
-          opts.push(["[溫和] 我知道妳在保護某個秘密，我們目的一致。", () => { addTrust(20, "釋出善意"); goto("map3"); }]);
-          break;
-        case "map3":
-          opts.push(["前往館長室外調查", () => { advance(20, "進入館長室外展示區"); goto("hall"); }]);
-          opts.push(["開始整理線索 (推理)", () => goto("deduction")]);
-          opts.push(["面對紅花", () => {
-            if (!S.flags.deductionComplete) {
-              pushLog("⚠ 你還沒完成推理盤，無法直接提出結論。");
-              render();
-              return;
-            }
-            goto("confront");
-          }]);
-          opts.push(["前往私人研究室 (高難度刷怪區)", () => {
-            advance(20, "進入私人研究室");
-            S.farmZone = "high";
-            if (S.highZoneKills >= 10) {
-              S.monsterHp = 350; S.monsterMaxHp = 350; S.monsterAtk = 38;
-              S.monsterName = "【隱藏超魔王】狂暴艾莉卡";
-              pushLog("🚨 警告：空間結構嚴重扭曲！雙馬尾被血色染紅的恐怖存在降臨──狂暴艾莉卡擋住了去路！");
-            } else {
-              S.monsterHp = 100; S.monsterMaxHp = 100; S.monsterAtk = 20;
-              S.monsterName = "深淵守衛";
-            }
-            goto("battle_farm");
-          }]);
-          opts.push(["前往廢棄閱覽室", () => { advance(20, "進入廢棄閱覽室"); goto("abandonedRoom"); }]);
-          opts.push(["前往封閉儲藏室（危險）", () => { advance(20, "靠近封閉儲藏室"); goto("basement"); }]);
-          opts.push(["查看一樓", () => { tryFloorTransition(1, 30, "前往 1F"); }]);
-          opts.push(["查看二樓", () => { tryFloorTransition(2, 20, "前往 2F"); }]);
-          break;
-        case "map2":
-          opts.push(["前往研究室A（研究桌）", () => { advance(20, "閱讀案情筆記"); goto("desk"); }]);
-          opts.push(["前往研究室B（窗邊）", () => { advance(20, "查看窗台字條"); goto("window"); }]);
-          opts.push(["前往檔案室（禁書區）", () => { advance(15, "進入禁書區"); goto("archiveRoom"); }]);
-          opts.push(["前往會議廳II (中難度刷怪區)", () => {
-            advance(15, "進入會議廳II");
-            S.farmZone = "";
-            S.monsterHp = 60; S.monsterMaxHp = 60; S.monsterAtk = 12; S.monsterName = "殘破的鎧甲";
-            goto("battle_farm");
-          }]);
-          opts.push(["前往修復工坊", () => { advance(20, "進入修復工坊"); goto("workshop"); }]);
-          opts.push(["前往二樓迴廊 (中難度刷怪區)", () => {
-            advance(15, "探索二樓迴廊");
-            S.farmZone = "";
-            S.monsterHp = 60; S.monsterMaxHp = 60; S.monsterAtk = 12; S.monsterName = "殘破的鎧甲";
-            goto("battle_farm");
-          }]);
-          opts.push(["查看一樓", () => { tryFloorTransition(1, 20, "前往 1F"); }]);
-          opts.push(["查看三樓", () => { tryFloorTransition(3, 20, "前往 3F"); }]);
-          break;
-        case "map1":
-          opts.push(["前往閱覽室A (低難度刷怪區)", () => {
-            advance(10, "進入閱覽室A尋找物資");
-            S.farmZone = "low";
-            if (S.lowZoneKills >= 10) {
-              S.monsterHp = 130; S.monsterMaxHp = 130; S.monsterAtk = 15;
-              S.monsterName = "受害者的怨靈 米糕";
-              pushLog("🛑 突然間四周溫度驟降！書架間飄出巨大的黑影──那是米糕因不甘而凝聚的怨靈！");
-            } else {
-              S.monsterHp = 30; S.monsterMaxHp = 30; S.monsterAtk = 5;
-              S.monsterName = "迷惘的幽魂";
-            }
-            goto("battle_farm");
-          }]);
-          opts.push(["前往閱覽室B (低難度刷怪區)", () => {
-            advance(10, "進入閱覽室B尋找物資");
-            S.farmZone = "";
-            S.monsterHp = 30; S.monsterMaxHp = 30; S.monsterAtk = 5; S.monsterName = "迷惘的幽魂";
-            goto("battle_farm");
-          }]);
-          opts.push(["前往收藏室（古籍庫）", () => { advance(20, "進入收藏室"); goto("collectionRoom"); }]);
-          opts.push(["前往會議廳I", () => { advance(20, "進入會議廳I"); goto("map1"); }]);
-          opts.push(["前往管理室走廊", () => { advance(15, "巡查管理室走廊"); goto("map1"); }]);
-          opts.push(["前往守衛室", () => { advance(20, "進入守衛室"); goto("guardRoom"); }]);
-          if (S.flags.basementOpen) {
-            opts.push(["地下密室", () => { advance(20, "下到地下密室"); goto("basement"); }]);
-          }
-          opts.push(["查看二樓", () => { tryFloorTransition(2, 20, "前往 2F"); }]);
-          opts.push(["查看三樓", () => { tryFloorTransition(3, 30, "前往 3F"); }]);
-          break;
-        case "hall":
-          opts.push(["密碼盒", () => {
-            const ans = prompt("請輸入三位數密碼：");
-            if (ans === PASSWORD_CODE) {
-              S.flags.trueSong = true;
-              advance(5, "解開密碼盒");
-              pushLog("🔓 密碼正確！取得關鍵道具《鎮魂歌譜》");
-            } else {
-              S.passwordFails += 1;
-              pushLog(`❌ 密碼錯誤（${S.passwordFails}/3）`);
-              if (S.passwordFails >= 3) {
-                goto("ending_bad_codefail");
-                return;
-              }
-            }
-            render();
-          }]);
-          opts.push(["前往書架深處（取得密碼盒線索）", () => { advance(20, "排列案卷"); goto("bookshelves"); }]);
-          
-          if (S.trust >= 60 && !S.flags.honghuaJoined) {
-            opts.push(["(信任) 邀請紅花一起行動", () => { 
-              S.flags.honghuaJoined = true; 
-              advance(5, "說服紅花"); 
-              pushLog("🤝 紅花點了點頭，拿起了她的燭台與你同行。"); 
-              render(); 
-            }]);
-          }
-
-          // --- Firekeeper Rest Mechanic ---
-          if (S.wax >= 2) {
-            opts.push([`🔥 [休息] 交出 2 塊殘蠟 (恢復 40 HP 與 全部燭火)`, () => {
-              S.wax -= 2;
-              S.playerHp = Math.min(S.maxHp, S.playerHp + 40);
-              advance(30, "在紅花的守護下休息");
-              
-              // 確保在 advance 扣除時間後，燭火依然補滿
-              S.candle = MAX_CANDLE; 
-              
-              addTrust(2, "依賴與陪伴");
-              pushLog("❤️ 紅花接過殘蠟添入燭台，火光重新明亮起來。你恢復了 40 點 HP，燭火值已補滿！");
-              render();
-            }]);
-          } else {
-            opts.push([`🔥 [休息] (需要 2 塊殘蠟) 目前殘蠟不足`, () => {
-              pushLog("💡 提示：在圖書館各樓層探索遭遇『黑影』並擊敗它們，可以取得殘蠟。");
-              render();
-            }]);
-          }
-          // -------------------------------------
-          opts.push(["回到三樓地圖", () => { advance(15, "返回地圖"); goto("map3"); }]);
-          break;
-        case "collectionRoom":
-          opts.push(["調查書架角落的舊工具箱", () => goto("toolbox")]);
-          opts.push(["離開收藏室，返回一樓地圖", () => { advance(15, "返回 1F"); goto("map1"); }]);
-          break;
-        case "toolbox":
-          opts.push(["拿走 15 公分的乾淨鐵鎚", () => {
-            advance(10, "拿錯證物");
-            pushLog("❌ 這把鎚子太輕，且沒有任何使用痕跡，顯然不是兇器。");
-            render();
-          }]);
-          opts.push(["拿走 30 公分的生鏽鐵鎚", () => {
-            if (!S.evidence.hammer) {
-              S.evidence.hammer = true;
-              addTrust(8, "你以精準的眼光挑出了正確兇器");
-              pushLog("📌 物證：30公分生鏽鐵鎚。你在底部刮開血污，發現了羅馬數字『III』（第一碼 3）");
-            }
-            advance(15, "找到關鍵證物");
-            goto("collectionRoom");
-          }]);
-          opts.push(["拿走 50 公分的雙手大木槌", () => {
-            advance(10, "拿錯證物");
-            pushLog("❌ 這把木槌太巨大了，兇手不可能把它藏在衣服裡帶進圖書館。");
-            render();
-          }]);
-          opts.push(["放棄調查，退回收藏室", () => goto("collectionRoom")]);
-          break;
-        case "archiveRoom":
-          opts.push([S.evidence.clover ? "✓ 已調查四葉草" : "書縫中的四葉草", () => {
-            if (!S.evidence.clover) {
-              S.evidence.clover = true;
-              pushLog(`📌 物證：幸運四葉草（第二碼 ${PASSWORD_DIGITS.clover}）`);
-            }
-            advance(15, "調查四葉草");
-            render();
-          }]);
-          if (S.evidence.clover && !S.flags.cloverUsed) {
-            opts.push(["(使用四葉草) 將四葉草作為書籤，放入桌上的無字天書", () => {
-              advance(10, "破解天書密碼");
-              S.flags.cloverUsed = true;
-              pushLog("📖 書頁浮現了隱藏的字跡！");
-              if (!S.clues.amelia) {
-                S.clues.amelia = true;
-                addTrust(10, "你透過四葉草解讀出艾蜜莉亞線索");
-                pushLog("🧩 人物線索：艾蜜莉亞失蹤原因（無字天書顯現）");
-              }
-              render();
-            }]);
-          }
-          opts.push(["離開檔案室，返回二樓地圖", () => { advance(15, "返回 2F"); goto("map2"); }]);
-          break;
-        case "guardRoom":
-          opts.push([S.flags.guardLogbookFound ? "✓ 已調查守衛記錄本" : "調查桌角的守衛記錄本", () => {
-            if (!S.flags.guardLogbookFound) {
-              S.flags.guardLogbookFound = true;
-              addTrust(5, "你記下守衛記錄本異常內容");
-              pushLog("🧩 線索：守衛記錄本（案發夜異常巡邏紀錄）");
-            }
-            advance(15, "翻閱守衛記錄本");
-            render();
-          }]);
-          if (!S.flags.foundMatches) {
-            opts.push(["尋找抽屜裡的火柴盒 (+30 燭火)", () => {
-              S.candle = Math.min(MAX_CANDLE, S.candle + MATCHES_CANDLE_BONUS);
-              advance(5, "點燃新火柴");
-              pushLog("🕯️ 補充光源");
-              S.flags.foundMatches = true;
-              render();
-            }]);
-          }
-          opts.push(["離開守衛室，返回一樓地圖", () => { advance(15, "返回 1F"); goto("map1"); }]);
-          break;
-        case "workshop":
-          opts.push([S.flags.workshopCardFound ? "✓ 已調查工作記錄卡" : "調查工具箱旁的工作記錄卡", () => {
-            if (!S.flags.workshopCardFound) {
-              S.flags.workshopCardFound = true;
-              addTrust(5, "你找到秘密修復委託記錄");
-              pushLog("🧩 線索：修復工作卡（T.S. 案發前三天秘密委託）");
-            }
-            advance(15, "翻閱工作記錄卡");
-            render();
-          }]);
-          opts.push(["離開修復工坊，返回二樓地圖", () => { advance(15, "返回 2F"); goto("map2"); }]);
-          break;
-        case "abandonedRoom":
-          if (S.flags.honghuaJoined && !S.clues.starscream) {
-            opts.push(["讓紅花幫忙搜索廢棄手冊", () => { 
-              S.clues.starscream = true; 
-              addTrust(10, "並肩作戰"); 
-              advance(5, "紅花的協助"); 
-              pushLog("🧩 紅花憑藉對圖書館的熟悉，從角落翻出了廢棄相框。"); 
-              render(); 
-            }]);
-          }
-
-          if (!S.clues.starscream) {
-            S.clues.starscream = true;
-            addTrust(5, "你找到廢棄手冊");
-            pushLog("🧩 人物線索：廢棄相框（艾莉卡的監視行程）");
-          }
-          opts.push([S.evidence.jeans ? "✓ 已調查牛仔褲" : "調查閱讀台下的牛仔褲（第四排）", () => {
-            if (!S.evidence.jeans) {
-              S.evidence.jeans = true;
-              pushLog(`📌 物證：YV 牛仔褲（第三碼 ${PASSWORD_DIGITS.jeans}）`);
-            }
-            advance(15, "調查牛仔褲");
-            render();
-          }]);
-          opts.push(["離開廢棄閱覽室，返回三樓地圖", () => { advance(15, "返回 3F"); goto("map3"); }]);
-          break;
-        case "killer_encounter":
-          opts.push(["(躲進旁邊的櫃子) 屏住呼吸", () => {
-            advance(30, "躲避殺手");
-            goto(`map${S.currentFloor}`);
-          }]);
-          opts.push(["(直接衝過去) 試圖硬闖", () => { goto("ending_killer_map"); }]);
-          break;
-        case "deduction":
-          opts.push(["開始回答三題推理", () => startDeductionQuiz()]);
-          if (S.flags.deductionComplete) {
-            opts.push(["面對紅花", () => goto("confront")]);
-          }
-          opts.push(["先回 3F 地圖", () => goto("map3")]);
-          break;
-        case "confront":
-          opts.push(["提出推論與證據", () => endingCheck()]);
-          opts.push(["返回 3F 地圖", () => goto("map3")]);
-          break;
-        case "alliance_followup":
-          opts.push(["帶紅花前往地下儲藏室", () => {
-            advance(15, "與紅花前往地下儲藏室");
-            if (S.scene === "ending_bad_darkness") return;
-            if (S.clues.starscream) {
-              pushLog("⚔️ 遭遇了躲在儲藏室深處的天王星！戰鬥開始！");
-              S.bossHp = S.bossMaxHp;
-              goto("battle_starscream");
-            } else {
-              pushLog("⚠ 線索不足，無法鎖定兇手藏匿點。");
-              goto("map1");
-            }
-          }]);
-          opts.push(["我自己先去地下室確認", () => {
-            advance(12, "單獨前往地下儲藏室");
-            if (S.scene === "ending_bad_darkness") return;
-            if (S.clues.starscream) {
-              S.scene = "ending_alliance_solo_bad";
-              pushLog("☠ 達成：單獨追兇失敗");
-              render();
-              return;
-            }
-            goto("basement");
-          }]);
-          opts.push(["先補齊線索再行動", () => goto("map3")]);
-          break;
-
-        case "battle_starscream":
-          // 1. Attack Option
-          opts.push(["🗡️ 全力攻擊", () => {
-            S.isDefending = false;
-            triggerPlayerAttackVisual();
-
-            // Player Attack
-            let dmg = getPlayerAtk() + Math.floor(Math.random() * 6) - 3;
-            S.bossHp -= dmg;
-            pushLog(`💥 你揮舞武器，對天王星造成了 ${dmg} 點傷害！`);
-
-            // Honghua Assist
-            if (S.flags.honghuaJoined && S.bossHp > 0) {
-              let hDmg = 8;
-              S.bossHp -= hDmg;
-              pushLog(`✨ 紅花在後方擲出燭台干擾，造成了 ${hDmg} 點追加傷害！`);
-            }
-
-            // Check Boss Death
-            if (S.bossHp <= 0) {
-              pushLog("🎉 天王星倒下了！");
-              S.scene = "ending_alliance_capture";
-              render();
-              return;
-            }
-
-            render();
-            setSceneUiInteractivity(false);
-            setTimeout(() => {
-              if (S.scene !== "battle_starscream") {
-                setSceneUiInteractivity(true);
-                return;
-              }
-
-              triggerMonsterAttackVisual("assets/boss_starscream_attack.gif", 1000);
-              if (audioEnabled) {
-                sfxMonsterHit.currentTime = 0;
-                sfxMonsterHit.play().catch(() => {});
-              }
-
-              let bossDmg = 20 + Math.floor(Math.random() * 10);
-              S.playerHp -= bossDmg;
-              pushLog(`🩸 天王星瘋狂反撲，你受到了 ${bossDmg} 點傷害。`);
-
-              if (S.playerHp <= 0) {
-                S.scene = "ending_alliance_solo_bad";
-                pushLog("☠ 你在戰鬥中力竭倒下了...");
-              }
-              setSceneUiInteractivity(true);
-              render();
-            }, 300);
-            return;
-          }]);
-
-          // 2. Defend Option
-          opts.push(["🛡️ 舉起物品防禦", () => {
-            S.isDefending = true;
-            let bossDmg = Math.floor((20 + Math.floor(Math.random() * 10)) * 0.3);
-            S.playerHp -= bossDmg;
-            pushLog(`🛡️ 你採取守勢，完美格擋！只受到了 ${bossDmg} 點傷害。`);
-
-            if (S.playerHp <= 0) S.scene = "ending_alliance_solo_bad";
-            render();
-          }]);
-
-          // 3. Heal Option
-          if (S.potions > 0) {
-            opts.push([`💊 嚼一口急救檳榔 (剩餘: ${S.potions})`, () => {
-              S.isDefending = false;
-              S.potions--;
-              let heal = 40;
-              S.playerHp = Math.min(S.maxHp, S.playerHp + heal);
-              pushLog(`💚 你嚼了一口檳榔，恢復了 ${heal} 點 HP！精神百倍！`);
-
-              // Boss still attacks while you heal
-              let bossDmg = 20 + Math.floor(Math.random() * 10);
-              S.playerHp -= bossDmg;
-              pushLog(`🩸 天王星趁隙攻擊，你受到了 ${bossDmg} 點傷害。`);
-
-              if (S.playerHp <= 0) S.scene = "ending_alliance_solo_bad";
-              render();
-            }]);
-          }
-          break;
-
-        case "battle_random":
-          opts.push(["🗡️ 攻擊", () => {
-            triggerPlayerAttackVisual();
-            // Player hits monster
-            let dmg = getPlayerAtk() + Math.floor(Math.random() * 4);
-            S.monsterHp -= dmg;
-            pushLog(`⚔️ 你擊中黑影，造成 ${dmg} 點傷害！`);
-            triggerMonsterHitEffect();
-
-            // Monster dies -> Reward and go back to map
-            if (S.monsterHp <= 0) {
-              let waxDrop = Math.floor(Math.random() * 2) + 1;
-              let candleRestore = 15;
-              let potionDrop = Math.random() < 0.2 ? 1 : 0;
-              startVictoryPhase({
-                enemyName: "徘徊的黑影",
-                expGain: 20,
-                waxGain: waxDrop,
-                candleGain: candleRestore,
-                potionGain: potionDrop,
-              });
-              return;
-            }
-
-            // Monster hits player
-            triggerMonsterAttackVisual(null, 800);
-            let mDmg = Math.floor(Math.random() * 8) + 2;
-            S.playerHp -= mDmg;
-            pushLog(`🩸 黑影抓傷了你，受到 ${mDmg} 點傷害。`);
-
-            if (S.playerHp <= 0) S.scene = "ending_alliance_solo_bad";
-            render();
-          }]);
-
-          opts.push(["🏃 逃跑", () => {
-            if (Math.random() < 0.6) {
-              pushLog("💨 你成功甩開了黑影！");
-              goto(`map${S.currentFloor}`);
-            } else {
-              let mDmg = Math.floor(Math.random() * 8) + 2;
-              S.playerHp -= mDmg;
-              pushLog(`🩸 逃跑失敗！黑影趁機攻擊，受到 ${mDmg} 點傷害。`);
-              if (S.playerHp <= 0) S.scene = "ending_alliance_solo_bad";
-              render();
-            }
-          }]);
-
-          // Heal Option in Random Battle
-          if (S.potions > 0) {
-            opts.push([`💊 嚼一口急救檳榔 (剩餘: ${S.potions})`, () => {
-              S.potions--;
-              let heal = 40;
-              S.playerHp = Math.min(S.maxHp, S.playerHp + heal);
-              pushLog(`💚 你嚼了一口檳榔，恢復了 ${heal} 點 HP！`);
-              if (audioEnabled) sfxHeal.play().catch(() => {});
-
-              let mDmg = Math.floor(Math.random() * 8) + 2;
-              S.playerHp -= mDmg;
-              pushLog(`🩸 黑影趁隙攻擊，受到 ${mDmg} 點傷害。`);
-
-              if (S.playerHp <= 0) S.scene = "ending_alliance_solo_bad";
-              render();
-            }]);
-          }
-          break;
-
-        case "battle_farm":
-          opts.push(["🗡️ 攻擊", () => {
-            if (audioEnabled) sfxAttack.play().catch(() => {});
-            triggerPlayerAttackVisual();
-
-            let dmg = getPlayerAtk() + Math.floor(Math.random() * 5);
-            S.monsterHp -= dmg;
-            pushLog(`⚔️ 你擊中 ${S.monsterName}，造成 ${dmg} 點傷害！`);
-            triggerMonsterHitEffect();
-
-            if (S.monsterHp <= 0) {
-              if (S.monsterName === "受害者的怨靈 米糕") {
-                S.lowZoneKills = 0;
-                pushLog("💀 你揮舞重鎚擊散了核心怨念，終於成功超渡了米糕的亡魂... 現場留下了大量遺物。");
-                processVictory(100, 6, 2, 50);
-                return;
-              }
-
-              if (S.monsterName === "【隱藏超魔王】狂暴艾莉卡") {
-                S.highZoneKills = 0;
-                pushLog("👑 奇蹟！你竟然憑藉驚人的毅力與戰術，擊敗了本遊戲的最強傳說──狂暴艾莉卡！");
-                processVictory(400, 20, 5, 100);
-                return;
-              }
-
-              if (S.farmZone === "low") {
-                S.lowZoneKills++;
-                pushLog(`📊 閱覽室淨化進度：${S.lowZoneKills}/10`);
-              } else if (S.farmZone === "high") {
-                S.highZoneKills++;
-                pushLog(`📊 研究室淨化進度：${S.highZoneKills}/10`);
-              }
-
-              let exp = S.monsterMaxHp > 50 ? 30 : 10;
-              let waxDrop = S.monsterMaxHp > 50 ? (Math.floor(Math.random() * 3) + 2) : 1;
-              let candleRestore = S.monsterMaxHp > 50 ? 25 : 10;
-              let potionDrop = (Math.random() < (S.monsterMaxHp / 200)) ? 1 : 0;
-
-              pushLog(`🎉 戰鬥勝利！擊敗了 ${S.monsterName}。`);
-              processVictory(exp, waxDrop, potionDrop, candleRestore);
-              return;
-            }
-
-            render();
-            setSceneUiInteractivity(false);
-            setTimeout(() => {
-              if (S.scene !== "battle_farm") {
-                setSceneUiInteractivity(true);
-                return;
-              }
-
-              let attackGif = null; // Default to NULL to trigger phantom strike
-              let animDuration = 800; 
-
-              if (S.monsterName.includes("米糕")) {
-                attackGif = "assets/boss_migao_attack.gif";
-                animDuration = 1000;
-              } else if (S.monsterName.includes("艾莉卡")) {
-                attackGif = "assets/boss_erica_attack.gif";
-                animDuration = 1200;
-              }
-
-              triggerMonsterAttackVisual(attackGif, animDuration); 
-              if (audioEnabled) setTimeout(() => sfxMonsterHit.play().catch(() => {}), 200);
-
-              let mDmg = Math.floor(Math.random() * S.monsterAtk) + Math.floor(S.monsterAtk / 2);
-              S.playerHp -= mDmg;
-              pushLog(`🩸 ${S.monsterName} 反擊，你受到 ${mDmg} 點傷害。`);
-
-              if (S.playerHp <= 0) {
-                S.scene = "ending_alliance_solo_bad";
-              }
-              
-              setSceneUiInteractivity(true);
-              render();
-            }, 800);
-            return;
-          }]);
-
-          opts.push(["🏃 逃跑", () => {
-            if (Math.random() < 0.7) {
-              pushLog("💨 你趁隙逃出了房間！");
-              S.farmZone = "";
-              goto(`map${S.currentFloor}`);
-            } else {
-              let mDmg = S.monsterAtk;
-              S.playerHp -= mDmg;
-              pushLog(`🩸 逃跑失敗！被 ${S.monsterName} 追擊，受到 ${mDmg} 點傷害。`);
-              if (S.playerHp <= 0) S.scene = "ending_alliance_solo_bad";
-              render();
-            }
-          }]);
-
-          // Heal Option in Farm Battle
-          if (S.potions > 0) {
-            opts.push([`💊 嚼一口急救檳榔 (剩餘: ${S.potions})`, () => {
-              S.potions--;
-              let heal = 40;
-              S.playerHp = Math.min(S.maxHp, S.playerHp + heal);
-              pushLog(`💚 你嚼了一口檳榔，恢復了 ${heal} 點 HP！精神百倍！`);
-              if (audioEnabled) sfxHeal.play().catch(() => {});
-
-              // Monster still attacks while you heal
-              let mDmg = Math.floor(Math.random() * S.monsterAtk) + Math.floor(S.monsterAtk / 2);
-              S.playerHp -= mDmg;
-              pushLog(`🩸 ${S.monsterName} 趁隙攻擊，你受到了 ${mDmg} 點傷害。`);
-
-              if (S.playerHp <= 0) S.scene = "ending_alliance_solo_bad";
-              render();
-            }]);
-          }
-          break;
-
-        case "victory":
-          opts.push(["✅ 繼續前進", () => {
-            const returnScene = `map${S.currentFloor}`;
-            S.lastVictory = null;
-            goto(returnScene);
-          }]);
-          break;
-
-        case "ending_bad":
-        case "ending_bad_codefail":
-        case "ending_bad_darkness":
-        case "ending_normal":
-          opts.push(["(察覺違和感) 等等……妳要不要打胰島素？", () => {
-            pushLog("👁️ 脫口而出的一句話，打破了夢境的邏輯。");
-            goto("python_hidden_start");
-          }]);
-          opts.push(["重新開始", () => {
-            S = initialState();
-            pushLog("♻ 已重新開始");
-            render();
-          }]);
-          break;
-
-        case "python_hidden_start":
-          opts.push(["登入遊戲，前往倫敦尋找過去", () => {
-            pushLog("🖥️ 你打開了《大航海時代Online》。");
-            goto("python_hidden_london");
-          }]);
-          opts.push(["關閉遊戲，接受現實", () => {
-            S = initialState();
-            pushLog("♻ 遊戲已關閉。");
-            render();
-          }]);
-          break;
-
-        case "python_hidden_london":
-          opts.push(["(進入工會據點) 接受艾蜜莉亞的身份", () => {
-            pushLog("📜 你以艾蜜莉亞的身份進入了公會據點。");
-            goto("amelia_hub");
-          }]);
-          opts.push(["(登出) 關閉客戶端", () => {
-            S = initialState();
-            pushLog("♻ 一切重新開始。");
-            render();
-          }]);
-          break;
-
-        // ── Amelia mode scenes ───────────────────────────────────────────────
-        case "amelia_hub":
-          opts.push(["前往閱覽室（幸運四葉草）", () => { advance(5, "進入閱覽室"); goto("amelia_reading_room"); }]);
-          opts.push(["前往檔案室（艾莉卡）", () => { advance(5, "進入檔案室"); goto("amelia_archive_room"); }]);
-          opts.push(["前往修復工坊（珊珊）", () => { advance(5, "進入修復工坊"); goto("amelia_workshop"); }]);
-          opts.push(["前往會議室（塞特・傑克森馬吉斯）", () => { advance(5, "進入會議室"); goto("amelia_meeting_room"); }]);
-          opts.push(["前往工會辦公室（紅花）", () => { advance(5, "前往工會辦公室"); goto("amelia_guild_office"); }]);
-          opts.push(["（登出）關閉客戶端", () => { S = initialState(); pushLog("♻ 已登出。"); render(); }]);
-          break;
-
-        case "amelia_reading_room":
-          if (!S.flags.ameliaTalkedClover) {
-            opts.push(["和幸運四葉草聊香料群島路線", () => {
-              S.flags.ameliaTalkedClover = true;
-              addTrust(5, "和幸運四葉草聊了新賽季路線");
-              pushLog("💬 幸運四葉草：香料群島海圖碎片線索，最後一片在馬六甲！");
-              advance(10, "閒聊");
-              render();
-            }]);
-          } else {
-            opts.push(["✓ 幸運四葉草（已對話）繼續聊", () => { advance(5, "續聊"); render(); }]);
-          }
-          opts.push(["返回工會據點", () => goto("amelia_hub")]);
-          break;
-
-        case "amelia_archive_room": {
-          const ericaFollowupReady = S.flags.ameliaTalkedClover && S.flags.ameliaTalkedJackson && !S.flags.ameliaEricaFollowup;
-          if (!S.flags.ameliaTalkedErica) {
-            opts.push(["聽艾莉卡說工會的故事", () => {
-              S.flags.ameliaTalkedErica = true;
-              addTrust(5, "了解工會的起源");
-              pushLog("💬 艾莉卡：工會起源——三個水手服同好，就這樣成了夥伴");
-              advance(10, "傾聽");
-              render();
-            }]);
-          } else if (ericaFollowupReady) {
-            opts.push(["艾莉卡有新話題（幸運＋傑克森資訊帶來的感觸）", () => {
-              S.flags.ameliaEricaFollowup = true;
-              addTrust(8, "艾莉卡說出了艦隊完整後的感觸");
-              pushLog("💬 艾莉卡（後續）：三種職業、一個工會——完整的艦隊");
-              advance(10, "傾聽");
-              render();
-            }]);
-          } else {
-            opts.push(["✓ 艾莉卡（已對話）繼續在書架旁坐一會", () => { advance(5, "靜坐"); render(); }]);
-          }
-          opts.push(["返回工會據點", () => goto("amelia_hub")]);
-          break;
-        }
-
-        case "amelia_workshop":
-          if (!S.flags.ameliaTalkedShanshan) {
-            opts.push(["聽珊珊說倫敦教堂任務的事", () => {
-              S.flags.ameliaTalkedShanshan = true;
-              addTrust(5, "了解倫敦教堂隱藏任務鏈");
-              pushLog("💬 珊珊：倫敦教堂隱藏任務需要水手＋海盜同時在場才能觸發");
-              advance(10, "傾聽");
-              render();
-            }]);
-          } else {
-            opts.push(["✓ 珊珊（已對話）繼續整理攻略", () => { advance(5, "觀看"); render(); }]);
-          }
-          opts.push(["返回工會據點", () => goto("amelia_hub")]);
-          break;
-
-        case "amelia_meeting_room":
-          if (!S.flags.ameliaTalkedJackson) {
-            opts.push(["和傑克森馬吉斯聊航海戰術與情報", () => {
-              S.flags.ameliaTalkedJackson = true;
-              addTrust(5, "和傑克森聊了情報與海盜戰術");
-              pushLog("💬 傑克森馬吉斯：情報才是海盜的核心；馬六甲海盜港位置確認");
-              advance(10, "閒聊");
-              render();
-            }]);
-          } else {
-            opts.push(["✓ 傑克森（已對話）繼續聊航線", () => { advance(5, "續聊"); render(); }]);
-          }
-          if (!S.flags.ameliaTalkedShanshan) {
-            opts.push(["塞特（🔒 先去修復工坊找珊珊才能解鎖）", () => {
-              pushLog("💡 提示：先去修復工坊找珊珊聊聊，再回來找塞特。");
-              render();
-            }]);
-          } else if (!S.flags.ameliaTalkedSeth) {
-            opts.push(["向塞特詢問倫敦教堂任務的觸發條件", () => {
-              S.flags.ameliaTalkedSeth = true;
-              addTrust(8, "塞特分享了倫敦任務的秘密");
-              pushLog("💬 塞特：午夜＋聖水＋舊錢幣→聖喬治畫後的古老海圖第一頁");
-              advance(10, "傾聽");
-              render();
-            }]);
-          } else {
-            opts.push(["✓ 塞特（已對話）倫敦任務細節確認完畢", () => { advance(5, "閒聊"); render(); }]);
-          }
-          opts.push(["返回工會據點", () => goto("amelia_hub")]);
-          break;
-
-        case "amelia_guild_office": {
-          const allTalked = S.flags.ameliaTalkedClover && S.flags.ameliaTalkedErica &&
-                            S.flags.ameliaTalkedShanshan && S.flags.ameliaTalkedJackson &&
-                            S.flags.ameliaTalkedSeth;
-          if (S.flags.ameliaInsulinUnlocked) {
-            opts.push(["💊 醒來", () => {
-              pushLog("☀️ 你回到了現實。");
-              goto("amelia_wakeup");
-            }]);
-          } else if (allTalked) {
-            opts.push(["聽紅花說最後一句話……", () => {
-              S.flags.ameliaInsulinUnlocked = true;
-              addTrust(20, "紅花說出了那個詞");
-              pushLog("💊 紅花提到「胰島素」——你應該醒來了");
-              advance(5, "凝神");
-              render();
-            }]);
-          } else {
-            opts.push(["和紅花說說今天工會的狀況", () => { advance(5, "閒聊"); render(); }]);
-          }
-          opts.push(["返回工會據點", () => goto("amelia_hub")]);
-          break;
-        }
-
-        case "amelia_wakeup":
-          opts.push(["重新開始（回到序章）", () => { S = initialState(); pushLog("♻ 已重新開始"); render(); }]);
-          opts.push(["回到工會據點（繼續遊戲）", () => goto("amelia_hub")]);
-          break;
-
-        case "desk":
-          if (!S.clues.honghua) {
-            S.clues.honghua = true;
-            addTrust(12, "你認真讀完紅花筆記");
-            pushLog("🧩 人物線索：紅花的案情紀錄");
-          }
-          opts.push(["返回 2F 地圖", () => goto("map2")]);
-          break;
-        case "window":
-          if (!S.clues.amelia) {
-            S.clues.amelia = true;
-            addTrust(12, "你找到艾蜜莉亞字條");
-            pushLog("🧩 人物線索：艾蜜莉亞失蹤原因");
-          }
-          opts.push(["返回 2F 地圖", () => goto("map2")]);
-          break;
-        case "bookshelves":
-          BOOKSHELF_CORRECT_ORDER.forEach((book) => {
-            opts.push([book, () => {
-              if (S.booksOrder.length >= BOOKSHELF_REQUIRED_COUNT) {
-                pushLog("ℹ️ 目前排序已滿，請清除後重新嘗試。");
-                render();
-                return;
-              }
-              S.booksOrder.push(book);
-              if (S.booksOrder.length === BOOKSHELF_REQUIRED_COUNT) {
-                const correct = BOOKSHELF_CORRECT_ORDER.every((v, idx) => S.booksOrder[idx] === v);
-                if (correct) {
-                  S.flags.basementOpen = true;
-                  pushLog("🔑 取得地下密室鑰匙");
-                } else {
-                  S.booksOrder = [];
-                  pushLog("❌ 順序錯誤，機關毫無反應。");
-                }
-              }
-              render();
-            }]);
-          });
-          if (S.booksOrder.length > 0) {
-            opts.push(["清除目前排序", () => { S.booksOrder = []; render(); }]);
-          }
-          opts.push(["返回 1F 地圖", () => goto("map1")]);
-          break;
-        case "basement":
-          if (S.evidence.hammer) {
-            opts.push(["(使用生鏽鎚子) 暴力砸開儲藏室的暗鎖", () => {
-              advance(15, "砸開鎖頭");
-              goto("basementDeep");
-            }]);
-          } else {
-            opts.push(["嘗試推開儲藏室的門", () => {
-              advance(5, "推門");
-              pushLog("🔒 門從裡面被鎖死了，需要某種堅硬的工具才能破壞。");
-              render();
-            }]);
-          }
-          opts.push(["離開地下區", () => { advance(8, "返回 1F"); goto("map1"); }]);
-          break;
-        case "basementDeep":
-          if (!S.clues.starscream) {
-            S.clues.starscream = true;
-            S.flags.trueSong = true;
-            addTrust(18, "你掌握天王星供詞與關鍵真相");
-            pushLog("🧩 人物線索：天王星親筆供詞");
-            pushLog("🎼 取得鎮魂歌譜");
-          }
-          opts.push(["返回 3F 面對紅花", () => { advance(20, "回到 3F"); goto("map3"); }]);
-          break;
-        default:
-          opts.push(["重新開始", () => {
-            S = initialState();
-            pushLog("♻ 已重新開始");
-            render();
-          }]);
-          break;
-      }
-
-      // --- GLOBAL MAP OPTIONS: Allow healing outside of battle ---
-      if (MAP_SCENES.has(S.scene) && S.potions > 0 && S.playerHp < S.maxHp) {
-        // Use unshift to place the heal button at the TOP of the options list
-        opts.unshift([`💊 停下腳步吃一顆檳榔 (剩餘: ${S.potions}, 恢復 40 HP)`, () => {
-          S.potions--;
-          S.playerHp = Math.min(S.maxHp, S.playerHp + 40);
-          pushLog(`💚 你在走廊上稍作休息，嚼了一口檳榔，恢復了 40 點 HP。`);
-          if (audioEnabled && typeof sfxHeal !== "undefined") sfxHeal.play().catch(() => {});
-          render();
-        }]);
-      }
-
-      return opts;
-    }
-
-function endingCheck() {
-      const e = evidenceCount();
-      const c = clueCount();
-      const t = S.trust;
-      advance(5, "面對紅花");
-      if (S.scene === "ending_bad_darkness") return;
-      if (S.flags.trueSong && c === 3 && t >= 70) {
-        S.scene = "ending_secret";
-        pushLog("✅ 達成：秘密結局");
-      } else if (S.flags.trueSong && t >= 45) {
-        S.scene = "ending_true";
-        pushLog("✅ 達成：真結局");
-      } else if (e >= 2 && t >= 60) {
-        S.scene = "alliance_followup";
-        pushLog("🤝 紅花加入：解鎖同盟追兇分支");
-      } else if (e >= 2) {
-        S.scene = "ending_normal";
-        pushLog("✅ 達成：普通結局");
+    // --- Meta UI Function ---
+    function applyMetaTheme(isMeta) {
+      const root = document.documentElement;
+      if (isMeta) {
+        root.style.setProperty('--bg', '#f0f4f8');
+        root.style.setProperty('--panel', '#ffffff');
+        root.style.setProperty('--panel-2', '#e2e8f0');
+        root.style.setProperty('--text', '#1a202c');
+        root.style.setProperty('--muted', '#718096');
+        root.style.setProperty('--line', '#cbd5e0');
+        document.body.style.background = '#f0f4f8';
       } else {
-        S.scene = "ending_bad";
-        pushLog("☠ 達成：壞結局");
+        root.style.setProperty('--bg', '#0e0a12');
+        root.style.setProperty('--panel', '#171121');
+        root.style.setProperty('--panel-2', '#221a2f');
+        root.style.setProperty('--text', '#d9d0c6');
+        root.style.setProperty('--muted', '#9b8ead');
+        root.style.setProperty('--line', '#3e3054');
+        document.body.style.background = 'radial-gradient(1200px 600px at 10% -20%, #2a1f3b, transparent), var(--bg)';
       }
+    }
+
+    function archiveKeys(group) {
+      return Object.keys(TEXT_ARCHIVE[group] || {}).sort();
+    }
+
+    function ensureArchiveState() {
+      if (!S.archive || !TEXT_ARCHIVE[S.archive.group]) {
+        S.archive = { group: "story_texts.py", key: null };
+      }
+      if (S.archive.key && !(S.archive.key in (TEXT_ARCHIVE[S.archive.group] || {}))) {
+        S.archive.key = null;
+      }
+    }
+
+    function formatTemplateText(raw) {
+      if (typeof raw !== "string") {
+        return JSON.stringify(raw, null, 2);
+      }
+      return raw.replaceAll("{hammer_length}", "30").replaceAll("{meeting_room_name}", "會議室");
+    }
+
+    function openArchive() {
+      ensureArchiveState();
+      goto("archive_index");
+    }
+
+    let currentSceneOptionButtons = [];
+
+    let S = initialState();
+    document.documentElement.style.setProperty("--player-marker-duration", `${MARKER_MOVE_DURATION_MS}ms`);
+    let hotspotMoveTimeoutId = null;
+    let hotspotMoveToken = 0;
+
+    function deepClone(obj) {
+      if (typeof structuredClone === "function") return structuredClone(obj);
+      return JSON.parse(JSON.stringify(obj));
+    }
+
+    function nowClock() {
+      const total = GAME_START_HOUR * 60 + S.elapsed;
+      const h = Math.floor((total % (24 * 60)) / 60);
+      const m = total % 60;
+      return `${String(h).padStart(2, "0")}:${String(m).padStart(2, "0")}`;
+    }
+
+    function dangerOn() { return S.elapsed >= KILLER_EMERGE_ELAPSED; }
+
+    function trustTier() {
+      if (S.trust >= 60) return "high";
+      if (S.trust >= 25) return "mid";
+      return "low";
+    }
+
+    function isEndingOrHiddenScene(scene) {
+      return scene.startsWith("ending_") || scene.startsWith("python_hidden_") || scene.startsWith("amelia_");
+    }
+
+    function clampCandle(value) {
+      return Math.max(0, Math.min(MAX_CANDLE, Math.floor(value)));
+    }
+
+    function shouldTriggerDarknessEnding() {
+      return S.candle === 0 && !isEndingOrHiddenScene(S.scene);
+    }
+
+    function scene1TimeOfDay() {
+      const total = (GAME_START_HOUR * 60 + S.elapsed) % (24 * 60);
+      const hour = Math.floor(total / 60);
+      if (hour >= 6 && hour < 17) return "day";
+      if (hour >= 17 && hour < 18) return "dusk";
+      return "night";
+    }
+
+    const bgm = new Audio(BGM_MAIN);
+    bgm.loop = true;
+    bgm.volume = 0.45;
+
+    const bgmEnd = new Audio(BGM_END);
+    bgmEnd.loop = true;
+    bgmEnd.volume = 0.45;
+
+    const bgmBattle = new Audio(BGM_BATTLE);
+    bgmBattle.loop = true;
+    bgmBattle.volume = 0.45;
+    
+    // 如果你有定義 BGM_BOSS 常數，則使用它；如果沒有，請手動確認這裡的路徑是否正確
+    const bgmBoss = new Audio(typeof BGM_BOSS !== 'undefined' ? BGM_BOSS : "assets/bgm_boss.mp3");
+    bgmBoss.loop = true;
+    bgmBoss.volume = 0.45;
+
+    const sfxAttack = new Audio("assets/sfx_attack.mp3");
+    const sfxHeal = new Audio("assets/sfx_heal.mp3");
+    const sfxMonsterHit = new Audio("assets/sfx_monster.mp3");
+    const victoryCueAudio = new Audio(BGM_END);
+    victoryCueAudio.loop = false;
+    victoryCueAudio.volume = 0.6;
+
+    const ALL_BGMS = {
+      [BGM_MAIN]: bgm,
+      [BGM_END]: bgmEnd,
+      [BGM_BATTLE]: bgmBattle,
+      [typeof BGM_BOSS !== 'undefined' ? BGM_BOSS : "assets/bgm_boss.mp3"]: bgmBoss,
+    };
+
+    let audioEnabled = false;
+    let audioGestureBound = false;
+    let monsterHitEffectTimer = null;
+    let lastRenderedScene = null;
+
+    function getMonsterImageSrc() {
+      if (S.scene === "battle_starscream") return "assets/boss_starscream.png";
+
+      const mName = S.lastVictory ? S.lastVictory.enemyName : S.monsterName;
+      if (!mName) return "assets/mob_shadow.png";
+
+      if (mName.includes("幽魂")) return "assets/mob_ghost.png";
+      if (mName.includes("鎧甲")) return "assets/mob_armor.png";
+      if (mName.includes("深淵守衛")) return "assets/mob_guard.png";
+      if (mName.includes("米糕")) return "assets/boss_migao.png";
+      if (mName.includes("艾莉卡")) return "assets/boss_erica.png";
+
+      return "assets/mob_shadow.png";
+    }
+
+    function targetBgmForScene() {
+      if (S.scene === "victory") return null; // Mute background music during victory fanfare
+      if (S.scene.startsWith("battle_")) {
+        const imgSrc = getMonsterImageSrc();
+        if (imgSrc.includes("boss_")) return typeof BGM_BOSS !== 'undefined' ? BGM_BOSS : "assets/bgm_boss.mp3";
+        return BGM_BATTLE;
+      }
+      return isEndingOrHiddenScene(S.scene) ? BGM_END : BGM_MAIN;
+    }
+
+    function updateAudioButton() {
+      const btn = document.getElementById("audioBtn");
+      btn.textContent = audioEnabled ? "🔊 音樂：開" : "🔈 音樂：關";
+    }
+
+    // 怪物受擊閃紅光動畫（已將壞死代碼徹底切除）
+    function triggerMonsterHitEffect() {
+      const monsterEl = document.getElementById("monsterImg");
+      const sceneEl = document.getElementById("sceneImg");
+      const imgEl = monsterEl && monsterEl.style.display !== "none" ? monsterEl : sceneEl;
+      
+      if (!imgEl || imgEl.style.display === "none") return;
+      
+      if (audioEnabled && typeof sfxMonsterHit !== 'undefined') {
+        sfxMonsterHit.currentTime = 0;
+        sfxMonsterHit.play().catch(() => {});
+      }
+      
+      imgEl.classList.remove("monster-hurt");
+      void imgEl.offsetWidth; // 觸發重繪
+      imgEl.classList.add("monster-hurt");
+      
+      if (monsterHitEffectTimer) clearTimeout(monsterHitEffectTimer);
+      monsterHitEffectTimer = setTimeout(() => {
+        if(imgEl) imgEl.classList.remove("monster-hurt");
+        monsterHitEffectTimer = null;
+      }, 300);
+    }
+
+    // 玩家攻擊刀光特效
+    function triggerPlayerAttackVisual() {
+      const effectEl = document.getElementById("effectLayer");
+      if (effectEl) {
+        effectEl.src = "assets/slash_effect.gif?t=" + new Date().getTime(); // 防止快取
+        effectEl.style.maxWidth = "150px"; 
+        effectEl.style.height = "auto";
+        effectEl.style.display = "block";
+        setTimeout(() => { effectEl.style.display = "none"; }, 500);
+      }
+    }
+
+    // 怪物反擊特效 (支援 無閃爍 GIF 或 紅色殘影突進)
+    function triggerMonsterAttackVisual(attackImgSrc, durationMs = 800) {
+      const monsterImgEl = document.getElementById("monsterImg");
+      const mainCard = document.querySelector(".main");
+      const effectEl = document.getElementById("effectLayer");
+
+      // 1. 畫面震動 (代表主角被打)
+      if (mainCard) {
+        mainCard.style.transform = "translateX(10px)";
+        setTimeout(() => mainCard.style.transform = "translateX(-10px)", 50);
+        setTimeout(() => mainCard.style.transform = "translateX(10px)", 100);
+        setTimeout(() => mainCard.style.transform = "translateX(0)", 150);
+      }
+
+      if (!monsterImgEl || monsterImgEl.style.display === "none" || !effectEl) return;
+
+      // 2. 如果有傳入 GIF 圖片
+      if (attackImgSrc && attackImgSrc.toLowerCase().includes(".gif")) {
+        const cacheBuster = "?t=" + new Date().getTime();
+        
+        effectEl.style.maxWidth = "none";
+        effectEl.style.height = monsterImgEl.clientHeight + "px";
+        effectEl.src = attackImgSrc + cacheBuster;
+        effectEl.style.display = "block";
+        
+        // 隱藏原本的靜態圖，防止閃爍
+        monsterImgEl.style.opacity = "0";
+
+        setTimeout(() => {
+          effectEl.style.display = "none";
+          effectEl.style.maxWidth = "150px";
+          effectEl.style.height = "auto";
+          effectEl.src = ""; 
+          monsterImgEl.style.opacity = "1"; // 動畫結束，顯示原本的靜態圖
+        }, durationMs);
+
+      } else {
+        // 3. 備案：如果沒有 GIF，就觸發紅色殘影突進 (Phantom Strike)
+        effectEl.src = monsterImgEl.src; 
+        effectEl.style.maxWidth = "none";
+        effectEl.style.height = monsterImgEl.clientHeight + "px"; 
+        effectEl.style.display = "block";
+        
+        effectEl.classList.add("phantom-strike-anim");
+        
+        setTimeout(() => {
+          effectEl.classList.remove("phantom-strike-anim");
+          effectEl.style.display = "none";
+          effectEl.style.maxWidth = "150px"; 
+          effectEl.style.height = "auto";
+          effectEl.src = ""; 
+        }, 400);
+      }
+    }
+
+    function battleMonsterAltText() {
+      if (S.scene === "victory") return `勝利演出角色：${S.lastVictory?.enemyName || "敵人"}`;
+      if (S.scene === "battle_farm") return `戰鬥敵人：${S.monsterName || "敵人"}`;
+      return `戰鬥敵人：${BATTLE_ENEMY_CONFIG[S.scene]?.name || "敵人"}`;
+    }
+
+    function playVictoryCue() {
+      if (!audioEnabled) return;
+      victoryCueAudio.currentTime = 0;
+      victoryCueAudio.play().catch(() => {});
+    }
+
+    function tryPlayBgm() {
+      if (!audioEnabled) return;
+      const target = targetBgmForScene();
+      const targetAudio = ALL_BGMS[target];
+      if (!targetAudio) return;
+      const playPromise = targetAudio.play();
+      if (playPromise && typeof playPromise.catch === "function") {
+        playPromise.catch(() => {});
+      }
+    }
+
+    function syncBgmTrack() {
+      const target = targetBgmForScene();
+
+      Object.entries(ALL_BGMS).forEach(([src, audio]) => {
+        if (src !== target && !audio.paused) {
+          audio.pause();
+          audio.currentTime = 0;
+        }
+      });
+
+      if (target && audioEnabled) {
+        const targetAudio = ALL_BGMS[target];
+        if (targetAudio && targetAudio.paused) {
+          targetAudio.play().catch(() => {});
+        }
+      }
+    }
+
+    function bindAudioGesture() {
+      if (audioGestureBound) return;
+      audioGestureBound = true;
+      const resume = () => {
+        if (audioEnabled) tryPlayBgm();
+      };
+      window.addEventListener("pointerdown", resume, { once: true });
+      window.addEventListener("keydown", resume, { once: true });
+    }
+
+    function toggleAudio() {
+      audioEnabled = !audioEnabled;
+      if (audioEnabled) {
+        syncBgmTrack();
+        bindAudioGesture();
+        tryPlayBgm();
+        pushLog("🔊 背景音樂已開啟");
+      } else {
+        victoryCueAudio.pause();
+        victoryCueAudio.currentTime = 0;
+        Object.values(ALL_BGMS).forEach(audio => audio.pause());
+        pushLog("🔈 背景音樂已關閉");
+      }
+      updateAudioButton();
       render();
     }
 
-function endingText() {
-      switch (S.scene) {
-        case "ending_secret":
-          return "【秘密結局】\n你遞出鎮魂歌譜與完整人物線索。紅花第一次真正笑了。";
-        case "ending_true":
-          return "【真結局】\n你證明了案件的關鍵脈絡，紅花終於願意與你並肩作證。";
-        case "ending_trust":
-          return "【信任結局】\n證據未齊，但紅花選擇相信你的判斷。";
-        case "ending_normal":
-          return "【普通結局】\n你帶著部分物證離開，真相仍有缺口。";
-        case "ending_bad":
-          return "【壞結局】\n準備不足就面對紅花，對話在沉默中結束。";
-        case "ending_bad_codefail":
-          return "【壞結局 B】\n你在密碼盒前連續輸錯三次，暗鎖警報響起，調查被迫中止。";
-        case "ending_bad_darkness":
-          return formatTemplateText(TEXT_ARCHIVE["story_texts.py"].ENDING_BAD_DARKNESS);
-        case "ending_killer_map":
-          return "【壞結局】\n你試圖硬闖黑影，下一秒只剩走廊裡急促的腳步與熄滅的燭光。";
-        case "ending_alliance_capture":
-          return "【同盟追兇結局】\n你依線索帶紅花下到地下儲藏室，兇手果然仍在。\n紅花一拳擊倒對方，嫌犯供出：封閉房內有暗門直通館外，\n過往失蹤調查員都是被他誘入地下後殺害。\n收尾後你騎上 GP125，準時下班離開。";
-        case "ending_alliance_solo_bad":
-          return "【壞結局 · 單獨追兇】\n你帶著線索獨自闖入地下儲藏室。\n門後黑影早已等著你——下一秒，刀光落下。\n你終於明白，這條路本該和紅花一起走。";
-        default:
-          return "";
+    function scene1TrustState() {
+      if (S.trust >= 75) return "trusted";
+      if (S.trust >= 50) return "friendly";
+      if (S.trust >= 25) return "peaceful";
+      return "impatient";
+    }
+
+    function scene1ImageCandidates() {
+      const tod = scene1TimeOfDay();
+      const trust = scene1TrustState();
+      return [
+        `${SCENE1_ASSETS}honghua_look_${tod}_${trust}.png`,
+        `${SCENE1_ASSETS}honghua_look_${tod}.png`,
+        `${SCENE1_ASSETS}honghua_look_day.png`,
+        "assets/scenes/prologue.png",   
+      ];
+    }
+
+    function tryImageFallbacks(imgEl, candidates, idx) {
+      if (idx >= candidates.length) return;
+      imgEl.onerror = () => tryImageFallbacks(imgEl, candidates, idx + 1);
+      imgEl.src = candidates[idx];
+    }
+
+    function evidenceCount() {
+      return Object.values(S.evidence).filter(Boolean).length;
+    }
+
+    function clueCount() {
+      return Object.values(S.clues).filter(Boolean).length;
+    }
+
+    function pushLog(text) {
+      S.log.push(text);
+      if (S.log.length > MAX_LOG_ENTRIES) S.log = S.log.slice(-MAX_LOG_ENTRIES);
+    }
+
+    function advance(minutes, reason) {
+      S.elapsed += minutes;
+      
+      // 紅花隨行會使燭火消耗減半
+      let drain = Math.floor(minutes * CANDLE_DRAIN_PER_MINUTE);
+      if (S.flags.honghuaJoined) drain = Math.floor(drain / 2);
+      
+      S.candle = clampCandle(S.candle - drain);
+      if (reason) pushLog(`⏱ +${minutes} 分鐘：${reason}`);
+      if (shouldTriggerDarknessEnding()) {
+        goto("ending_bad_darkness");
+        pushLog("🕯️ 燭火熄滅，黑暗吞噬了你。");
       }
     }
+
+    function addTrust(v, reason) {
+      const next = Math.max(0, Math.min(100, S.trust + v));
+      const diff = next - S.trust;
+      S.trust = next;
+      if (diff !== 0 && reason) pushLog(`💫 信任度 ${diff > 0 ? "+" : ""}${diff}：${reason}`);
+    }
+
+    function goto(scene) {
+      if (
+        S.candle === 0 &&
+        S.scene === "ending_bad_darkness" &&
+        !isEndingOrHiddenScene(scene)
+      ) {
+        render();
+        return;
+      }
+      S.scene = scene;
+      if (scene === "map1") S.currentFloor = 1;
+      if (scene === "map2") S.currentFloor = 2;
+      if (scene === "map3") S.currentFloor = 3;
+      render();
+    }
+
+    function getPlayerAtk() {
+      let atk = S.playerBaseAtk;
+      if (S.evidence.hammer) atk += 15; // 30cm 生鏽鐵鎚的加成
+      return atk;
+    }
+
+    function applyExpAndLevel(expGain) {
+      const gain = Math.max(0, Math.floor(expGain || 0));
+      S.exp += gain;
+      let levelUps = 0;
+      while (S.exp >= S.expNext) {
+        S.exp -= S.expNext;
+        S.level += 1;
+        levelUps += 1;
+        S.maxHp += LEVEL_UP_HP_GAIN;
+        S.playerBaseAtk += LEVEL_UP_ATK_GAIN;
+        S.playerHp = S.maxHp;
+        S.expNext = Math.floor(S.expNext * EXP_NEXT_MULTIPLIER);
+      }
+      return { gain, levelUps };
+    }
+
+    function startVictoryPhase({ enemyName, expGain, waxGain, candleGain, potionGain }) {
+      const safeWaxGain = Math.max(0, Math.floor(waxGain || 0));
+      const safeCandleGain = Math.max(0, Math.floor(candleGain || 0));
+      const safePotionGain = Math.max(0, Math.floor(potionGain || 0));
+      const levelResult = applyExpAndLevel(expGain);
+      S.wax += safeWaxGain;
+      S.candle = Math.min(MAX_CANDLE, S.candle + safeCandleGain);
+      S.potions += safePotionGain;
+      S.lastVictory = {
+        enemyName: enemyName || "敵人",
+        expGain: levelResult.gain,
+        waxGain: safeWaxGain,
+        candleGain: safeCandleGain,
+        potionGain: safePotionGain,
+        levelUps: levelResult.levelUps,
+      };
+      goto("victory");
+    }
+
+    function processVictory(expGain, waxGain, potionGain, candleGain) {
+      S.farmZone = "";
+      startVictoryPhase({
+        enemyName: S.monsterName,
+        expGain,
+        waxGain,
+        candleGain,
+        potionGain,
+      });
+    }
+
+    function tryFloorTransition(targetFloor, minutes, reason) {
+      advance(minutes, reason);
+      S.currentFloor = targetFloor;
+
+      if (S.elapsed > STALKER_ENCOUNTER_ELAPSED && Math.random() < STALKER_ENCOUNTER_CHANCE) {
+        goto("killer_encounter");
+        return;
+      }
+
+      if (Math.random() < 0.20 && !isEndingOrHiddenScene(S.scene)) {
+        S.monsterHp = 40;
+        S.monsterMaxHp = 40;
+        pushLog("⚠️ 感覺到黑暗中有東西靠近... 進入戰鬥！");
+        goto("battle_random");
+        return;
+      }
+
+      goto(`map${targetFloor}`);
+    }
+
+    function normalizeAnswer(ans) {
+      return String(ans || "").trim().replace(/\s+/g, "");
+    }
+
+    function startDeductionQuiz() {
+      for (let i = 0; i < DEDUCTION_QUESTIONS.length; i += 1) {
+        const { question, answer } = DEDUCTION_QUESTIONS[i];
+        const input = prompt(question);
+        if (input === null) {
+          pushLog("📝 你暫停了推理。");
+          goto("map3");
+          return;
+        }
+        if (normalizeAnswer(input) !== normalizeAnswer(answer)) {
+          pushLog(`❌ 推理中斷：第 ${i + 1} 題答案不正確。`);
+          goto("map3");
+          return;
+        }
+      }
+      S.flags.deductionComplete = true;
+      pushLog("🧠 推理完成：你整理出完整案件邏輯。");
+      goto("confront");
+    }
+
+    function clickOptionByMatch(match) {
+      const buttons = currentSceneOptionButtons;
+      const normalize = (text) => (text || "").trim();
+      const exact = buttons.find((b) => normalize(b.textContent) === match);
+      if (exact) {
+        exact.click();
+        return true;
+      }
+      const starts = buttons.filter((b) => normalize(b.textContent).startsWith(match));
+      if (starts.length === 1) {
+        starts[0].click();
+        return true;
+      }
+      const includes = buttons.filter((b) => normalize(b.textContent).includes(match));
+      if (includes.length === 1) {
+        includes[0].click();
+        return true;
+      }
+      return false;
+    }
+
+    function setSceneUiInteractivity(enabled) {
+      const pointerEvents = enabled ? "auto" : "none";
+      document.getElementById("sceneHotspots").style.pointerEvents = pointerEvents;
+      document.getElementById("options").style.pointerEvents = pointerEvents;
+    }
+
+    function renderHotspots() {
+      const wrap = document.getElementById("sceneHotspots");
+      wrap.innerHTML = "";
+      const imgSrc = SCENE_IMAGES[S.scene] || "";
+      const defs = SCENE_HOTSPOTS[S.scene] || [];
+      if (!imgSrc || !defs.length) {
+        wrap.style.display = "none";
+        return;
+      }
+      wrap.style.display = "block";
+      defs.forEach((hotspot) => {
+        if (typeof hotspot.visibleWhen === "function" && !hotspot.visibleWhen(S)) return;
+        const [left, top, width, height] = hotspot.rect;
+        const hotspotBtn = document.createElement("button");
+        hotspotBtn.type = "button";
+        hotspotBtn.className = "scene-hotspot";
+        hotspotBtn.textContent = hotspot.label;
+        hotspotBtn.title = hotspot.label;
+        hotspotBtn.setAttribute("aria-label", `互動：${hotspot.label}`);
+        hotspotBtn.style.left = `${left}%`;
+        hotspotBtn.style.top = `${top}%`;
+        hotspotBtn.style.width = `${width}%`;
+        hotspotBtn.style.height = `${height}%`;
+        hotspotBtn.onclick = () => {
+          const centerX = left + (width / 2);
+          const centerY = top + (height / 2);
+          const previousPlayerX = S.playerX;
+          const previousPlayerY = S.playerY;
+
+          if (S.flags.honghuaJoined) {
+            S.honghuaX = previousPlayerX;
+            S.honghuaY = previousPlayerY;
+            const honghuaMarker = document.getElementById("honghuaMarker");
+            honghuaMarker.style.left = `${S.honghuaX}%`;
+            honghuaMarker.style.top = `${S.honghuaY}%`;
+          }
+
+          S.playerX = centerX;
+          S.playerY = centerY;
+          const marker = document.getElementById("playerMarker");
+          marker.style.left = `${centerX}%`;
+          marker.style.top = `${centerY}%`;
+          const sceneAtClick = S.scene;
+          const moveToken = ++hotspotMoveToken;
+
+          setSceneUiInteractivity(false);
+          if (hotspotMoveTimeoutId !== null) {
+            clearTimeout(hotspotMoveTimeoutId);
+          }
+
+          hotspotMoveTimeoutId = setTimeout(() => {
+            hotspotMoveTimeoutId = null;
+            if (moveToken !== hotspotMoveToken || S.scene !== sceneAtClick) {
+              return;
+            }
+            setSceneUiInteractivity(true);
+            if (!clickOptionByMatch(hotspot.match)) {
+              pushLog(`⚠ 互動區「${hotspot.label}」暫時無法使用，請改用按鈕選項。`);
+              render();
+            }
+          }, MARKER_MOVE_DURATION_MS);
+        };
+        wrap.appendChild(hotspotBtn);
+      });
+    }
+
+
+
+    function render() {
+      applyMetaTheme(isEndingOrHiddenScene(S.scene) && !S.scene.includes("darkness") && !S.scene.includes("killer"));
+
+      const clockEl = document.getElementById("clock");
+      if (S.scene === "ending_bad" || S.scene === "ending_normal" || S.scene === "ending_bad_codefail") {
+        clockEl.textContent = Math.random() > 0.5 ? "PING: 999ms" : "伺服器連線不穩";
+        clockEl.style.color = "#d77777";
+      } else {
+        clockEl.textContent = nowClock();
+        clockEl.style.color = "";
+      }
+
+      document.getElementById("dangerState").innerHTML = dangerOn()
+        ? '<span class="danger">危險（2AM 後）</span>'
+        : "一般";
+      document.getElementById("candleText").textContent = `${S.candle}/${MAX_CANDLE}`;
+      document.getElementById("candleBar").style.width = `${S.candle}%`;
+      document.getElementById("candleBar").setAttribute("aria-valuenow", String(S.candle));
+      document.getElementById("trustText").textContent = `${S.trust}/100`;
+      document.getElementById("trustBar").style.width = `${S.trust}%`;
+      document.getElementById("evidenceText").textContent = `${evidenceCount()}/3`;
+      document.getElementById("clueText").textContent = `${clueCount()}/3`;
+
+      const evidenceNames = [["hammer", "生鏽鎚子"], ["clover", "四葉草"], ["jeans", "YV 牛仔褲"]];
+      const clueNames = [["honghua", "紅花筆記"], ["amelia", "艾蜜莉亞字條"], ["starscream", "天王星供詞"]];
+      document.getElementById("evidenceChips").innerHTML =
+        evidenceNames.filter(([k]) => S.evidence[k]).map(([, n]) => `<span class="chip">${n}</span>`).join("") || '<span class="chip">尚未取得</span>';
+      document.getElementById("clueChips").innerHTML =
+        clueNames.filter(([k]) => S.clues[k]).map(([, n]) => `<span class="chip">${n}</span>`).join("") || '<span class="chip">尚未取得</span>';
+
+      const isEnding = S.scene.startsWith("ending_");
+      const inArchive = S.scene.startsWith("archive_");
+      const isAmelia = S.scene.startsWith("amelia_");
+      const isHidden = S.scene.startsWith("python_hidden_") || isAmelia;
+      const isBattle = S.scene.startsWith("battle_");
+      const mainEl = document.querySelector(".main");
+      if (mainEl) mainEl.classList.toggle("battle-mode", isBattle);
+      if (mainEl) mainEl.classList.toggle("victory-mode", S.scene === "victory");
+
+      document.getElementById("sceneName").textContent =
+        (isEnding || isHidden) ? "ENDING" : (inArchive ? "TEXT ARCHIVE" : (SCENE_DISPLAY_NAMES[S.scene] || S.scene.toUpperCase()));
+
+      const imgEl = document.getElementById("sceneImg");
+      const monsterEl = document.getElementById("monsterImg");
+      
+      if (SCENE1_SCENES.has(S.scene)) {
+        imgEl.style.display = "block";
+        tryImageFallbacks(imgEl, scene1ImageCandidates(), 0);
+      } else {
+        imgEl.onerror = null;
+        const imgSrc = SCENE_IMAGES[S.scene] || "";
+        imgEl.src = imgSrc;
+        imgEl.style.display = imgSrc ? "block" : "none";
+      }
+      imgEl.alt = SCENE_ALT_TEXTS[S.scene] || `${S.scene.toUpperCase()} 場景`;
+      
+      const mapViewport = MAP_SCENE_VIEWPORTS[S.scene];
+      if (mapViewport) {
+        imgEl.style.objectPosition = mapViewport.objectPosition;
+        imgEl.style.transform = `scale(${mapViewport.scale})`;
+      } else {
+        imgEl.style.objectPosition = "50% 50%";
+        imgEl.style.transform = "scale(1)";
+      }
+
+      if (monsterEl) {
+        const showMonsterLayer = isBattle || S.scene === "victory";
+        if (showMonsterLayer) {
+          monsterEl.onerror = () => {
+            monsterEl.onerror = null;
+            monsterEl.src = "assets/mob_shadow.png";
+          };
+          monsterEl.style.display = "block";
+          imgEl.style.filter = "brightness(0.4)";
+          monsterEl.src = getMonsterImageSrc();
+          monsterEl.alt = battleMonsterAltText();
+          monsterEl.style.opacity = "1"; // 確保不會因為戰鬥結束後卡在隱形
+        } else {
+          monsterEl.style.display = "none";
+          imgEl.style.filter = "none";
+          monsterEl.removeAttribute("src");
+          monsterEl.alt = "";
+        }
+      }
+
+      const sceneEl = document.getElementById("sceneText");
+      if (isEnding) {
+        sceneEl.innerHTML = `<span class="ending">${endingText()}</span>`;
+      } else if (isHidden) {
+        sceneEl.innerHTML = `<span class="ending" style="color: #1a202c; font-weight: bold;">${sceneText(S.scene)}</span>`;
+      } else {
+        sceneEl.textContent = sceneText(S.scene);
+      }
+
+      const safeHp = Number.isFinite(S.playerHp) ? S.playerHp : 0;
+      const safeMaxHp = Number.isFinite(S.maxHp) ? S.maxHp : 100;
+      const safeWax = Number.isFinite(S.wax) ? S.wax : 0;
+      const safePotions = Number.isFinite(S.potions) ? S.potions : 0;
+      const safeBossHp = Number.isFinite(S.bossHp) ? Math.max(0, S.bossHp) : 0;
+      const safeBossMaxHp = Number.isFinite(S.bossMaxHp) ? S.bossMaxHp : 150;
+      const safeMonsterHp = Number.isFinite(S.monsterHp) ? Math.max(0, S.monsterHp) : 0;
+      const safeMonsterMaxHp = Number.isFinite(S.monsterMaxHp) ? S.monsterMaxHp : 0;
+      const safeLevel = Number.isFinite(S.level) ? Math.max(1, Math.floor(S.level)) : 1;
+      const safeExp = Number.isFinite(S.exp) ? Math.max(0, Math.floor(S.exp)) : 0;
+      const safeExpNext = Number.isFinite(S.expNext) ? Math.max(1, Math.floor(S.expNext)) : 50;
+
+      document.getElementById("statusLine").innerHTML = inArchive
+        ? "完整文本檔案庫：已將 story_texts.py / character_texts.py 內嵌到單一 HTML（可離線瀏覽）"
+        : `<strong>🎖️ Lv: ${safeLevel} (EXP: ${safeExp}/${safeExpNext}) &nbsp;|&nbsp; ❤️ HP: ${safeHp} / ${safeMaxHp} &nbsp;|&nbsp; 🕯️ 殘蠟: ${safeWax} &nbsp;|&nbsp; 💊 檳榔: ${safePotions}</strong>`;
+
+      const battleStatusWindowEl = document.getElementById("battleStatusWindow");
+      if (isBattle) {
+        const enemyHpPools = {
+          boss: { hp: safeBossHp, maxHp: safeBossMaxHp },
+          monster: { hp: safeMonsterHp, maxHp: safeMonsterMaxHp },
+        };
+        const enemyConfig = BATTLE_ENEMY_CONFIG[S.scene] || DEFAULT_BATTLE_ENEMY_CONFIG;
+        const enemyPool = enemyHpPools[enemyConfig.hpPool] || enemyHpPools.monster;
+        const enemyName = S.scene === "battle_farm" ? (S.monsterName || enemyConfig.name) : enemyConfig.name;
+        const enemyStatus = `👹 ${enemyName}\n   HP: ${enemyPool.hp} / ${enemyPool.maxHp}`;
+        
+        battleStatusWindowEl.replaceChildren();
+        [
+          `👤 皇家警察 Yv\n   HP: ${safeHp} / ${safeMaxHp}`,
+          `💊 備用檳榔: ${safePotions} 顆`,
+          enemyStatus
+        ].forEach((line) => {
+          const lineEl = document.createElement("div");
+          lineEl.style.whiteSpace = "pre-wrap";
+          lineEl.textContent = line;
+          battleStatusWindowEl.appendChild(lineEl);
+        });
+        battleStatusWindowEl.style.display = "flex";
+      } else {
+        battleStatusWindowEl.style.display = "none";
+        battleStatusWindowEl.replaceChildren();
+      }
+
+      const optionsEl = document.getElementById("options");
+      optionsEl.innerHTML = "";
+      const opts = makeOptions();
+      opts.forEach(([label, fn]) => {
+        const b = document.createElement("button");
+        b.textContent = label;
+        b.onclick = fn;
+        optionsEl.appendChild(b);
+      });
+      if (isEnding) {
+        const restart = document.createElement("button");
+        restart.textContent = "重新開始";
+        restart.onclick = () => { S = initialState(); render(); };
+        optionsEl.appendChild(restart);
+      }
+      setSceneUiInteractivity(true);
+      currentSceneOptionButtons = [...optionsEl.querySelectorAll("button")];
+      renderHotspots();
+      syncBgmTrack();
+      
+      if (S.scene === "victory" && lastRenderedScene !== "victory" && audioEnabled) {
+        playVictoryCue();
+      }
+      lastRenderedScene = S.scene;
+      updateAudioButton();
+
+      const marker = document.getElementById("playerMarker");
+      const honghuaMarker = document.getElementById("honghuaMarker");
+      marker.classList.toggle("is-amelia", isAmelia);
+      
+      if (MAP_SCENES.has(S.scene)) {
+        marker.style.display = "block";
+        marker.style.left = `${S.playerX}%`;
+        marker.style.top = `${S.playerY}%`;
+        if (S.flags.honghuaJoined) {
+          honghuaMarker.style.display = "block";
+          honghuaMarker.style.left = `${S.honghuaX}%`;
+          honghuaMarker.style.top = `${S.honghuaY}%`;
+        } else {
+          honghuaMarker.style.display = "none";
+        }
+      } else {
+        marker.style.display = "none";
+        honghuaMarker.style.display = "none";
+      }
+
+      document.getElementById("log").innerHTML = S.log.map(x => `<div>${x}</div>`).join("");
+    }
+
+    function normalizeLoadedState(state) {
+      const merged = deepClone(initialState());
+      Object.assign(merged, state || {});
+      merged.evidence = Object.assign({}, DEFAULT_EVIDENCE, state?.evidence || {});
+      merged.clues = Object.assign({}, DEFAULT_CLUES, state?.clues || {});
+      merged.flags = Object.assign({}, DEFAULT_FLAGS, state?.flags || {});
+      merged.archive = Object.assign({}, DEFAULT_ARCHIVE, state?.archive || {});
+      if (typeof merged.candle !== "number" || Number.isNaN(merged.candle)) merged.candle = MAX_CANDLE;
+      merged.candle = clampCandle(merged.candle);
+      if (!Array.isArray(merged.log)) merged.log = [DEFAULT_LOG_MESSAGE];
+      if (!Array.isArray(merged.booksOrder)) merged.booksOrder = [];
+      if (typeof merged.passwordFails !== "number") merged.passwordFails = 0;
+      if (!VALID_FLOORS.includes(merged.currentFloor)) merged.currentFloor = 3;
+      if (!Number.isFinite(merged.playerX)) merged.playerX = DEFAULT_PLAYER_X;
+      if (!Number.isFinite(merged.playerY)) merged.playerY = DEFAULT_PLAYER_Y;
+      if (!Number.isFinite(merged.honghuaX)) merged.honghuaX = DEFAULT_HONGHUA_X;
+      if (!Number.isFinite(merged.honghuaY)) merged.honghuaY = DEFAULT_HONGHUA_Y;
+      if (!Number.isFinite(merged.playerHp)) merged.playerHp = 100;
+      if (!Number.isFinite(merged.maxHp)) merged.maxHp = 100;
+      if (!Number.isFinite(merged.playerBaseAtk)) merged.playerBaseAtk = 10;
+      if (!Number.isFinite(merged.potions)) merged.potions = 3;
+      if (!Number.isFinite(merged.wax)) merged.wax = 0;
+      if (!Number.isFinite(merged.bossHp)) merged.bossHp = 150;
+      if (!Number.isFinite(merged.bossMaxHp)) merged.bossMaxHp = 150;
+      if (typeof merged.isDefending !== "boolean") merged.isDefending = false;
+      if (!Number.isFinite(merged.monsterHp)) merged.monsterHp = 0;
+      if (!Number.isFinite(merged.monsterMaxHp)) merged.monsterMaxHp = 0;
+      if (!Number.isFinite(merged.monsterAtk)) merged.monsterAtk = 0;
+      if (typeof merged.monsterName !== "string") merged.monsterName = "敵人";
+      if (typeof merged.farmZone !== "string") merged.farmZone = "";
+      if (!Number.isFinite(merged.lowZoneKills)) merged.lowZoneKills = 0;
+      if (!Number.isFinite(merged.highZoneKills)) merged.highZoneKills = 0;
+      if (!Number.isFinite(merged.level)) merged.level = 1;
+      if (!Number.isFinite(merged.exp)) merged.exp = 0;
+      if (!Number.isFinite(merged.expNext)) merged.expNext = 50;
+      merged.level = Math.max(1, Math.floor(merged.level));
+      merged.exp = Math.max(0, Math.floor(merged.exp));
+      merged.expNext = Math.max(1, Math.floor(merged.expNext));
+      if (merged.lastVictory && typeof merged.lastVictory !== "object") merged.lastVictory = null;
+      return merged;
+    }
+
+    function saveGame() {
+      const data = { version: SAVE_VERSION, state: S };
+      localStorage.setItem(SAVE_KEY, JSON.stringify(data));
+      pushLog("💾 已儲存至瀏覽器 localStorage");
+      render();
+    }
+
+    function loadGame() {
+      const raw = localStorage.getItem(SAVE_KEY);
+      if (!raw) {
+        pushLog("⚠ 找不到存檔");
+        render();
+        return;
+      }
+      try {
+        const data = JSON.parse(raw);
+        if (!data || typeof data !== "object") {
+          pushLog("⚠ 存檔格式錯誤，已忽略");
+          render();
+          return;
+        }
+        if (data.version !== SAVE_VERSION) {
+          pushLog(`⚠ 存檔版本不相容（存檔:${data.version}｜當前:${SAVE_VERSION}），已忽略`);
+          render();
+          return;
+        }
+        if (!data.state || typeof data.state !== "object") {
+          pushLog("⚠ 存檔缺少遊戲狀態資料，已忽略");
+          render();
+          return;
+        }
+        S = normalizeLoadedState(data.state);
+        pushLog("📂 已載入存檔");
+      } catch (err) {
+        pushLog(`⚠ 存檔損毀，無法載入（${err?.message || "未知錯誤"}）`);
+      }
+      render();
+    }     
+  
