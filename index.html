@@ -301,7 +301,7 @@
       <div class="scene-img-wrap">
         <img id="sceneImg" src="" alt="" />
         <img id="monsterImg" src="" alt="" aria-hidden="true" />
-        <img id="effectLayer" src="" alt="" aria-hidden="true" />
+        <img id="effectLayer" alt="" aria-hidden="true" />
         <div id="sceneHotspots" class="scene-hotspots" aria-label="場景互動熱區"></div>
         <div id="honghuaMarker" aria-hidden="true"></div>
         <div id="playerMarker" aria-hidden="true"></div>
@@ -988,7 +988,7 @@ const TEXT_ARCHIVE = {
       if (effectEl) {
         setEffectLayerSource(effectEl, imgEl);
         effectEl.classList.remove("active");
-        void effectEl.offsetWidth; // Force reflow so repeated hits can restart animation immediately.
+        void effectEl.offsetWidth; // Force layout recalculation so repeated hits can restart animation immediately.
         effectEl.classList.add("active");
         if (overlayEffectTimer) clearTimeout(overlayEffectTimer);
         overlayEffectTimer = setTimeout(() => {
@@ -1000,6 +1000,7 @@ const TEXT_ARCHIVE = {
 
     function setEffectLayerSource(effectEl, imgEl) {
       if (!effectEl || !imgEl) return;
+      // Prefer currentSrc to mirror the browser's resolved source when responsive selection is in effect.
       const effectSrc = imgEl.currentSrc || imgEl.src || "";
       if (effectSrc) {
         if (effectEl.src !== effectSrc) effectEl.src = effectSrc;
