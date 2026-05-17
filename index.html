@@ -988,6 +988,7 @@ const TEXT_ARCHIVE = {
       if (effectEl) {
         setEffectLayerSource(effectEl, imgEl);
         effectEl.classList.remove("active");
+        // Force reflow so repeated hits can restart the same CSS animation immediately.
         void effectEl.offsetWidth;
         effectEl.classList.add("active");
         if (overlayEffectTimer) clearTimeout(overlayEffectTimer);
@@ -1001,7 +1002,7 @@ const TEXT_ARCHIVE = {
     function setEffectLayerSource(effectEl, imgEl) {
       if (!effectEl || !imgEl) return;
       const effectSrc = imgEl.currentSrc || imgEl.src || "";
-      if (effectSrc) effectEl.src = effectSrc;
+      if (effectSrc && effectEl.src !== effectSrc) effectEl.src = effectSrc;
     }
 
     function playVictoryCue() {
