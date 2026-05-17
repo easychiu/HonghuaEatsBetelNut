@@ -89,11 +89,18 @@ python game.py                     # 啟動遊戲
 - 更多互動音效與完整 UI 動畫
 - 與 Python 版所有場景細節逐項對齊（含隱藏線後續章節完整互動）
 
-### Web 版缺圖檢查（`index.html` 實際引用）
+### Web 版缺圖／缺音樂檢查（`index.html` 實際引用）
 
-目前僅下列檔案被 Web 版引用但 `assets/scenes/` 尚未找到：
+目前下列檔案被 Web 版引用，但專案內尚未找到：
 
-- `assets/scenes/normal_end.png`
+- 圖片
+  - `assets/honghua.png`
+  - `assets/scenes/normal_end.png`
+- 音樂 / 音效
+  - `assets/bgm_battle.mp3`
+  - `assets/sfx_attack.mp3`
+  - `assets/sfx_heal.mp3`
+  - `assets/sfx_monster.mp3`
 
 ### Copilot 產圖語法（維護者選用，可直接貼到 Copilot Chat）
 
