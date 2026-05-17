@@ -360,6 +360,7 @@
       killer_encounter: "assets/scenes/hall.png",
       battle_starscream: "assets/scenes/basement_deep.png",
       battle_random: "assets/scenes/basement.png",
+      battle_farm:   "assets/scenes/basement.png",
       deduction: "assets/scenes/desk.png",
       python_hidden_start: "assets/scenes/true_end.png",
       python_hidden_london: "assets/scenes/true_end.png",
@@ -729,6 +730,7 @@ const TEXT_ARCHIVE = {
       alliance_followup:"同盟追兇",
       battle_starscream: "地下儲藏室 · 死鬥",
       battle_random: "突發遭遇戰",
+      battle_farm:   "刷怪房",
       python_hidden_start:"隱藏線：夢醒時分",
       python_hidden_london:"隱藏線：航向倫敦",
       amelia_hub:          "水手服同好會工會據點",
@@ -816,7 +818,9 @@ const TEXT_ARCHIVE = {
       bossMaxHp: 150,
       isDefending: false,
       monsterHp: 0,
-      monsterMaxHp: 0
+      monsterMaxHp: 0,
+      monsterAtk: 0,
+      monsterName: "敵人"
     });
 
     let S = initialState();
@@ -867,10 +871,30 @@ const TEXT_ARCHIVE = {
     const bgm = new Audio(BGM_MAIN);
     bgm.loop = true;
     bgm.volume = 0.45;
+
+    const bgmEnd = new Audio(BGM_END);
+    bgmEnd.loop = true;
+    bgmEnd.volume = 0.45;
+
+    const bgmBattle = new Audio("assets/bgm_battle.mp3");
+    bgmBattle.loop = true;
+    bgmBattle.volume = 0.45;
+
+    const sfxAttack = new Audio("assets/sfx_attack.mp3");
+    const sfxHeal = new Audio("assets/sfx_heal.mp3");
+    const sfxMonsterHit = new Audio("assets/sfx_monster.mp3");
+
+    const ALL_BGMS = {
+      [BGM_MAIN]: bgm,
+      [BGM_END]: bgmEnd,
+      "assets/bgm_battle.mp3": bgmBattle,
+    };
+
     let audioEnabled = false;
     let audioGestureBound = false;
 
     function targetBgmForScene() {
+      if (S.scene.startsWith("battle_")) return "assets/bgm_battle.mp3";
       return isEndingOrHiddenScene(S.scene) ? BGM_END : BGM_MAIN;
     }
 
@@ -881,35 +905,25 @@ const TEXT_ARCHIVE = {
 
     function tryPlayBgm() {
       if (!audioEnabled) return;
-      const playPromise = bgm.play();
+      const target = targetBgmForScene();
+      const targetAudio = ALL_BGMS[target];
+      if (!targetAudio) return;
+      const playPromise = targetAudio.play();
       if (playPromise && typeof playPromise.catch === "function") {
         playPromise.catch(() => {});
       }
     }
 
-    function isCurrentBgmTarget(target) {
-      if (!bgm.src) return false;
-      try {
-        const pathname = new URL(bgm.src, window.location.href).pathname;
-        const basename = target.split("/").pop();
-        return pathname.endsWith(`/${target}`) || (basename ? pathname.endsWith(`/${basename}`) : false);
-      } catch (_) {
-        return bgm.src.includes(target);
-      }
-    }
-
     function syncBgmTrack() {
       const target = targetBgmForScene();
-      if (isCurrentBgmTarget(target)) {
-        tryPlayBgm();
-        return;
-      }
-      const wasPaused = bgm.paused;
-      bgm.src = target;
-      bgm.loop = true;
-      if (!wasPaused || audioEnabled) {
-        bgm.currentTime = 0;
-        tryPlayBgm();
+      const targetAudio = ALL_BGMS[target];
+      if (!targetAudio) return;
+      Object.entries(ALL_BGMS).forEach(([src, audio]) => {
+        if (src !== target && !audio.paused) audio.pause();
+      });
+      if (audioEnabled && targetAudio.paused) {
+        targetAudio.currentTime = 0;
+        targetAudio.play().catch(() => {});
       }
     }
 
@@ -931,7 +945,7 @@ const TEXT_ARCHIVE = {
         tryPlayBgm();
         pushLog("🔊 背景音樂已開啟");
       } else {
-        bgm.pause();
+        Object.values(ALL_BGMS).forEach(audio => audio.pause());
         pushLog("🔈 背景音樂已關閉");
       }
       updateAudioButton();
@@ -1197,6 +1211,9 @@ const TEXT_ARCHIVE = {
       if (key === "battle_random") {
         return `【突發戰鬥】\n走廊的陰影中，一具『徘徊的黑影』朝你撲來！\n\n[皇家警察 Yv]\n❤️ HP: ${S.playerHp} / ${S.maxHp}\n\n[徘徊的黑影]\n❤️ HP: ${S.monsterHp} / ${S.monsterMaxHp}\n\n請選擇行動：`;
       }
+      if (key === "battle_farm") {
+        return `【戰鬥】\n你遭遇了『${S.monsterName}』！\n\n[皇家警察 Yv]\n❤️ HP: ${S.playerHp} / ${S.maxHp}\n\n[${S.monsterName}]\n❤️ HP: ${S.monsterHp} / ${S.monsterMaxHp}\n\n請選擇行動：`;
+      }
       if (key === "python_hidden_start") {
         return formatTemplateText(TEXT_ARCHIVE["story_texts.py"]?.ENDING_HIDDEN || "【隱藏結局】夢醒時分。");
       }
@@ -1293,7 +1310,11 @@ const TEXT_ARCHIVE = {
             }
             goto("confront");
           }]);
-          opts.push(["前往私人研究室", () => { advance(15, "進入私人研究室"); goto("map3"); }]);
+          opts.push(["前往私人研究室 (高難度刷怪區)", () => {
+            advance(20, "進入私人研究室");
+            S.monsterHp = 100; S.monsterMaxHp = 100; S.monsterAtk = 20; S.monsterName = "深淵守衛";
+            goto("battle_farm");
+          }]);
           opts.push(["前往廢棄閱覽室", () => { advance(20, "進入廢棄閱覽室"); goto("abandonedRoom"); }]);
           opts.push(["前往封閉儲藏室（危險）", () => { advance(20, "靠近封閉儲藏室"); goto("basement"); }]);
           opts.push(["查看一樓", () => { tryFloorTransition(1, 30, "前往 1F"); }]);
@@ -1303,15 +1324,31 @@ const TEXT_ARCHIVE = {
           opts.push(["前往研究室A（研究桌）", () => { advance(20, "閱讀案情筆記"); goto("desk"); }]);
           opts.push(["前往研究室B（窗邊）", () => { advance(20, "查看窗台字條"); goto("window"); }]);
           opts.push(["前往檔案室（禁書區）", () => { advance(15, "進入禁書區"); goto("archiveRoom"); }]);
-          opts.push(["前往會議廳II", () => { advance(15, "進入會議廳II"); goto("map2"); }]);
+          opts.push(["前往會議廳II (中難度刷怪區)", () => {
+            advance(15, "進入會議廳II");
+            S.monsterHp = 60; S.monsterMaxHp = 60; S.monsterAtk = 12; S.monsterName = "殘破的鎧甲";
+            goto("battle_farm");
+          }]);
           opts.push(["前往修復工坊", () => { advance(20, "進入修復工坊"); goto("workshop"); }]);
-          opts.push(["前往二樓迴廊", () => { advance(15, "探索二樓迴廊"); goto("map2"); }]);
+          opts.push(["前往二樓迴廊 (中難度刷怪區)", () => {
+            advance(15, "探索二樓迴廊");
+            S.monsterHp = 60; S.monsterMaxHp = 60; S.monsterAtk = 12; S.monsterName = "殘破的鎧甲";
+            goto("battle_farm");
+          }]);
           opts.push(["查看一樓", () => { tryFloorTransition(1, 20, "前往 1F"); }]);
           opts.push(["查看三樓", () => { tryFloorTransition(3, 20, "前往 3F"); }]);
           break;
         case "map1":
-          opts.push(["前往閱覽室A", () => { advance(15, "進入閱覽室A"); goto("map1"); }]);
-          opts.push(["前往閱覽室B", () => { advance(15, "進入閱覽室B"); goto("map1"); }]);
+          opts.push(["前往閱覽室A (低難度刷怪區)", () => {
+            advance(10, "進入閱覽室A尋找物資");
+            S.monsterHp = 30; S.monsterMaxHp = 30; S.monsterAtk = 5; S.monsterName = "迷惘的幽魂";
+            goto("battle_farm");
+          }]);
+          opts.push(["前往閱覽室B (低難度刷怪區)", () => {
+            advance(10, "進入閱覽室B尋找物資");
+            S.monsterHp = 30; S.monsterMaxHp = 30; S.monsterAtk = 5; S.monsterName = "迷惘的幽魂";
+            goto("battle_farm");
+          }]);
           opts.push(["前往收藏室（古籍庫）", () => { advance(20, "進入收藏室"); goto("collectionRoom"); }]);
           opts.push(["前往會議廳I", () => { advance(20, "進入會議廳I"); goto("map1"); }]);
           opts.push(["前往管理室走廊", () => { advance(15, "巡查管理室走廊"); goto("map1"); }]);
@@ -1641,6 +1678,55 @@ const TEXT_ARCHIVE = {
               let mDmg = Math.floor(Math.random() * 8) + 2;
               S.playerHp -= mDmg;
               pushLog(`🩸 逃跑失敗！黑影趁機攻擊，受到 ${mDmg} 點傷害。`);
+              if (S.playerHp <= 0) S.scene = "ending_alliance_solo_bad";
+              render();
+            }
+          }]);
+          break;
+
+        case "battle_farm":
+          opts.push(["🗡️ 攻擊", () => {
+            if (audioEnabled) sfxAttack.play().catch(() => {});
+
+            let dmg = getPlayerAtk() + Math.floor(Math.random() * 5);
+            S.monsterHp -= dmg;
+            pushLog(`⚔️ 你擊中 ${S.monsterName}，造成 ${dmg} 點傷害！`);
+
+            if (S.monsterHp <= 0) {
+              let waxDrop = S.monsterMaxHp > 50 ? (Math.floor(Math.random() * 3) + 2) : 1;
+              let candleRestore = S.monsterMaxHp > 50 ? 25 : 10;
+
+              S.wax += waxDrop;
+              S.candle = Math.min(MAX_CANDLE, S.candle + candleRestore);
+
+              pushLog(`🎉 戰鬥勝利！恢復了 ${candleRestore} 點燭火，獲得了 ${waxDrop} 塊【殘蠟】。`);
+
+              if (Math.random() < (S.monsterMaxHp / 200)) {
+                S.potions += 1;
+                pushLog("🎁 額外掉落了一顆【急救檳榔】！");
+              }
+              goto(`map${S.currentFloor}`);
+              return;
+            }
+
+            if (audioEnabled) setTimeout(() => sfxMonsterHit.play().catch(() => {}), 300);
+            let mDmg = Math.floor(Math.random() * S.monsterAtk) + Math.floor(S.monsterAtk / 2);
+            S.playerHp -= mDmg;
+            pushLog(`🩸 ${S.monsterName} 反擊，你受到 ${mDmg} 點傷害。`);
+
+            if (S.playerHp <= 0) S.scene = "ending_alliance_solo_bad";
+            render();
+          }]);
+
+          opts.push(["🏃 逃跑", () => {
+            if (Math.random() < 0.7) {
+              pushLog("💨 你趁隙逃出了房間！");
+              goto(`map${S.currentFloor}`);
+            } else {
+              if (audioEnabled) sfxMonsterHit.play().catch(() => {});
+              let mDmg = S.monsterAtk;
+              S.playerHp -= mDmg;
+              pushLog(`🩸 逃跑失敗！被 ${S.monsterName} 追擊，受到 ${mDmg} 點傷害。`);
               if (S.playerHp <= 0) S.scene = "ending_alliance_solo_bad";
               render();
             }
@@ -2031,7 +2117,8 @@ const TEXT_ARCHIVE = {
         };
         const enemyConfig = BATTLE_ENEMY_CONFIG[S.scene] || DEFAULT_BATTLE_ENEMY_CONFIG;
         const enemyPool = enemyHpPools[enemyConfig.hpPool] || enemyHpPools.monster;
-        const enemyStatus = `👹 ${enemyConfig.name} HP: ${enemyPool.hp} / ${enemyPool.maxHp}`;
+        const enemyName = S.scene === "battle_farm" ? (S.monsterName || enemyConfig.name) : enemyConfig.name;
+        const enemyStatus = `👹 ${enemyName} HP: ${enemyPool.hp} / ${enemyPool.maxHp}`;
         battleStatusWindowEl.replaceChildren();
         [`❤️ HP ${safeHp}/${safeMaxHp}`, `💊 檳榔 ${safePotions}`, enemyStatus].forEach((line) => {
           const lineEl = document.createElement("div");
@@ -2113,6 +2200,8 @@ const TEXT_ARCHIVE = {
       if (typeof merged.isDefending !== "boolean") merged.isDefending = false;
       if (!Number.isFinite(merged.monsterHp)) merged.monsterHp = 0;
       if (!Number.isFinite(merged.monsterMaxHp)) merged.monsterMaxHp = 0;
+      if (!Number.isFinite(merged.monsterAtk)) merged.monsterAtk = 0;
+      if (typeof merged.monsterName !== "string") merged.monsterName = "敵人";
       return merged;
     }
 
