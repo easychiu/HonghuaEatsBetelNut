@@ -328,6 +328,7 @@
     const MAP_SCENES = new Set(["map1", "map2", "map3"]);
     const BGM_MAIN = "assets/bgm_main.mp3";
     const BGM_END = "assets/bgm_end.mp3";
+    const BGM_BATTLE = "assets/bgm_battle.mp3";
 
     const SCENE_IMAGES = {
       intro:          "assets/scenes/outside.png",
@@ -876,7 +877,7 @@ const TEXT_ARCHIVE = {
     bgmEnd.loop = true;
     bgmEnd.volume = 0.45;
 
-    const bgmBattle = new Audio("assets/bgm_battle.mp3");
+    const bgmBattle = new Audio(BGM_BATTLE);
     bgmBattle.loop = true;
     bgmBattle.volume = 0.45;
 
@@ -887,14 +888,14 @@ const TEXT_ARCHIVE = {
     const ALL_BGMS = {
       [BGM_MAIN]: bgm,
       [BGM_END]: bgmEnd,
-      "assets/bgm_battle.mp3": bgmBattle,
+      [BGM_BATTLE]: bgmBattle,
     };
 
     let audioEnabled = false;
     let audioGestureBound = false;
 
     function targetBgmForScene() {
-      if (S.scene.startsWith("battle_")) return "assets/bgm_battle.mp3";
+      if (S.scene.startsWith("battle_")) return BGM_BATTLE;
       return isEndingOrHiddenScene(S.scene) ? BGM_END : BGM_MAIN;
     }
 
