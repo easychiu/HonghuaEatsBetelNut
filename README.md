@@ -11,6 +11,20 @@
 - 兩種謎題類型與 8 種結局
 - 新增圖書館三層「上帝視角」2D 像素風地圖與樓層切換
 
+## 🧭 目前架構 Review（2026-05）
+
+專案目前是「雙執行入口 + 共用文本」架構：
+
+- `index.html`：單檔離線 Web 版（主要分享與快速遊玩入口）
+  - 內嵌劇情文本、狀態機、地圖熱區、存檔（localStorage）
+- `game.py`：Python / Tkinter 桌面版（可搭配 Pillow + pygame + 角色動畫）
+  - 透過場景函式與 UI 元件切換劇情流程
+- `story_texts.py` / `character_texts.py`：共用敘事文本常數
+- `library_map.py`：三樓層地圖熱區、樓層切換、地圖渲染邏輯
+- `generate_assets.py`：維護者素材工具（場景圖、情緒圖、BGM、用途清單輸出）
+
+設計上以 `index.html` 作為「可攜完整內容版」，`game.py` 作為「本機沉浸演出版」，兩者共享世界觀與文本素材。
+
 ## 🚀 快速開始（下載即玩）
 
 > **所有場景圖與配樂均已內附，無需自行生成任何素材。**
@@ -77,30 +91,17 @@ python game.py                     # 啟動遊戲
 
 ### Web 版缺圖檢查（`index.html` 實際引用）
 
-以下檔案目前被 Web 版引用，但 `assets/scenes/` 尚未找到：
+目前僅下列檔案被 Web 版引用但 `assets/scenes/` 尚未找到：
 
-- `assets/scenes/prologue.png`
-- `assets/scenes/hall.png`
-- `assets/scenes/window.png`
-- `assets/scenes/basement.png`
-- `assets/scenes/basement_deep.png`
-- `assets/scenes/archive_room.png`
-- `assets/scenes/guard_room.png`
-- `assets/scenes/workshop.png`
-- `assets/scenes/abandoned_room.png`
-- `assets/scenes/confront.png`
-- `assets/scenes/secret_end.png`
-- `assets/scenes/true_end.png`
 - `assets/scenes/normal_end.png`
-- `assets/scenes/bad_a.png`
 
-### Copilot 產圖語法（直接貼到 Copilot Chat）
+### Copilot 產圖語法（維護者選用，可直接貼到 Copilot Chat）
 
 建議每張圖輸出比例固定為 **460x490（直式）**（與 `generate_assets.py` 的 `IMAGE_WIDTH=460`、`IMAGE_HEIGHT=490` 一致），風格與專案根目錄已附帶的參考圖 `./info.jpg` 一致（17 世紀英格蘭、哥德式、陰鬱、燭光、寫實偏插畫）。
 若你的工作目錄沒有 `./info.jpg`，請保留 prompt 內的風格關鍵字：`dark gothic`、`candlelight`、`painterly realistic`，作為替代基準。
 若你的產圖工具偏好單一語言，可保留同一欄位中的英文風格關鍵字，將前半段中文敘事改寫成全英文後再送出。
 
-| 缺圖檔名 | 想表達的情節 | Copilot Prompt |
+| 場景檔名 | 想表達的情節 | Copilot Prompt |
 |---|---|---|
 | `prologue.png` | 主角初入廢棄圖書館，與紅花首次對峙前的壓迫感開場。 | `請生成一張 460x490 直式場景圖：17世紀英格蘭廢棄圖書館內景，夜晚燭光、灰塵與蛛網、陰冷哥德式氛圍，主角剛踏入調查，畫面有「即將見到守館者」的緊張感；dark gothic, cinematic lighting, painterly realistic, no text, no watermark.` |
 | `hall.png` | 三樓館長室外主中樞，玩家在此整理線索並準備輸入密碼。 | `請生成一張 460x490 直式場景圖：三樓館長室外展示區，老舊書架與密碼盒、散落卷宗、微弱燭光，作為調查中樞場景；17th century England library, dark gothic mystery, moody shadows, painterly realistic, no text, no watermark.` |
@@ -187,7 +188,7 @@ python generate_assets.py --scene-usage-text
 | 場景 | 說明 |
 |------|------|
 | 三樓管理室外展示區 | 遊戲起始區域，紅花位於三樓管理室 |
-| 圖書館上帝視角地圖（1F/2F/3F） | 三層平面圖，會依 `TopMap.png` 下方圖說顯示各層實際房間名稱（如閱覽室、研究室、館長室、禁書檔案室等） |
+| 圖書館上帝視角地圖（1F/2F/3F） | 三層平面圖（`map_f1.png` / `map_f2.png` / `map_f3.png`），以獨立樓層圖對應各層房間熱區（閱覽室、研究室、館長室、禁書檔案室等） |
 | 一樓書架深處 | 案件時間線排序謎題，解開可得地下密室鑰匙；1F/2F 任何場景均有背刺風險 |
 | 研究桌（二樓） | 紅花的案情筆記，揭露她所掌握的秘密；2F 有背刺風險 |
 | 窗邊（二樓） | 艾蜜莉亞失蹤的線索；2F 有背刺風險 |
@@ -207,7 +208,7 @@ python generate_assets.py --scene-usage-text
 - `hall` 對話期間若缺少上述信任度圖，會回退到 `assets/character_emotions/honghua_readbook_{impatient|peaceful|friendly|trusted}.png`
 - 若缺少上述素材，會回退至 `HonghuaReadBook.jpg`（紅花在圖書館看書）
 - `intro` 開場畫面會優先使用 `assets/scenes/outside.png`
-- 大地圖模式（`map_f1` / `map_f2` / `map_f3`）會優先使用 `assets/scenes/TopMap.png`，並依樓層顯示對應區域
+- 大地圖模式（`map_f1` / `map_f2` / `map_f3`）會優先使用 `assets/scenes/map_f1.png`、`map_f2.png`、`map_f3.png`；若缺圖才回退為程式繪製地圖
 - 若有 `HonghuaInENG.jpg`，`confront` / `basement` / `basement_deep` 會優先使用該圖（紅花人物形象）
 - 專案已先行附帶開場、大廳、對峙、地下室、各調查節點與結局場景圖（包含 `assets/scenes/default.png`）
 - 維護者重新生成場景圖時，會一併輸出 `assets/scenes/default.png` 作為紅花主視覺預設場景
