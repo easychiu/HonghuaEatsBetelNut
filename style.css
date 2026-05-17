@@ -53,8 +53,25 @@
       transition: all 0.5s ease;
     }
     .scene-name { margin: 14px 0 8px; color: var(--accent); letter-spacing: 2px; font-size: 13px; }
-    .scene-img-wrap { width: 100%; margin-bottom: 10px; border-radius: 8px; overflow: hidden; background: #0e0a12; display: flex; align-items: center; justify-content: center; position: relative; }
-    #sceneImg { width: 100%; max-height: 380px; object-fit: cover; display: block; border-radius: 8px; }
+    /* Responsive Map Wrapper - Hugs the image exactly so % coordinates align */
+    .scene-img-wrap {
+      width: 100%;
+      margin-bottom: 10px;
+      border-radius: 8px;
+      overflow: hidden;
+      background: #0e0a12;
+      position: relative;
+      /* Removed flex and absolute centering to prevent image overflow */
+    }
+
+    /* Map Image - Scales naturally without cropping */
+    #sceneImg {
+      width: 100%;
+      height: auto;
+      display: block;
+      border-radius: 8px;
+      /* Removed max-height and object-fit: cover to prevent the map from zooming/exceeding bounds */
+    }
     #effectLayer {
       position: absolute;
       inset: 0;
@@ -68,15 +85,14 @@
     /* Monster Foreground Layer */
     #monsterImg {
       position: absolute;
-      bottom: 0;
+      bottom: 0; /* Stands on the bottom of the wrapper */
       left: 50%;
-      transform: translateX(-50%);
+      transform: translateX(-50%); /* Centered horizontally */
       max-height: 290px;
       max-width: 95%;
       object-fit: contain;
       z-index: 5;
       display: none;
-      pointer-events: none;
     }
     #effectLayer.active {
       display: block;
