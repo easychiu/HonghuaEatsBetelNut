@@ -96,6 +96,99 @@
     #honghuaMarker { background-image: url('assets/honghua.png'); z-index: 10; }
     #playerMarker.is-amelia { background-image: url('assets/amelia.png') !important; }
 
+    /* DQ Style Window */
+    .dq-window {
+      background-color: rgba(0, 0, 0, 0.95);
+      border: 4px double #ffffff; /* Classic thick white double border */
+      border-radius: 0; /* Sharp corners for retro feel */
+      font-family: monospace; /* Monospace for retro text alignment */
+      color: #ffffff;
+      padding: 10px;
+      box-shadow: 0 0 15px rgba(0,0,0,0.5);
+    }
+
+    /* Battle Mode Layout for the Main Card */
+    .main.battle-mode {
+      background-color: #000000 !important;
+      background-image: none !important; /* Pure black background for battle */
+      display: grid;
+      grid-template-areas:
+        "monster-area"
+        "message-area"
+        "command-area";
+      grid-template-rows: 1fr auto auto; /* Image area takes remaining space */
+      gap: 12px;
+      padding: 12px;
+    }
+
+    /* 1. Monster Area */
+    .main.battle-mode .scene-img-wrap {
+      grid-area: monster-area;
+      border: none;
+      background: transparent;
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      position: relative; /* For floating stats */
+    }
+
+    .main.battle-mode #sceneImg {
+      max-height: 280px; /* Adjust size of monster portrait */
+      width: auto;
+      object-fit: contain;
+    }
+
+    /* Classic Top-Left Party Stats Window (Floating over monster area) */
+    #battleStatusWindow {
+      position: absolute;
+      top: 10px;
+      left: 10px;
+      display: none; /* Hidden by default, shown in battle */
+      z-index: 20;
+      min-width: 120px;
+    }
+    #battleStatusWindow div { margin-bottom: 4px; font-size: 13px; }
+
+    /* 2. Message Area (Classic DQ text box at bottom) */
+    .main.battle-mode .scene {
+      grid-area: message-area;
+      composes: dq-window; /* Apply DQ window styles */
+      min-height: 80px;
+      background: rgba(0,0,0,0.9);
+      border: 4px double #ffffff;
+    }
+    .main.battle-mode .scene span.ending { color: #ffffff !important; } /* Combat text should be white */
+
+    /* 3. Command Area (DQ 2x2 grid below text box) */
+    .main.battle-mode #options {
+      grid-area: command-area;
+      display: grid;
+      grid-template-columns: 1fr 1fr; /* Two columns for commands */
+      grid-template-rows: auto auto; /* Two rows */
+      gap: 8px;
+    }
+
+    .main.battle-mode #options button {
+      composes: dq-window; /* Apply DQ window styles to buttons */
+      background: rgba(0,0,0,0.9);
+      border: 4px double #ffffff;
+      color: #ffffff;
+      border-radius: 0;
+      text-align: left;
+      font-size: 13px;
+      transition: none; /* Retro feel, no transitions */
+    }
+    .main.battle-mode #options button:hover {
+      background-color: #ffffff;
+      color: #000000;
+    }
+
+    /* Hide non-battle elements in main card during battle */
+    .main.battle-mode .scene-name,
+    .main.battle-mode .status {
+      display: none;
+    }
+
     .btns { display: grid; gap: 8px; margin-top: 12px; }
     button {
       width: 100%;
@@ -161,6 +254,7 @@
         <div id="sceneHotspots" class="scene-hotspots" aria-label="場景互動熱區"></div>
         <div id="honghuaMarker" aria-hidden="true"></div>
         <div id="playerMarker" aria-hidden="true"></div>
+        <div id="battleStatusWindow" class="dq-window" aria-live="polite"></div>
       </div>
       <div class="scene-name" id="sceneName"></div>
       <div class="scene" id="sceneText"></div>
@@ -1864,6 +1958,9 @@ const TEXT_ARCHIVE = {
       const inArchive = S.scene.startsWith("archive_");
       const isAmelia = S.scene.startsWith("amelia_");
       const isHidden = S.scene.startsWith("python_hidden_") || isAmelia;
+      const isBattle = S.scene.startsWith("battle_");
+      const mainEl = document.querySelector(".main");
+      mainEl.classList.toggle("battle-mode", isBattle);
 
       document.getElementById("sceneName").textContent =
         (isEnding || isHidden) ? "ENDING" : (inArchive ? "TEXT ARCHIVE" : (SCENE_DISPLAY_NAMES[S.scene] || S.scene.toUpperCase()));
@@ -1899,9 +1996,24 @@ const TEXT_ARCHIVE = {
       const safeMaxHp = Number.isFinite(S.maxHp) ? S.maxHp : 100;
       const safeWax = Number.isFinite(S.wax) ? S.wax : 0;
       const safePotions = Number.isFinite(S.potions) ? S.potions : 0;
+      const safeBossHp = Number.isFinite(S.bossHp) ? Math.max(0, S.bossHp) : 0;
+      const safeBossMaxHp = Number.isFinite(S.bossMaxHp) ? S.bossMaxHp : 150;
+      const safeMonsterHp = Number.isFinite(S.monsterHp) ? Math.max(0, S.monsterHp) : 0;
+      const safeMonsterMaxHp = Number.isFinite(S.monsterMaxHp) ? S.monsterMaxHp : 0;
       document.getElementById("statusLine").innerHTML = inArchive
         ? "完整文本檔案庫：已將 story_texts.py / character_texts.py 內嵌到單一 HTML（可離線瀏覽）"
         : `<strong>❤️ HP: ${safeHp} / ${safeMaxHp} &nbsp;|&nbsp; 🕯️ 殘蠟: ${safeWax} 塊 &nbsp;|&nbsp; 💊 檳榔: ${safePotions} 顆</strong>`;
+      const battleStatusWindowEl = document.getElementById("battleStatusWindow");
+      if (isBattle) {
+        const enemyStatus = S.scene === "battle_starscream"
+          ? `👹 天王星 HP: ${safeBossHp} / ${safeBossMaxHp}`
+          : `👹 黑影 HP: ${safeMonsterHp} / ${safeMonsterMaxHp}`;
+        battleStatusWindowEl.innerHTML = `<div>❤️ HP ${safeHp}/${safeMaxHp}</div><div>💊 檳榔 ${safePotions}</div><div>${enemyStatus}</div>`;
+        battleStatusWindowEl.style.display = "block";
+      } else {
+        battleStatusWindowEl.style.display = "none";
+        battleStatusWindowEl.innerHTML = "";
+      }
 
       const optionsEl = document.getElementById("options");
       optionsEl.innerHTML = "";
