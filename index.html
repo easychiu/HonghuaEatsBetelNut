@@ -329,6 +329,7 @@
     const DEFAULT_HONGHUA_Y = DEFAULT_PLAYER_Y;
     const MARKER_MOVE_DURATION_MS = 600;
     const CANDLE_DRAIN_PER_MINUTE = 0.5;
+    const BATTLE_EFFECT_DURATION_MS = 350;
     const MATCHES_CANDLE_BONUS = 30;
     const DEFAULT_LOG_MESSAGE = "── 進入蔚藍學院 ──";
     const ARCHIVE_PREVIEW_LIMIT = 12;
@@ -985,8 +986,7 @@ const TEXT_ARCHIVE = {
       }, 300);
 
       if (effectEl) {
-        const effectSrc = imgEl.currentSrc || imgEl.src || "";
-        if (effectSrc) effectEl.src = effectSrc;
+        setEffectLayerSource(effectEl, imgEl);
         effectEl.classList.remove("active");
         void effectEl.offsetWidth;
         effectEl.classList.add("active");
@@ -994,8 +994,14 @@ const TEXT_ARCHIVE = {
         overlayEffectTimer = setTimeout(() => {
           effectEl.classList.remove("active");
           overlayEffectTimer = null;
-        }, 350);
+        }, BATTLE_EFFECT_DURATION_MS);
       }
+    }
+
+    function setEffectLayerSource(effectEl, imgEl) {
+      if (!effectEl || !imgEl) return;
+      const effectSrc = imgEl.currentSrc || imgEl.src || "";
+      if (effectSrc) effectEl.src = effectSrc;
     }
 
     function playVictoryCue() {
@@ -2290,8 +2296,7 @@ const TEXT_ARCHIVE = {
       const effectEl = document.getElementById("effectLayer");
       if (effectEl) {
         if (isBattle && imgEl.style.display !== "none") {
-          const effectSrc = imgEl.currentSrc || imgEl.src || "";
-          if (effectSrc) effectEl.src = effectSrc;
+          setEffectLayerSource(effectEl, imgEl);
         } else {
           if (overlayEffectTimer) {
             clearTimeout(overlayEffectTimer);
