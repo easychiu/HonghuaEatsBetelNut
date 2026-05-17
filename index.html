@@ -1093,7 +1093,7 @@ const TEXT_ARCHIVE = {
         setTimeout(() => {
           // Use includes without the cacheBuster to safely check if we should revert
           if (monsterImgEl.src.includes(attackImgSrc)) {
-             monsterImgEl.src = originalSrc;
+            monsterImgEl.src = originalSrc;
           }
         }, durationMs); // Use the customizable duration
       }
@@ -2111,51 +2111,6 @@ const TEXT_ARCHIVE = {
             }]);
           }
           break;
-
-        case "battle_farm":
-          opts.push(["🗡️ 攻擊", () => {
-            if (audioEnabled) sfxAttack.play().catch(() => {});
-
-            let dmg = getPlayerAtk() + Math.floor(Math.random() * 5);
-            S.monsterHp -= dmg;
-            pushLog(`⚔️ 你擊中 ${S.monsterName}，造成 ${dmg} 點傷害！`);
-            triggerMonsterHitEffect();
-
-            if (S.monsterHp <= 0) {
-              if (S.monsterName === "受害者的怨靈 米糕") {
-                S.lowZoneKills = 0;
-                pushLog("💀 你揮舞重鎚擊散了核心怨念，終於成功超渡了米糕的亡魂... 現場留下了大量遺物。");
-                processVictory(100, 6, 2, 50);
-                return;
-              }
-
-              if (S.monsterName === "【隱藏超魔王】狂暴艾莉卡") {
-                S.highZoneKills = 0;
-                pushLog("👑 奇蹟！你竟然憑藉驚人的毅力與戰術，擊敗了本遊戲的最強傳說──狂暴艾莉卡！");
-                processVictory(400, 20, 5, 100);
-                return;
-              }
-
-              if (S.farmZone === "low") {
-                S.lowZoneKills++;
-                pushLog(`📊 閱覽室淨化進度：${S.lowZoneKills}/10`);
-              } else if (S.farmZone === "high") {
-                S.highZoneKills++;
-                pushLog(`📊 研究室淨化進度：${S.highZoneKills}/10`);
-              }
-
-              let exp = S.monsterMaxHp > 50 ? 30 : 10;
-              let waxDrop = S.monsterMaxHp > 50 ? (Math.floor(Math.random() * 3) + 2) : 1;
-              let candleRestore = S.monsterMaxHp > 50 ? 25 : 10;
-              let potionDrop = (Math.random() < (S.monsterMaxHp / 200)) ? 1 : 0;
-
-              pushLog(`🎉 戰鬥勝利！擊敗了 ${S.monsterName}。`);
-              processVictory(exp, waxDrop, potionDrop, candleRestore);
-              return;
-            }
-
-            render();
-          }]);
 
         case "victory":
           opts.push(["✅ 繼續前進", () => {
