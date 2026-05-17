@@ -138,6 +138,20 @@
       object-fit: contain;
     }
 
+    /* Hit Effect Animation */
+    @keyframes monsterHitEffect {
+      0%   { transform: translateX(0); filter: brightness(1); }
+      20%  { transform: translateX(-8px) scale(0.95); filter: brightness(0.5) sepia(1) hue-rotate(-50deg) saturate(10); }
+      40%  { transform: translateX(8px) scale(1); filter: brightness(1); }
+      60%  { transform: translateX(-8px) scale(0.95); filter: brightness(0.5) sepia(1) hue-rotate(-50deg) saturate(10); }
+      80%  { transform: translateX(8px) scale(1); filter: brightness(1); }
+      100% { transform: translateX(0); filter: brightness(1); }
+    }
+
+    .monster-hurt {
+      animation: monsterHitEffect 0.3s ease-out;
+    }
+
     /* Classic Top-Left Party Stats Window (Floating over monster area) */
     #battleStatusWindow {
       position: absolute;
@@ -893,6 +907,7 @@ const TEXT_ARCHIVE = {
 
     let audioEnabled = false;
     let audioGestureBound = false;
+    let monsterHitEffectTimer = null;
 
     function targetBgmForScene() {
       if (S.scene.startsWith("battle_")) return BGM_BATTLE;
@@ -902,6 +917,23 @@ const TEXT_ARCHIVE = {
     function updateAudioButton() {
       const btn = document.getElementById("audioBtn");
       btn.textContent = audioEnabled ? "🔊 音樂：開" : "🔈 音樂：關";
+    }
+
+    function triggerMonsterHitEffect() {
+      const imgEl = document.getElementById("sceneImg");
+      if (audioEnabled) {
+        sfxMonsterHit.currentTime = 0;
+        sfxMonsterHit.play().catch(() => {});
+      }
+      if (!imgEl || imgEl.style.display === "none") return;
+      imgEl.classList.remove("monster-hurt");
+      void imgEl.offsetWidth;
+      imgEl.classList.add("monster-hurt");
+      if (monsterHitEffectTimer) clearTimeout(monsterHitEffectTimer);
+      monsterHitEffectTimer = setTimeout(() => {
+        imgEl.classList.remove("monster-hurt");
+        monsterHitEffectTimer = null;
+      }, 300);
     }
 
     function tryPlayBgm() {
@@ -1640,6 +1672,7 @@ const TEXT_ARCHIVE = {
             let dmg = getPlayerAtk() + Math.floor(Math.random() * 4);
             S.monsterHp -= dmg;
             pushLog(`⚔️ 你擊中黑影，造成 ${dmg} 點傷害！`);
+            triggerMonsterHitEffect();
 
             // Monster dies -> Reward and go back to map
             if (S.monsterHp <= 0) {
@@ -1692,6 +1725,7 @@ const TEXT_ARCHIVE = {
             let dmg = getPlayerAtk() + Math.floor(Math.random() * 5);
             S.monsterHp -= dmg;
             pushLog(`⚔️ 你擊中 ${S.monsterName}，造成 ${dmg} 點傷害！`);
+            setTimeout(triggerMonsterHitEffect, 300);
 
             if (S.monsterHp <= 0) {
               let waxDrop = S.monsterMaxHp > 50 ? (Math.floor(Math.random() * 3) + 2) : 1;
@@ -1710,7 +1744,6 @@ const TEXT_ARCHIVE = {
               return;
             }
 
-            if (audioEnabled) setTimeout(() => sfxMonsterHit.play().catch(() => {}), 300);
             let mDmg = Math.floor(Math.random() * S.monsterAtk) + Math.floor(S.monsterAtk / 2);
             S.playerHp -= mDmg;
             pushLog(`🩸 ${S.monsterName} 反擊，你受到 ${mDmg} 點傷害。`);
@@ -1724,7 +1757,6 @@ const TEXT_ARCHIVE = {
               pushLog("💨 你趁隙逃出了房間！");
               goto(`map${S.currentFloor}`);
             } else {
-              if (audioEnabled) sfxMonsterHit.play().catch(() => {});
               let mDmg = S.monsterAtk;
               S.playerHp -= mDmg;
               pushLog(`🩸 逃跑失敗！被 ${S.monsterName} 追擊，受到 ${mDmg} 點傷害。`);
