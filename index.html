@@ -312,6 +312,9 @@
     const DEFAULT_LOG_MESSAGE = "── 進入蔚藍學院 ──";
     const ARCHIVE_PREVIEW_LIMIT = 12;
     const VALID_FLOORS = [1, 2, 3];
+    const LEVEL_UP_HP_GAIN = 10;
+    const LEVEL_UP_ATK_GAIN = 2;
+    const EXP_NEXT_MULTIPLIER = 1.4;
     const PASSWORD_CODE = "314";
     const PASSWORD_DIGITS = { hammer: "3", clover: "1", jeans: "4" };
     const BOOKSHELF_CORRECT_ORDER = ["失蹤案卷", "退學檔案", "死亡報告", "停課公告"];
@@ -914,9 +917,9 @@ const TEXT_ARCHIVE = {
     const sfxAttack = new Audio("assets/sfx_attack.mp3");
     const sfxHeal = new Audio("assets/sfx_heal.mp3");
     const sfxMonsterHit = new Audio("assets/sfx_monster.mp3");
-    const victoryFanfare = new Audio(BGM_END);
-    victoryFanfare.loop = false;
-    victoryFanfare.volume = 0.6;
+    const victoryCueAudio = new Audio(BGM_END);
+    victoryCueAudio.loop = false;
+    victoryCueAudio.volume = 0.6;
 
     const ALL_BGMS = {
       [BGM_MAIN]: bgm,
@@ -954,6 +957,12 @@ const TEXT_ARCHIVE = {
         imgEl.classList.remove("monster-hurt");
         monsterHitEffectTimer = null;
       }, 300);
+    }
+
+    function playVictoryCue() {
+      if (!audioEnabled) return;
+      victoryCueAudio.currentTime = 0;
+      victoryCueAudio.play().catch(() => {});
     }
 
     function tryPlayBgm() {
@@ -998,8 +1007,8 @@ const TEXT_ARCHIVE = {
         tryPlayBgm();
         pushLog("🔊 背景音樂已開啟");
       } else {
-        victoryFanfare.pause();
-        victoryFanfare.currentTime = 0;
+        victoryCueAudio.pause();
+        victoryCueAudio.currentTime = 0;
         Object.values(ALL_BGMS).forEach(audio => audio.pause());
         pushLog("🔈 背景音樂已關閉");
       }
@@ -1096,10 +1105,10 @@ const TEXT_ARCHIVE = {
         S.exp -= S.expNext;
         S.level += 1;
         levelUps += 1;
-        S.maxHp += 10;
-        S.playerBaseAtk += 2;
+        S.maxHp += LEVEL_UP_HP_GAIN;
+        S.playerBaseAtk += LEVEL_UP_ATK_GAIN;
         S.playerHp = S.maxHp;
-        S.expNext = Math.floor(S.expNext * 1.4);
+        S.expNext = Math.floor(S.expNext * EXP_NEXT_MULTIPLIER);
       }
       return { gain, levelUps };
     }
@@ -2253,8 +2262,7 @@ const TEXT_ARCHIVE = {
       renderHotspots();
       syncBgmTrack();
       if (S.scene === "victory" && lastRenderedScene !== "victory" && audioEnabled) {
-        victoryFanfare.currentTime = 0;
-        victoryFanfare.play().catch(() => {});
+        playVictoryCue();
       }
       lastRenderedScene = S.scene;
       updateAudioButton();
