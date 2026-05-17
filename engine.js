@@ -661,15 +661,6 @@ function openArchive() {
           monsterEl.alt = "";
         }
       }
-      const effectEl = document.getElementById("effectLayer");
-      if (effectEl) {
-        if (!isBattle) {
-          effectEl.classList.remove("active");
-          effectEl.classList.remove("phantom-strike-anim");
-          effectEl.style.display = "none";
-          effectEl.removeAttribute("src");
-        }
-      }
       const sceneEl = document.getElementById("sceneText");
       if (isEnding) {
         sceneEl.innerHTML = `<span class="ending">${endingText()}</span>`;
