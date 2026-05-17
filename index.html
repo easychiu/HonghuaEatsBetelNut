@@ -1032,21 +1032,24 @@ const TEXT_ARCHIVE = {
       }
     }
 
+    function findSpriteByEnemyName(enemyName) {
+      const safeName = enemyName || "";
+      const matched = MONSTER_NAME_SPRITES.find(({ keyword }) => safeName.includes(keyword));
+      return matched ? matched.src : "";
+    }
+
     function resolveBattleMonsterSprite() {
-      const resolveByEnemyName = (enemyName) => {
-        const matched = MONSTER_NAME_SPRITES.find(({ keyword }) => enemyName.includes(keyword));
-        return matched ? matched.src : "";
-      };
       if (S.scene === "victory") {
         const lastEnemy = S.lastVictory?.enemyName || "";
-        const victorySprite = resolveByEnemyName(lastEnemy);
+        const victorySprite = findSpriteByEnemyName(lastEnemy);
         if (victorySprite) return victorySprite;
         return DEFAULT_MONSTER_SPRITE;
       }
       if (S.scene === "battle_farm") {
         const enemyName = S.monsterName || "";
-        const farmSprite = resolveByEnemyName(enemyName);
+        const farmSprite = findSpriteByEnemyName(enemyName);
         if (farmSprite) return farmSprite;
+        return DEFAULT_MONSTER_SPRITE;
       }
       return BATTLE_MONSTER_SPRITES[S.scene] || DEFAULT_MONSTER_SPRITE;
     }
