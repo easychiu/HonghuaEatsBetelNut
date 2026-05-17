@@ -394,6 +394,11 @@
       battle_starscream: "assets/boss_starscream.png",
       battle_random: DEFAULT_MONSTER_SPRITE,
     };
+    const MONSTER_NAME_SPRITES = [
+      { keyword: "天王星", src: "assets/boss_starscream.png" },
+      { keyword: "艾莉卡", src: "assets/amelia.png" },
+      { keyword: "米糕", src: "assets/honghua.png" },
+    ];
 
     const SCENE_IMAGES = {
       intro:          "assets/scenes/outside.png",
@@ -1028,17 +1033,20 @@ const TEXT_ARCHIVE = {
     }
 
     function resolveBattleMonsterSprite() {
+      const resolveByEnemyName = (enemyName) => {
+        const matched = MONSTER_NAME_SPRITES.find(({ keyword }) => enemyName.includes(keyword));
+        return matched ? matched.src : "";
+      };
       if (S.scene === "victory") {
         const lastEnemy = S.lastVictory?.enemyName || "";
-        if (lastEnemy.includes("天王星")) return "assets/boss_starscream.png";
-        if (lastEnemy.includes("艾莉卡")) return "assets/amelia.png";
-        if (lastEnemy.includes("米糕")) return "assets/honghua.png";
+        const victorySprite = resolveByEnemyName(lastEnemy);
+        if (victorySprite) return victorySprite;
         return DEFAULT_MONSTER_SPRITE;
       }
       if (S.scene === "battle_farm") {
         const enemyName = S.monsterName || "";
-        if (enemyName.includes("艾莉卡")) return "assets/amelia.png";
-        if (enemyName.includes("米糕")) return "assets/honghua.png";
+        const farmSprite = resolveByEnemyName(enemyName);
+        if (farmSprite) return farmSprite;
       }
       return BATTLE_MONSTER_SPRITES[S.scene] || DEFAULT_MONSTER_SPRITE;
     }
