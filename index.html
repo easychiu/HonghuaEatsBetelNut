@@ -921,11 +921,11 @@ const TEXT_ARCHIVE = {
 
     function triggerMonsterHitEffect() {
       const imgEl = document.getElementById("sceneImg");
+      if (!imgEl || imgEl.style.display === "none") return;
       if (audioEnabled) {
         sfxMonsterHit.currentTime = 0;
         sfxMonsterHit.play().catch(() => {});
       }
-      if (!imgEl || imgEl.style.display === "none") return;
       imgEl.classList.remove("monster-hurt");
       void imgEl.offsetWidth;
       imgEl.classList.add("monster-hurt");
@@ -1725,7 +1725,7 @@ const TEXT_ARCHIVE = {
             let dmg = getPlayerAtk() + Math.floor(Math.random() * 5);
             S.monsterHp -= dmg;
             pushLog(`⚔️ 你擊中 ${S.monsterName}，造成 ${dmg} 點傷害！`);
-            setTimeout(triggerMonsterHitEffect, 300);
+            triggerMonsterHitEffect();
 
             if (S.monsterHp <= 0) {
               let waxDrop = S.monsterMaxHp > 50 ? (Math.floor(Math.random() * 3) + 2) : 1;
