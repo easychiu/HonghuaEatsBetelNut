@@ -390,7 +390,7 @@
     const BGM_END = "assets/bgm_end.mp3";
     const BGM_BATTLE = "assets/bgm_battle.mp3";
     const DEFAULT_MONSTER_SPRITE = "assets/mob_guard.png";
-    const BATTLE_MONSTER_SPRITES = {
+    const SCENE_MONSTER_SPRITES = {
       battle_starscream: "assets/boss_starscream.png",
       battle_random: DEFAULT_MONSTER_SPRITE,
     };
@@ -1038,20 +1038,24 @@ const TEXT_ARCHIVE = {
       return matched ? matched.src : "";
     }
 
+    function resolveSpriteFromEnemyNameOrDefault(enemyName) {
+      return findSpriteByEnemyName(enemyName) || DEFAULT_MONSTER_SPRITE;
+    }
+
     function resolveBattleMonsterSprite() {
       if (S.scene === "victory") {
-        const lastEnemy = S.lastVictory?.enemyName || "";
-        const victorySprite = findSpriteByEnemyName(lastEnemy);
-        if (victorySprite) return victorySprite;
-        return DEFAULT_MONSTER_SPRITE;
+        return resolveSpriteFromEnemyNameOrDefault(S.lastVictory?.enemyName || "");
       }
       if (S.scene === "battle_farm") {
-        const enemyName = S.monsterName || "";
-        const farmSprite = findSpriteByEnemyName(enemyName);
-        if (farmSprite) return farmSprite;
-        return DEFAULT_MONSTER_SPRITE;
+        return resolveSpriteFromEnemyNameOrDefault(S.monsterName || "");
       }
-      return BATTLE_MONSTER_SPRITES[S.scene] || DEFAULT_MONSTER_SPRITE;
+      return SCENE_MONSTER_SPRITES[S.scene] || DEFAULT_MONSTER_SPRITE;
+    }
+
+    function battleMonsterAltText() {
+      if (S.scene === "victory") return `勝利演出角色：${S.lastVictory?.enemyName || "敵人"}`;
+      if (S.scene === "battle_farm") return `戰鬥敵人：${S.monsterName || "敵人"}`;
+      return `戰鬥敵人：${BATTLE_ENEMY_CONFIG[S.scene]?.name || "敵人"}`;
     }
 
     function playVictoryCue() {
@@ -2350,9 +2354,7 @@ const TEXT_ARCHIVE = {
           const monsterSrc = resolveBattleMonsterSprite();
           monsterEl.onerror = null;
           monsterEl.src = monsterSrc;
-          monsterEl.alt = S.scene === "victory"
-            ? `勝利演出角色：${S.lastVictory?.enemyName || "敵人"}`
-            : `戰鬥敵人：${S.scene === "battle_farm" ? (S.monsterName || "敵人") : (BATTLE_ENEMY_CONFIG[S.scene]?.name || "敵人")}`;
+          monsterEl.alt = battleMonsterAltText();
           monsterEl.style.display = monsterSrc ? "block" : "none";
         } else {
           monsterEl.style.display = "none";
