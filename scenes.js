@@ -1,4 +1,4 @@
-    // --- Meta UI Function ---
+   // --- Meta UI Function ---
     function applyMetaTheme(isMeta) {
       const root = document.documentElement;
       if (isMeta) {
@@ -128,7 +128,7 @@
     let monsterHitEffectTimer = null;
     let lastRenderedScene = null;
 
-    function getMonsterImageSrc() {
+function getMonsterImageSrc() {
       if (S.scene === "battle_starscream") return "assets/boss_starscream.png";
 
       const mName = S.lastVictory ? S.lastVictory.enemyName : S.monsterName;
@@ -317,7 +317,7 @@
       render();
     }
 
-    function scene1TrustState() {
+function scene1TrustState() {
       if (S.trust >= 75) return "trusted";
       if (S.trust >= 50) return "friendly";
       if (S.trust >= 25) return "peaceful";
@@ -580,10 +580,7 @@
         wrap.appendChild(hotspotBtn);
       });
     }
-
-
-
-    function render() {
+function render() {
       applyMetaTheme(isEndingOrHiddenScene(S.scene) && !S.scene.includes("darkness") && !S.scene.includes("killer"));
 
       const clockEl = document.getElementById("clock");
@@ -849,5 +846,4 @@
         pushLog(`⚠ 存檔損毀，無法載入（${err?.message || "未知錯誤"}）`);
       }
       render();
-    }     
-  
+    }
