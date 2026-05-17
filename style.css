@@ -1,0 +1,312 @@
+:root {
+      --bg: #0e0a12;
+      --panel: #171121;
+      --panel-2: #221a2f;
+      --text: #d9d0c6;
+      --muted: #9b8ead;
+      --line: #3e3054;
+      --accent: #9f84d6;
+      --ok: #90c191;
+      --danger: #d77777;
+    }
+    * { box-sizing: border-box; }
+    body {
+      margin: 0;
+      color: var(--text);
+      background: radial-gradient(1200px 600px at 10% -20%, #2a1f3b, transparent), var(--bg);
+      font-family: "Noto Serif TC", "PingFang TC", "Microsoft JhengHei", serif;
+      min-height: 100vh;
+      transition: background 0.5s ease;
+    }
+    .app {
+      max-width: 1200px;
+      margin: 0 auto;
+      padding: 18px;
+      display: grid;
+      grid-template-columns: 300px 1fr;
+      gap: 14px;
+    }
+    .card {
+      border: 1px solid var(--line);
+      background: linear-gradient(180deg, var(--panel), #120d19);
+      border-radius: 10px;
+      box-shadow: 0 8px 30px rgba(0, 0, 0, 0.35);
+      transition: all 0.5s ease;
+    }
+    .sidebar { padding: 14px; position: sticky; top: 12px; height: fit-content; }
+    .title { margin: 0 0 10px; letter-spacing: 1px; font-size: 16px; color: var(--accent); }
+    .kv { display: flex; justify-content: space-between; font-size: 13px; margin: 4px 0; color: var(--muted); }
+    .bar { height: 8px; border-radius: 8px; overflow: hidden; background: #281f37; margin-bottom: 7px; }
+    .fill { height: 100%; background: linear-gradient(90deg, #7d62b8, #bfa7ef); transition: width 0.3s; }
+    .chips { display: flex; flex-wrap: wrap; gap: 6px; margin-top: 6px; }
+    .chip { border: 1px solid var(--line); padding: 3px 8px; border-radius: 999px; font-size: 12px; color: var(--text); transition: all 0.5s; }
+    .main { padding: 14px; }
+    .scene {
+      border: 1px solid var(--line);
+      border-radius: 10px;
+      min-height: 220px;
+      padding: 14px;
+      background: linear-gradient(140deg, rgba(164, 128, 218, 0.18), rgba(23, 17, 33, 0.25));
+      white-space: pre-wrap;
+      line-height: 1.7;
+      font-size: 15px;
+      transition: all 0.5s ease;
+    }
+    .scene-name { margin: 14px 0 8px; color: var(--accent); letter-spacing: 2px; font-size: 13px; }
+    .scene-img-wrap { width: 100%; margin-bottom: 10px; border-radius: 8px; overflow: hidden; background: #0e0a12; display: flex; align-items: center; justify-content: center; position: relative; }
+    #sceneImg { width: 100%; max-height: 380px; object-fit: cover; display: block; border-radius: 8px; }
+    #effectLayer {
+      position: absolute;
+      inset: 0;
+      width: 100%;
+      height: 100%;
+      object-fit: contain;
+      pointer-events: none;
+      display: none;
+      z-index: 5;
+    }
+    /* Monster Foreground Layer */
+    #monsterImg {
+      position: absolute;
+      bottom: 0;
+      left: 50%;
+      transform: translateX(-50%);
+      max-height: 290px;
+      max-width: 95%;
+      object-fit: contain;
+      z-index: 5;
+      display: none;
+      pointer-events: none;
+    }
+    #effectLayer.active {
+      display: block;
+      animation: battleSlashEffect 0.35s ease-out forwards;
+    }
+    @keyframes battleSlashEffect {
+      0% { opacity: 0; transform: scale(0.85); filter: brightness(1.2); }
+      25% { opacity: 0.85; transform: scale(1); filter: brightness(2.2) contrast(1.35) saturate(1.45); }
+      100% { opacity: 0; transform: scale(1.1); filter: brightness(1); }
+    }
+    .scene-hotspots { position: absolute; inset: 0; pointer-events: none; }
+    .scene-hotspot {
+      position: absolute;
+      pointer-events: auto;
+      border: 1px dashed rgba(205, 186, 238, 0.9);
+      background: rgba(159, 132, 214, 0.18);
+      color: #e7dbff;
+      font-size: 11px;
+      border-radius: 6px;
+      padding: 2px 4px;
+      text-align: left;
+      overflow: hidden;
+      white-space: nowrap;
+      text-overflow: ellipsis;
+    }
+    .scene-hotspot:hover { background: rgba(159, 132, 214, 0.32); border-color: #d9c8fa; }
+
+    #playerMarker, #honghuaMarker {
+      position: absolute;
+      width: 32px;
+      height: 32px;
+      background-size: contain;
+      background-repeat: no-repeat;
+      background-position: center bottom;
+      transform: translate(-50%, -100%);
+      transition: all 0.6s ease-in-out;
+      display: none;
+      z-index: 10;
+      pointer-events: none;
+    }
+    #playerMarker { background-image: url('assets/player.png'); z-index: 11; }
+    #honghuaMarker { background-image: url('assets/honghua.png'); z-index: 10; }
+    #playerMarker.is-amelia { background-image: url('assets/amelia.png') !important; }
+
+    /* DQ Style Window */
+    .dq-window {
+      background-color: rgba(0, 0, 0, 0.7) !important; /* Semi-transparent */
+      backdrop-filter: blur(4px); /* Modern blur effect */
+      border: 4px double #ffffff; /* Classic thick white double border */
+      border-radius: 0; /* Sharp corners for retro feel */
+      font-family: monospace; /* Monospace for retro text alignment */
+      color: #ffffff;
+      padding: 10px;
+      box-shadow: 0 0 15px rgba(0,0,0,0.5);
+    }
+
+    /* Battle Mode Layout - Restructured to 2 Columns (Left Stats, Right Canvas) */
+    .main.battle-mode {
+      background-color: #000000 !important;
+      background-image: none !important;
+      display: grid;
+      grid-template-areas:
+        "status-area monster-area"
+        "message-area message-area"
+        "command-area command-area";
+      grid-template-columns: minmax(200px, 240px) 1fr;
+      grid-template-rows: minmax(280px, 300px) auto auto;
+      gap: 14px;
+      padding: 14px;
+    }
+
+    /* 1. Left Column: Dedicated DQ Status Window (No longer floating/blocking!) */
+    .main.battle-mode #battleStatusWindow {
+      grid-area: status-area;
+      position: relative;
+      top: auto;
+      left: auto;
+      height: 100%;
+      display: flex;
+      flex-direction: column;
+      justify-content: center;
+      gap: 12px;
+      font-size: 15px;
+      padding: 20px;
+      line-height: 1.6;
+    }
+    .main.battle-mode #battleStatusWindow div {
+      border-bottom: 1px dashed rgba(255, 255, 255, 0.2);
+      padding-bottom: 6px;
+      margin-bottom: 0;
+    }
+    .main.battle-mode #battleStatusWindow div:last-child {
+      border-bottom: none;
+    }
+
+    /* 2. Right Column: Monster Canvas (Shifted to the Right) */
+    .main.battle-mode .scene-img-wrap {
+      grid-area: monster-area;
+      border: none;
+      background: transparent;
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      position: relative;
+    }
+
+    .main.battle-mode #sceneImg {
+      max-height: 280px; /* Adjust size of monster portrait */
+      width: auto;
+      object-fit: contain;
+    }
+
+    /* Hit Effect Animation (Updated for Bottom Alignment) */
+    @keyframes monsterHitEffect {
+      0%   { transform: translateX(-50%); filter: brightness(1); }
+      20%  { transform: translateX(calc(-50% - 8px)) scale(0.95); filter: brightness(0.5) sepia(1) hue-rotate(-50deg) saturate(10); }
+      40%  { transform: translateX(calc(-50% + 8px)) scale(1); filter: brightness(1); }
+      60%  { transform: translateX(calc(-50% - 8px)) scale(0.95); filter: brightness(0.5) sepia(1) hue-rotate(-50deg) saturate(10); }
+      80%  { transform: translateX(calc(-50% + 8px)) scale(1); filter: brightness(1); }
+      100% { transform: translateX(-50%); filter: brightness(1); }
+    }
+
+    .monster-hurt {
+      animation: monsterHitEffect 0.3s ease-out;
+    }
+
+    /* Victory Pose Animation (Updated for Bottom Alignment) */
+    @keyframes victoryPose {
+      0%, 100% { transform: translateX(-50%) translateY(0) scale(1); filter: brightness(1); }
+      50% { transform: translateX(-50%) translateY(-8px) scale(1.05); filter: brightness(1.15); }
+    }
+    .main.victory-mode #monsterImg {
+      animation: victoryPose 1.2s ease-in-out infinite;
+    }
+
+    /* Default hidden state for battle status window */
+    #battleStatusWindow {
+      display: none;
+      z-index: 20;
+      min-width: 120px;
+    }
+    #battleStatusWindow div { margin-bottom: 4px; font-size: 13px; }
+
+    /* 2. Message Area (Classic DQ text box at bottom) */
+    .main.battle-mode .scene {
+      grid-area: message-area;
+      font-family: monospace;
+      color: #ffffff;
+      border-radius: 0;
+      padding: 10px;
+      box-shadow: 0 0 15px rgba(0,0,0,0.5);
+      min-height: 80px;
+      background: rgba(0, 0, 0, 0.7); /* Semi-transparent */
+      backdrop-filter: blur(4px); /* Modern blur effect */
+      border: 4px double #ffffff;
+    }
+    .main.battle-mode .scene span.ending { color: #ffffff !important; } /* Combat text should be white */
+
+    /* 3. Command Area (DQ 2x2 grid below text box) */
+    .main.battle-mode #options {
+      grid-area: command-area;
+      display: grid;
+      grid-template-columns: 1fr 1fr; /* Two columns for commands */
+      grid-template-rows: auto auto; /* Two rows */
+      gap: 8px;
+    }
+
+    .main.battle-mode #options button {
+      font-family: monospace;
+      box-shadow: 0 0 15px rgba(0,0,0,0.5);
+      background: rgba(0, 0, 0, 0.7); /* Semi-transparent */
+      backdrop-filter: blur(4px); /* Modern blur effect */
+      border: 4px double #ffffff;
+      color: #ffffff;
+      border-radius: 0;
+      padding: 10px;
+      text-align: left;
+      font-size: 13px;
+      transition: none; /* Retro feel, no transitions */
+    }
+    .main.battle-mode #options button:hover {
+      background-color: #ffffff;
+      color: #000000;
+    }
+
+    /* Hide non-battle elements in main card during battle */
+    .main.battle-mode .scene-name,
+    .main.battle-mode .status {
+      display: none;
+    }
+
+    .btns { display: grid; gap: 8px; margin-top: 12px; }
+    button {
+      width: 100%;
+      text-align: left;
+      border: 1px solid var(--line);
+      border-radius: 8px;
+      background: linear-gradient(180deg, var(--panel-2), var(--panel));
+      color: var(--text);
+      padding: 10px 12px;
+      cursor: pointer;
+      font-size: 14px;
+      transition: all 0.3s ease;
+    }
+    button:hover { border-color: var(--accent); }
+    button:disabled { cursor: not-allowed; color: #756982; border-color: #30253f; }
+    .row { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; }
+    .status { margin-top: 10px; font-size: 13px; color: var(--muted); }
+    .log {
+      border-top: 1px dashed var(--line);
+      margin-top: 12px;
+      padding-top: 8px;
+      max-height: 160px;
+      overflow: auto;
+      font-size: 12px;
+      color: var(--muted);
+      transition: border-color 0.5s ease;
+    }
+    .ending { color: var(--ok); }
+    .danger { color: var(--danger); }
+    @media (max-width: 920px) {
+      .app { grid-template-columns: 1fr; }
+      .sidebar { position: static; }
+      .main.battle-mode {
+        grid-template-areas:
+          "status-area"
+          "monster-area"
+          "message-area"
+          "command-area";
+        grid-template-columns: 1fr;
+        grid-template-rows: auto auto auto auto;
+      }
+    }
