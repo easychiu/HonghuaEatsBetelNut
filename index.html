@@ -850,6 +850,9 @@ const TEXT_ARCHIVE = {
       monsterMaxHp: 0,
       monsterAtk: 0,
       monsterName: "敵人",
+      farmZone: "",
+      lowZoneKills: 0,
+      highZoneKills: 0,
       level: 1,
       exp: 0,
       expNext: 50,
@@ -1129,6 +1132,17 @@ const TEXT_ARCHIVE = {
         levelUps: levelResult.levelUps,
       };
       goto("victory");
+    }
+
+    function processVictory(expGain, waxGain, potionGain, candleGain) {
+      S.farmZone = "";
+      startVictoryPhase({
+        enemyName: S.monsterName,
+        expGain,
+        waxGain,
+        candleGain,
+        potionGain,
+      });
     }
 
     function tryFloorTransition(targetFloor, minutes, reason) {
@@ -1419,7 +1433,15 @@ const TEXT_ARCHIVE = {
           }]);
           opts.push(["前往私人研究室 (高難度刷怪區)", () => {
             advance(20, "進入私人研究室");
-            S.monsterHp = 100; S.monsterMaxHp = 100; S.monsterAtk = 20; S.monsterName = "深淵守衛";
+            S.farmZone = "high";
+            if (S.highZoneKills >= 10) {
+              S.monsterHp = 350; S.monsterMaxHp = 350; S.monsterAtk = 38;
+              S.monsterName = "【隱藏超魔王】狂暴艾莉卡";
+              pushLog("🚨 警告：空間結構嚴重扭曲！雙馬尾被血色染紅的恐怖存在降臨──狂暴艾莉卡擋住了去路！");
+            } else {
+              S.monsterHp = 100; S.monsterMaxHp = 100; S.monsterAtk = 20;
+              S.monsterName = "深淵守衛";
+            }
             goto("battle_farm");
           }]);
           opts.push(["前往廢棄閱覽室", () => { advance(20, "進入廢棄閱覽室"); goto("abandonedRoom"); }]);
@@ -1433,12 +1455,14 @@ const TEXT_ARCHIVE = {
           opts.push(["前往檔案室（禁書區）", () => { advance(15, "進入禁書區"); goto("archiveRoom"); }]);
           opts.push(["前往會議廳II (中難度刷怪區)", () => {
             advance(15, "進入會議廳II");
+            S.farmZone = "";
             S.monsterHp = 60; S.monsterMaxHp = 60; S.monsterAtk = 12; S.monsterName = "殘破的鎧甲";
             goto("battle_farm");
           }]);
           opts.push(["前往修復工坊", () => { advance(20, "進入修復工坊"); goto("workshop"); }]);
           opts.push(["前往二樓迴廊 (中難度刷怪區)", () => {
             advance(15, "探索二樓迴廊");
+            S.farmZone = "";
             S.monsterHp = 60; S.monsterMaxHp = 60; S.monsterAtk = 12; S.monsterName = "殘破的鎧甲";
             goto("battle_farm");
           }]);
@@ -1448,11 +1472,20 @@ const TEXT_ARCHIVE = {
         case "map1":
           opts.push(["前往閱覽室A (低難度刷怪區)", () => {
             advance(10, "進入閱覽室A尋找物資");
-            S.monsterHp = 30; S.monsterMaxHp = 30; S.monsterAtk = 5; S.monsterName = "迷惘的幽魂";
+            S.farmZone = "low";
+            if (S.lowZoneKills >= 10) {
+              S.monsterHp = 130; S.monsterMaxHp = 130; S.monsterAtk = 15;
+              S.monsterName = "受害者的怨靈 米糕";
+              pushLog("🛑 突然間四周溫度驟降！書架間飄出巨大的黑影──那是米糕因不甘而凝聚的怨靈！");
+            } else {
+              S.monsterHp = 30; S.monsterMaxHp = 30; S.monsterAtk = 5;
+              S.monsterName = "迷惘的幽魂";
+            }
             goto("battle_farm");
           }]);
           opts.push(["前往閱覽室B (低難度刷怪區)", () => {
             advance(10, "進入閱覽室B尋找物資");
+            S.farmZone = "";
             S.monsterHp = 30; S.monsterMaxHp = 30; S.monsterAtk = 5; S.monsterName = "迷惘的幽魂";
             goto("battle_farm");
           }]);
@@ -1796,16 +1829,35 @@ const TEXT_ARCHIVE = {
             triggerMonsterHitEffect();
 
             if (S.monsterHp <= 0) {
+              if (S.monsterName === "受害者的怨靈 米糕") {
+                S.lowZoneKills = 0;
+                pushLog("💀 你揮舞重鎚擊散了核心怨念，終於成功超渡了米糕的亡魂... 現場留下了大量遺物。");
+                processVictory(100, 6, 2, 50);
+                return;
+              }
+
+              if (S.monsterName === "【隱藏超魔王】狂暴艾莉卡") {
+                S.highZoneKills = 0;
+                pushLog("👑 奇蹟！你竟然憑藉驚人的毅力與戰術，擊敗了本遊戲的最強傳說──狂暴艾莉卡！");
+                processVictory(400, 20, 5, 100);
+                return;
+              }
+
+              if (S.farmZone === "low") {
+                S.lowZoneKills++;
+                pushLog(`📊 閱覽室淨化進度：${S.lowZoneKills}/10`);
+              } else if (S.farmZone === "high") {
+                S.highZoneKills++;
+                pushLog(`📊 研究室淨化進度：${S.highZoneKills}/10`);
+              }
+
+              let exp = S.monsterMaxHp > 50 ? 30 : 10;
               let waxDrop = S.monsterMaxHp > 50 ? (Math.floor(Math.random() * 3) + 2) : 1;
               let candleRestore = S.monsterMaxHp > 50 ? 25 : 10;
-              let potionDrop = Math.random() < (S.monsterMaxHp / 200) ? 1 : 0;
-              startVictoryPhase({
-                enemyName: S.monsterName,
-                expGain: Math.max(20, Math.floor(S.monsterMaxHp * 0.75)),
-                waxGain: waxDrop,
-                candleGain: candleRestore,
-                potionGain: potionDrop,
-              });
+              let potionDrop = (Math.random() < (S.monsterMaxHp / 200)) ? 1 : 0;
+
+              pushLog(`🎉 戰鬥勝利！擊敗了 ${S.monsterName}。`);
+              processVictory(exp, waxDrop, potionDrop, candleRestore);
               return;
             }
 
@@ -1820,6 +1872,7 @@ const TEXT_ARCHIVE = {
           opts.push(["🏃 逃跑", () => {
             if (Math.random() < 0.7) {
               pushLog("💨 你趁隙逃出了房間！");
+              S.farmZone = "";
               goto(`map${S.currentFloor}`);
             } else {
               let mDmg = S.monsterAtk;
@@ -2316,6 +2369,9 @@ const TEXT_ARCHIVE = {
       if (!Number.isFinite(merged.monsterMaxHp)) merged.monsterMaxHp = 0;
       if (!Number.isFinite(merged.monsterAtk)) merged.monsterAtk = 0;
       if (typeof merged.monsterName !== "string") merged.monsterName = "敵人";
+      if (typeof merged.farmZone !== "string") merged.farmZone = "";
+      if (!Number.isFinite(merged.lowZoneKills)) merged.lowZoneKills = 0;
+      if (!Number.isFinite(merged.highZoneKills)) merged.highZoneKills = 0;
       if (!Number.isFinite(merged.level)) merged.level = 1;
       if (!Number.isFinite(merged.exp)) merged.exp = 0;
       if (!Number.isFinite(merged.expNext)) merged.expNext = 50;
